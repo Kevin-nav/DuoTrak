@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - DuoTrak</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Animations & Custom Styles -->
+    <style>
+      :root { --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27%23FFFFFF%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e'); }
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-intro { animation: fadeInUp 0.5s ease-out forwards; }
+      .animate-card-in { animation: scaleIn 0.4s ease-out forwards; }
+      
+      .opacity-0 { opacity: 0; }
+      .delay-100 { animation-delay: 100ms; } .delay-200 { animation-delay: 200ms; }
+      .delay-300 { animation-delay: 300ms; } .delay-400 { animation-delay: 400ms; }
+      .delay-500 { animation-delay: 500ms; } .delay-600 { animation-delay: 600ms; }
+    </style>
+</head>
+<body class="bg-[#FAFBFB]" style='font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'>
+    
+    <div class="relative flex h-screen flex-col overflow-hidden">
+        
+        <!-- Top Navigation Bar (Sticky) -->
+        <header class="sticky top-0 z-20 flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f3f4] bg-white/80 px-4 py-3 backdrop-blur-sm sm:px-8">
+            <div class="flex items-center gap-4 text-[#111518]"><div class="size-5 text-[#111518]"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M44 4H30.67V17.33H17.33V30.67H4V44H44V4Z" fill="currentColor"></path></svg></div><h2 class="text-[#111518] text-lg font-bold">DuoTrak</h2></div>
+            <div class="flex items-center justify-end gap-3">
+                <button class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#f0f3f4] text-[#111518] hover:bg-[#dce2e5] transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256"><path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06Z"></path></svg></button>
+                <div class="h-10 w-10 cursor-pointer rounded-full bg-center bg-cover" style='background-image: url("https://lh3.googleusercontent.com/a/ACg8ocJ-2a-bV8sE0k3hYcX0z4BexqUSRm82nARgmMlCnuBf=s96-c");'></div>
+            </div>
+        </header>
+
+        <!-- Main Content (Scrollable with padding for bottom nav) -->
+        <main class="flex-grow overflow-y-auto p-4 pb-24 sm:p-6 sm:pb-24">
+            <div class="mx-auto max-w-2xl">
+                <div id="streak-card" class="flex items-stretch justify-between gap-4 rounded-xl bg-white p-4 shadow-sm opacity-0">
+                    <div class="flex flex-col gap-1"><p class="text-base font-bold text-[#111518]">Streak: 5</p><p class="text-sm text-[#637c88]">Keep up the great work!</p></div>
+                    <div class="w-24 flex-shrink-0 rounded-lg bg-center bg-cover" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDwXd-4QI911Ke5YKFcF93W-bnzQk59p4bamUv3SWffHy0SHlwvThUpTYi7UWq1pnc51qFuMOA1IQ-e8GIyMA0N_Hto48YkI0ah53mWF7MFeS3J3GvLXZ6GsX-7UlJ6Px7ww3tLdEhBSx_p0lk6r73DoeZA2mNHrgY4S9im2C3F7Yk0ukCaxJea3lhW6krcWtrBQtKRAoGSQsYrPFs71NZTn3HEB7CkTy9rsuwFhlecVgs-c5v1LODXn0viWY4lQiyS7jsLYrtMJPk");'></div>
+                </div>
+                <h3 id="welcome-heading" class="mt-6 text-2xl font-bold text-[#111518] opacity-0">Welcome back, Sarah!</h3>
+                <div id="tasks-container" class="mt-4 flex flex-col gap-3">
+                    <div class="task-item flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm opacity-0">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-[#f0f3f4] text-[#111518]"><svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32Z"></path></svg></div>
+                        <div class="flex-grow"><p class="font-semibold text-[#111518]">Wake up by 7 AM</p><p class="text-sm text-[#637c88]">Morning Routine</p></div>
+                        <input type="checkbox" class="h-5 w-5 flex-shrink-0 rounded border-2 border-[#dce2e5] text-[#19a1e5] checked:border-[#19a1e5] checked:bg-[#19a1e5] checked:bg-[image:var(--checkbox-tick-svg)] focus:ring-0 focus:ring-offset-0"/>
+                    </div>
+                     <div class="task-item flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm opacity-0">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-[#f0f3f4] text-[#111518]"><svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M248,120h-8V88a16,16,0,0,0-16-16H208V64a16,16,0,0,0-16-16H168a16,16,0,0,0-16,16v56H104V64A16,16,0,0,0,88,48H64A16,16,0,0,0,48,64v8H32A16,16,0,0,0,16,88v32H8a8,8,0,0,0,0,16h8v32a16,16,0,0,0,16,16H48v8a16,16,0,0,0,16,16H88a16,16,0,0,0,16-16V136h48v56a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16v-8h16a16,16,0,0,0,16-16V136h8a8,8,0,0,0,0-16Z"></path></svg></div>
+                        <div class="flex-grow"><p class="font-semibold text-[#111518]">30-minute workout</p><p class="text-sm text-[#637c88]">Fitness</p></div>
+                        <input type="checkbox" class="h-5 w-5 flex-shrink-0 rounded border-2 border-[#dce2e5] text-[#19a1e5] checked:border-[#19a1e5] checked:bg-[#19a1e5] checked:bg-[image:var(--checkbox-tick-svg)] focus:ring-0 focus:ring-offset-0"/>
+                    </div>
+                </div>
+                <div id="verification-card" class="mt-6 flex flex-col items-start gap-4 rounded-xl border border-[#dce2e5] bg-white p-5 shadow-sm opacity-0 sm:flex-row sm:items-center">
+                    <div class="flex-grow"><p class="font-bold text-[#111518]">Verification Queue</p><p class="mt-1 text-sm text-[#637c88]">Your partner has 1 task waiting for your review.</p></div>
+                    <button class="w-full flex-shrink-0 cursor-pointer rounded-full bg-[#19a1e5] px-5 py-2 text-sm font-bold text-white hover:bg-[#1590d3] sm:w-auto">View Queue</button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Navigation Bar (Sticky on ALL screens) -->
+        <footer class="sticky bottom-0 z-20 bg-white/80 backdrop-blur-sm border-t border-[#f0f3f4]">
+            <div class="mx-auto grid max-w-2xl grid-cols-4">
+                <a class="flex flex-col items-center justify-center gap-1 border-t-2 border-[#111518] py-2 text-[#111518]" href="#"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48a16,16,0,0,1,21.53,0l80,75.48A16,16,0,0,1,224,115.55Z"></path></svg><p class="text-xs font-bold">Home</p></a>
+                <a class="flex flex-col items-center justify-center gap-1 border-t-2 border-transparent py-2 text-[#637c88] hover:text-[#111518]" href="#"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M232,64H208V56a16,16,0,0,0-16-16H64A16,16,0,0,0,48,56v8H24A16,16,0,0,0,8,80V96a40,40,0,0,0,40,40h3.65A80.13,80.13,0,0,0,120,191.61V216H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16H136V191.58c31.94-3.23,58.44-25.64,68.08-55.58H208a40,40,0,0,0,40-40V80A16,16,0,0,0,232,64ZM48,120A24,24,0,0,1,24,96V80H48ZM192,56V111.1c-35.52-.26-64.64-28.78-64.9-64.3H192ZM80,56h31.1C107.36,91.51,78.24,120,43.39,120A40,40,0,0,0,48,136h.39C84.49,132.64,115.22,102.35,120,66.05V56ZM232,96a24,24,0,0,1-24,24h-4V80h28v16Z"></path></svg><p class="text-xs font-medium">Goals</p></a>
+                <a class="flex flex-col items-center justify-center gap-1 border-t-2 border-transparent py-2 text-[#637c88] hover:text-[#111518]" href="#"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M117.25,157.92a60,60,0,1,0-66.5,0,95.83,95.83,0,0,0-47.22,37.71a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74,95.83,95.83,0,0,0-47.22-37.71ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Z M250.14,206.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path></svg><p class="text-xs font-medium">Partner</p></a>
+                <a class="flex flex-col items-center justify-center gap-1 border-t-2 border-transparent py-2 text-[#637c88] hover:text-[#111518]" href="#"><svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M224,168H160v40a8,8,0,0,1-16,0V168H88v40a8,8,0,0,1-16,0V168H32a8,8,0,0,1-8-8V48a8,8,0,0,1,8-8H224a8,8,0,0,1,8,8v112A8,8,0,0,1,224,168ZM88,104a8,8,0,0,0-16,0v40h16Zm48,0a8,8,0,0,0-16,0v40h16Zm48,0a8,8,0,0,0-16,0v40h16Z"></path></svg><p class="text-xs font-medium">Progress</p></a>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- "Create First Goal" Dialogue Box -->
+    <div id="goal-prompt-modal" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50"></div>
+        <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 animate-intro text-center">
+             <h3 class="text-lg font-bold text-[#111518]">Ready to set your first goal?</h3>
+             <p class="text-sm text-[#637c88] mt-2">This is where the magic happens. Let's define a goal and break it down into daily tasks.</p>
+             <div class="mt-6 flex flex-col gap-3">
+                <button class="flex w-full justify-center rounded-full h-11 px-5 bg-[#19a1e5] text-white text-sm font-bold items-center hover:bg-[#1590d3] transition-colors">Let's Go!</button>
+                <button id="close-prompt-btn" class="flex w-full justify-center rounded-full h-11 px-5 text-[#637c88] text-sm font-medium items-center hover:bg-[#f0f3f4] transition-colors">Maybe Later</button>
+             </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const elementsToAnimate = [
+                { selector: '#streak-card', delay: 100, animClass: 'animate-card-in' },
+                { selector: '#welcome-heading', delay: 200, animClass: 'animate-intro' },
+                ...Array.from(document.querySelectorAll('.task-item')).map((el, index) => ({
+                    element: el,
+                    delay: 300 + (index * 150),
+                    animClass: 'animate-intro'
+                })),
+                { selector: '#verification-card', delay: 600, animClass: 'animate-card-in' }
+            ];
+
+            elementsToAnimate.forEach(item => {
+                const el = item.element || document.querySelector(item.selector);
+                if (el) {
+                    setTimeout(() => {
+                        el.classList.remove('opacity-0');
+                        el.classList.add(item.animClass);
+                    }, item.delay);
+                }
+            });
+
+            const goalPromptModal = document.getElementById('goal-prompt-modal');
+            setTimeout(() => {
+                goalPromptModal.classList.remove('hidden');
+            }, 1800); // Delay prompt until after main animations
+
+            document.getElementById('close-prompt-btn').addEventListener('click', () => {
+                goalPromptModal.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>

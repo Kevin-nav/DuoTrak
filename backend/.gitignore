@@ -1,0 +1,8 @@
+# backend/.gitignore
+
+# Firebase Admin SDK key
+duotrak-6367d-firebase-adminsdk-fbsvc-fee690a079.json
+
+# Environment variables
+.env
+.env.local

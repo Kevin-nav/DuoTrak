@@ -1,0 +1,80 @@
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800"
+    />
+
+    <title>Stitch Design</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body>
+    <div class="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden" style='font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'>
+      <div class="layout-container flex h-full grow flex-col">
+        <div class="px-40 flex flex-1 justify-center py-5">
+          <div class="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
+            <div class="@container">
+              <div class="@[480px]:px-4 @[480px]:py-3">
+                <div
+                  class="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden bg-white @[480px]:rounded-xl min-h-80"
+                  style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCm1fRX1b8YTg1QlbHnTb4zZad-5dx-bqQSJdVZe1WmkqQw9sKnA_rH-9USkizLeTH2iu5yQS3idkW3rqX-TyhBD6qtyGuJjcW3gA3QQHpAspRAT6ddKnkqrsqVfQfA7uYy6cU5y2CmrXiZjhqrTMPfHysA6-07aaCQI-iEoU9kSB3q8c2ndhUIJS1McTO-0o7h4cmo9wmRFbqFFOB7fxZc7i7GrJQjEGt-XhZS0wK3L_ezJNnXA6PCyVfRsUkZkfxvuTQBzkS9Q2I");'
+                ></div>
+              </div>
+            </div>
+            <div class="flex flex-col gap-3 p-4">
+              <div class="flex gap-6 justify-between"><p class="text-[#111518] text-base font-medium leading-normal">1/5</p></div>
+              <div class="rounded bg-[#dce2e5]"><div class="h-2 rounded bg-[#111518]" style="width: 20%;"></div></div>
+            </div>
+            <h2 class="text-[#111518] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Welcome to Habit Buddies!</h2>
+            <p class="text-[#111518] text-base font-normal leading-normal pb-3 pt-1 px-4 text-center">
+              Track your habits, collaborate with a partner, and get support from our community. Let's get started!
+            </p>
+            <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label class="flex flex-col min-w-40 flex-1">
+                <input
+                  placeholder="Email"
+                  class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#111518] focus:outline-0 focus:ring-0 border-none bg-[#f0f3f4] focus:border-none h-14 placeholder:text-[#637c88] p-4 text-base font-normal leading-normal"
+                  value=""
+                />
+              </label>
+            </div>
+            <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label class="flex flex-col min-w-40 flex-1">
+                <input
+                  placeholder="Password"
+                  class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#111518] focus:outline-0 focus:ring-0 border-none bg-[#f0f3f4] focus:border-none h-14 placeholder:text-[#637c88] p-4 text-base font-normal leading-normal"
+                  value=""
+                />
+              </label>
+            </div>
+            <p class="text-[#637c88] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center underline">Forgot Password?</p>
+            <div class="flex px-4 py-3">
+              <button
+                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 flex-1 bg-[#19a1e5] text-white text-base font-bold leading-normal tracking-[0.015em]"
+              >
+                <span class="truncate">Sign Up / Log In</span>
+              </button>
+            </div>
+            <div class="flex px-4 py-3">
+              <button
+                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 flex-1 bg-[#f0f3f4] text-[#111518] gap-2 pl-5 text-base font-bold leading-normal tracking-[0.015em]"
+              >
+                <div class="text-[#111518]" data-icon="GoogleLogo" data-size="24px" data-weight="regular">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M224,128a96,96,0,1,1-21.95-61.09,8,8,0,1,1-12.33,10.18A80,80,0,1,0,207.6,136H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128Z"></path>
+                  </svg>
+                </div>
+                <span class="truncate">Or continue with Google</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

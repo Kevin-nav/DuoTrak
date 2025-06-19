@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invite Your Partner - DuoTrak</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Animations & Custom Styles -->
+    <style>
+      @keyframes shake {
+        10%, 90% { transform: translateX(-1px); }
+        20%, 80% { transform: translateX(2px); }
+        30%, 50%, 70% { transform: translateX(-4px); }
+        40%, 60% { transform: translateX(4px); }
+      }
+      .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+
+      .form-error { border: 1px solid #ef4444; }
+      .error-message { color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem; display: none; }
+    </style>
+</head>
+<body class="bg-white" style='font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'>
+    <div class="flex min-h-screen flex-col">
+        <main class="flex-grow flex items-center justify-center p-4">
+            <div class="w-full max-w-xl animate-fade-in">
+                <!-- Progress Bar -->
+                <div class="mb-8">
+                    <div class="flex justify-between mb-1">
+                        <p class="text-[#111518] text-base font-medium leading-normal">Step 2 of 3</p>
+                        <p class="text-[#637c88] text-base font-medium leading-normal">Invite Partner</p>
+                    </div>
+                    <div class="rounded-full bg-[#dce2e5] h-2">
+                        <div class="h-2 rounded-full bg-[#19a1e5] transition-all duration-500" style="width: 66%;"></div>
+                    </div>
+                </div>
+
+                <!-- Image -->
+                <div
+                  class="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden rounded-xl min-h-[220px] mb-8"
+                  style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDZCIZxh7mHESadkhc9uUW-NMObFiEoEIh0pvtUWpSb1hFAgSoHppuQJVgst9gOCxzdIPtfoppH4aYcpOVjQ2ZRxljCdP79EszriVkdNC7HDsOnp-iWnwifWYs5P8jVhsIllTCtn1o3hcZQHuIjNQCW82t1sq5PUj5cdCbt3uJ-tviKbf8LTXahC0KdlQ5-OJ3XhZuw36-fclcvCjQME97p_ntbQrFNJgKR_lEBUyYDF7a5WGL_jvYfE8QrKLLPA-J8dX2NHJNJoHE");'
+                ></div>
+                
+                <!-- Content -->
+                <h2 class="text-[#111518] tracking-light text-[28px] font-bold leading-tight text-center">Invite Your Partner</h2>
+                <p class="text-[#637c88] text-base font-normal leading-normal mt-2 pb-8 text-center max-w-lg mx-auto">
+                  DuoTrak is better with a partner. Invite someone to join you on your journey and hold each other accountable.
+                </p>
+
+                <form id="invite-form" class="flex flex-col gap-4 max-w-lg mx-auto">
+                    <div>
+                        <label for="partner-name" class="sr-only">Partner's Name</label>
+                        <input
+                            id="partner-name"
+                            type="text"
+                            placeholder="Partner's Name"
+                            class="form-input flex w-full min-w-0 rounded-xl text-[#111518] focus:outline-0 focus:ring-2 focus:ring-[#19a1e5]/50 border border-transparent bg-[#f0f3f4] h-14 placeholder:text-[#637c88] p-4 text-base font-normal transition-all duration-200"
+                        />
+                        <p id="name-error" class="error-message">Partner's name cannot be empty.</p>
+                    </div>
+                    <div>
+                        <label for="partner-email" class="sr-only">Partner's Email</label>
+                        <input
+                            id="partner-email"
+                            type="email"
+                            placeholder="Partner's Email"
+                            class="form-input flex w-full min-w-0 rounded-xl text-[#111518] focus:outline-0 focus:ring-2 focus:ring-[#19a1e5]/50 border border-transparent bg-[#f0f3f4] h-14 placeholder:text-[#637c88] p-4 text-base font-normal transition-all duration-200"
+                        />
+                        <p id="email-error" class="error-message">Please enter a valid email address.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-3 pt-4">
+                        <button type="submit" class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-full h-12 px-5 bg-[#19a1e5] text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-[#1590d3] transition-all duration-200 active:scale-95">
+                            Send Invitation
+                        </button>
+                        <a href="#" class="text-center text-sm font-medium text-[#637c88] hover:text-[#111518] py-2">
+                            Skip for now
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <footer class="bg-white p-6 md:px-12">
+            <div class="flex flex-col items-center justify-between gap-4 text-center sm:flex-row">
+                <p class="text-sm text-[#637c88]">© <span id="copyright-year"></span> DuoTrak Inc. All Rights Reserved.</p>
+                <a href="mailto:info@duotrak.org" class="text-sm font-medium text-[#111518] hover:text-[#19a1e5] hover:underline">info@duotrak.org</a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Sets the copyright year in the footer
+            document.getElementById('copyright-year').textContent = new Date().getFullYear();
+
+            const form = document.getElementById('invite-form');
+            const nameInput = document.getElementById('partner-name');
+            const emailInput = document.getElementById('partner-email');
+            const nameError = document.getElementById('name-error');
+            const emailError = document.getElementById('email-error');
+
+            function showError(input, errorElement, message) {
+                input.classList.add('form-error', 'animate-shake');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+                setTimeout(() => input.classList.remove('animate-shake'), 500);
+            }
+            
+            function clearErrors() {
+                [nameInput, emailInput].forEach(input => input.classList.remove('form-error', 'animate-shake'));
+                [nameError, emailError].forEach(error => error.style.display = 'none');
+            }
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                clearErrors();
+                let isValid = true;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                if (nameInput.value.trim() === '') {
+                    showError(nameInput, nameError, "Partner's name cannot be empty.");
+                    isValid = false;
+                }
+                if (!emailRegex.test(emailInput.value)) {
+                    showError(emailInput, emailError, 'Please enter a valid email address.');
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    console.log("Invitation Sent! Redirecting to pending acceptance screen...");
+                    window.location.href = 'pending-acceptance.html'; 
+                }
+            });
+        });
+    </script>
+</body>
+</html>

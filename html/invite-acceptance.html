@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>You're Invited! - DuoTrak</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&family=Plus+Jakarta+Sans%3Awght%40400%3B500%3B700%3B800"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Animations & Custom Styles -->
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes shake {
+        10%, 90% { transform: translateX(-1px); }
+        20%, 80% { transform: translateX(2px); }
+        30%, 50%, 70% { transform: translateX(-4px); }
+        40%, 60% { transform: translateX(4px); }
+      }
+      .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+      .modal-backdrop { animation: fadeIn 0.3s ease-out forwards; }
+      .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+      .form-error { border: 1px solid #ef4444; }
+      .error-message { color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem; display: none; }
+    </style>
+</head>
+<body class="bg-white" style='font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'>
+    <div class="flex min-h-screen flex-col">
+        <main class="flex-grow flex items-center justify-center p-4">
+            <div class="w-full max-w-xl animate-fade-in-up text-center">
+
+                <!-- Inviter's Profile Image -->
+                <div class="flex justify-center mb-4">
+                    <div class="relative">
+                        <img class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg" src="https://lh3.googleusercontent.com/a/ACg8ocJ-2a-bV8sE0k3hYcX0z4BexqUSRm82nARgmMlCnuBf=s96-c" alt="Chris's profile picture">
+                        <div class="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#19A1E5] text-white border-2 border-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M1 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5z"/><path fill-rule="evenodd" d="M13 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0v-2z"/></svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <h1 class="text-[#111518] tracking-light text-2xl md:text-3xl font-bold leading-tight">Chris has invited you to team up!</h1>
+                <p class="text-[#637c88] text-base font-normal leading-normal mt-3 max-w-lg mx-auto">
+                  Join them on DuoTrak to track habits, stay accountable, and achieve your goals together.
+                </p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
+                    <button id="accept-btn" class="w-full sm:w-auto flex min-w-[120px] cursor-pointer items-center justify-center rounded-full h-12 px-6 bg-[#19a1e5] text-white text-base font-bold hover:bg-[#1590d3] transition-all duration-200 active:scale-95">
+                        Accept Invitation
+                    </button>
+                    <button id="decline-btn" class="w-full sm:w-auto flex min-w-[120px] cursor-pointer items-center justify-center rounded-full h-12 px-6 bg-[#f0f3f4] text-[#111518] text-base font-bold hover:bg-[#dce2e5] transition-all duration-200 active:scale-95">
+                        Decline
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-white p-6 md:px-12">
+            <div class="flex flex-col items-center justify-between gap-4 text-center sm:flex-row">
+                <p class="text-sm text-[#637c88]">© <span id="copyright-year"></span> DuoTrak Inc. All Rights Reserved.</p>
+                <a href="mailto:info@duotrak.org" class="text-sm font-medium text-[#111518] hover:text-[#19a1e5] hover:underline">info@duotrak.org</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="accept-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="modal-backdrop fixed inset-0 bg-black/50"></div>
+        <div class="relative w-full max-w-md bg-white rounded-2xl shadow-lg p-6 animate-fade-in-up">
+            <!-- Initial State -->
+            <div id="initial-state">
+                <h3 class="text-lg font-bold text-center text-[#111518]">Welcome to DuoTrak!</h3>
+                <p class="text-center text-sm text-[#637c88] mt-2">To accept Chris's invitation, let's get you set up. Do you already have an account?</p>
+                <div class="mt-6 flex flex-col gap-3">
+                    <button id="show-signup-btn" class="flex w-full justify-center rounded-full h-11 px-5 bg-[#19a1e5] text-white text-sm font-bold items-center hover:bg-[#1590d3] transition-colors">No, I'm new here</button>
+                    <button id="show-login-btn" class="flex w-full justify-center rounded-full h-11 px-5 bg-[#f0f3f4] text-[#111518] text-sm font-bold items-center hover:bg-[#dce2e5] transition-colors">Yes, I have an account</button>
+                </div>
+            </div>
+
+            <!-- Login State -->
+            <div id="login-state" class="hidden">
+                <h3 class="text-lg font-bold text-center text-[#111518]">Log In to Accept</h3>
+                <form id="login-form" class="mt-4 flex flex-col gap-4">
+                    <input id="login-email" type="email" placeholder="Email" class="form-input w-full rounded-xl text-[#111518] border-transparent bg-[#f0f3f4] h-14 p-4 focus:ring-2 focus:ring-[#19a1e5]/50"/>
+                    <input id="login-password" type="password" placeholder="Password" class="form-input w-full rounded-xl text-[#111518] border-transparent bg-[#f0f3f4] h-14 p-4 focus:ring-2 focus:ring-[#19a1e5]/50"/>
+                    <p id="login-error" class="error-message">Invalid credentials. Please try again.</p>
+                    <button type="submit" class="rounded-full h-12 bg-[#19a1e5] text-white font-bold hover:bg-[#1590d3] transition-colors">Log In & Accept</button>
+                </form>
+            </div>
+            
+            <!-- Signup State -->
+            <div id="signup-state" class="hidden">
+                <h3 class="text-lg font-bold text-center text-[#111518]">Create Your Account</h3>
+                <form id="signup-form" class="mt-4 flex flex-col gap-4">
+                    <input id="signup-username" type="text" placeholder="Username" class="form-input w-full rounded-xl text-[#111518] border-transparent bg-[#f0f3f4] h-14 p-4 focus:ring-2 focus:ring-[#19a1e5]/50"/>
+                    <input id="signup-email" type="email" placeholder="Email" class="form-input w-full rounded-xl text-[#111518] border-transparent bg-[#f0f3f4] h-14 p-4 focus:ring-2 focus:ring-[#19a1e5]/50"/>
+                    <input id="signup-password" type="password" placeholder="Password (min. 8 characters)" class="form-input w-full rounded-xl text-[#111518] border-transparent bg-[#f0f3f4] h-14 p-4 focus:ring-2 focus:ring-[#19a1e5]/50"/>
+                    <p id="signup-error" class="error-message">Please fill all fields correctly.</p>
+                    <button type="submit" class="rounded-full h-12 bg-[#19a1e5] text-white font-bold hover:bg-[#1590d3] transition-colors">Sign Up & Accept</button>
+                </form>
+            </div>
+            <button class="modal-close-btn absolute top-3 right-3 text-[#8B9AA5] hover:text-[#111518]">×</button>
+        </div>
+    </div>
+    
+    <div id="decline-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="modal-backdrop fixed inset-0 bg-black/50"></div>
+        <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 animate-fade-in-up text-center">
+             <h3 class="text-lg font-bold text-[#111518]">Decline Invitation?</h3>
+             <p class="text-sm text-[#637c88] mt-2">Are you sure? This action cannot be undone.</p>
+             <div class="mt-6 flex gap-3">
+                <button id="confirm-decline-btn" class="flex-1 rounded-full h-11 bg-[#ef4444] text-white text-sm font-bold hover:bg-red-600 transition-colors">Yes, Decline</button>
+                <button class="modal-close-btn flex-1 rounded-full h-11 bg-[#f0f3f4] text-[#111518] text-sm font-bold hover:bg-[#dce2e5] transition-colors">Cancel</button>
+             </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('copyright-year').textContent = new Date().getFullYear();
+
+        const acceptModal = document.getElementById('accept-modal');
+        const declineModal = document.getElementById('decline-modal');
+        
+        const initialState = document.getElementById('initial-state');
+        const loginState = document.getElementById('login-state');
+        const signupState = document.getElementById('signup-state');
+
+        // --- Event Listeners to Open Modals ---
+        document.getElementById('accept-btn').addEventListener('click', () => {
+            initialState.style.display = 'block';
+            loginState.style.display = 'none';
+            signupState.style.display = 'none';
+            acceptModal.classList.remove('hidden');
+        });
+
+        document.getElementById('decline-btn').addEventListener('click', () => {
+            declineModal.classList.remove('hidden');
+        });
+
+        // --- Event Listeners to Close Modals ---
+        document.querySelectorAll('.modal-backdrop, .modal-close-btn').forEach(el => {
+            el.addEventListener('click', () => {
+                acceptModal.classList.add('hidden');
+                declineModal.classList.add('hidden');
+            });
+        });
+        
+        // --- Event Listeners for Modal State Changes ---
+        document.getElementById('show-login-btn').addEventListener('click', () => {
+            initialState.style.display = 'none';
+            loginState.style.display = 'block';
+        });
+        
+        document.getElementById('show-signup-btn').addEventListener('click', () => {
+            initialState.style.display = 'none';
+            signupState.style.display = 'block';
+        });
+        
+        // --- Form Logic (Simplified) ---
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            // In a real app, you would validate and make an API call
+            console.log('Logged in and accepted invitation! Redirecting to dashboard...');
+            window.location.href = 'dashboard.html'; // <-- REDIRECT ADDED
+        });
+
+        document.getElementById('signup-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('signup-password').value;
+            if (password.length < 8) {
+                // ... error handling code ...
+                return;
+            }
+            console.log('Account created and invitation accepted! Redirecting to dashboard...');
+            window.location.href = 'dashboard.html'; // <-- REDIRECT ADDED
+        });
+
+        document.getElementById('confirm-decline-btn').addEventListener('click', () => {
+            alert('Invitation declined.');
+            declineModal.classList.add('hidden');
+            document.querySelector('main').style.opacity = '0.5';
+            document.querySelector('main').style.pointerEvents = 'none';
+        });
+    });
+    </script>
+</body>
+</html>
