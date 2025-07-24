@@ -1,0 +1,58 @@
+from datetime import datetime
+from enum import Enum
+from typing import Optional, TYPE_CHECKING
+from uuid import UUID
+import uuid
+
+from pydantic import BaseModel, EmailStr, Field
+
+if TYPE_CHECKING:
+    from .user import UserRead
+
+class InvitationStatus(str, Enum):
+    """Invitation status values."""
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+
+class PartnerInvitationBase(BaseModel):
+    """Base schema for partner invitation."""
+    receiver_email: EmailStr = Field(..., description="Email address of the user being invited")
+
+class PartnerInvitationCreate(PartnerInvitationBase):
+    """Schema for creating a new partner invitation."""
+    receiver_name: str = Field(..., min_length=1, max_length=100, description="Name of the user being invited")
+    expires_in_days: int = Field(7, description="Number of days until the invitation expires")
+
+class PartnerInvitationUpdate(BaseModel):
+    """Schema for updating an existing partner invitation."""
+    status: InvitationStatus = Field(..., description="New status for the invitation")
+
+class PartnerInvitationInDBBase(PartnerInvitationBase):
+    """Base schema for partner invitation in the database."""
+    id: UUID
+    sender_id: UUID
+    status: InvitationStatus
+    created_at: datetime
+    expires_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PartnerInvitation(PartnerInvitationInDBBase):
+    """Schema for returning a partner invitation with sender details."""
+    sender: "UserRead"
+
+class InvitationAction(BaseModel):
+    invitation_id: uuid.UUID
+
+
+class PartnerInvitationResponse(BaseModel):
+    """Response schema for partner invitation operations."""
+    message: str
+    invitation: Optional[PartnerInvitation] = None
+
+# Forward reference resolution is handled in app.schemas.__init__.py
+

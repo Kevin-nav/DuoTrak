@@ -2,18 +2,13 @@ fastapi
 uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
-pydantic
 pydantic-settings
 python-dotenv
 firebase-admin
-resend
 slowapi
 redis
-email-validator
-aiosqlite
+resend==0.8.0
+alembic
 psycopg2-binary
-
-# For testing
-pytest
-pytest-asyncio
-httpx
+supabase
+fastapi-csrf-protect

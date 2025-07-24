@@ -1,30 +1,22 @@
-'use client';
+import * as React from "react"
 
-import React from 'react';
-import { twMerge } from 'tailwind-merge';
+import { cn } from "@/lib/utils"
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  error?: boolean;
-}
-
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, error, ...props }, ref) => {
-    const baseStyles =
-      'rounded-2xl h-14 bg-pearl-gray border-2 border-transparent w-full px-4 text-base font-normal text-charcoal placeholder:text-stone-gray transition-colors duration-200 focus:outline-none focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/50';
-
-    const errorStyles = 'border-error-red border-2';
-
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
     return (
       <input
         type={type}
-        className={twMerge(baseStyles, error && errorStyles, className)}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          className
+        )}
         ref={ref}
         {...props}
       />
-    );
+    )
   }
-);
+)
+Input.displayName = "Input"
 
-Input.displayName = 'Input';
-
-export default Input;
+export { Input }

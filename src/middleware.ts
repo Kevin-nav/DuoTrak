@@ -1,31 +1,46 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const isAuthenticated = request.cookies.has('auth_token'); // Example auth check
+// Define a type for the user object we expect from our API
+interface User {
+  id: string;
+  partnership_status: 'partnered' | 'no_partner';
+  sent_invitation: object | null;
+  received_invitation: object | null;
+  // Add other user properties as needed
+}
 
-  // Redirect authenticated users from auth pages to dashboard
-  if (isAuthenticated && (pathname.startsWith('/login') || pathname.startsWith('/signup'))) {
+interface AuthData {
+  isAuthenticated: boolean;
+  user: User | null;
+}
+
+export function middleware(request: NextRequest) {
+  const authToken = request.cookies.get('auth_token')?.value;
+  const { pathname } = request.nextUrl;
+
+  const protectedRoutes = ['/dashboard', '/invite-partner', '/pending-acceptance'];
+  const publicRoutes = ['/login', '/signup', '/'];
+
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.includes(pathname);
+
+  // If user has a token and tries to access a public route (like /login),
+  // redirect them to the dashboard.
+  if (authToken && isPublicRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Define protected app routes
-  const appRoutes = ['/dashboard', '/invite-partner', '/pending-acceptance'];
-
-  // Protect app routes
-  if (!isAuthenticated && appRoutes.some(route => pathname.startsWith(route))) {
+  // If user does NOT have a token and tries to access a protected route,
+  // redirect them to the login page.
+  if (!authToken && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-  
-  // Root redirect logic
-  if (pathname === '/') {
-    if (isAuthenticated) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-    // Allow unauthenticated users to access the landing page at the root
-    return NextResponse.next();
-  }
+
+  // All other data-dependent redirection logic (e.g., based on partnership status)
+  // should be handled on the client-side after user data is fetched.
+  // The middleware's only job is to handle coarse-grained auth protection.
+
 
   return NextResponse.next();
 }
@@ -35,6 +50,12 @@ export const config = {
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    /*
+     * Match all request paths except for the ones starting with:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)

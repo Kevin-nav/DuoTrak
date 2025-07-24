@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import Input from '@/components/ui/Input';
+import { Input } from '@/components/ui/input';
 import AnimatedTextCharacter from '@/components/ui/AnimatedTextCharacter';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 
@@ -61,7 +61,7 @@ export default function PasswordResetPage() {
   };
 
   return (
-    <div className="text-center animate-fadeInUp">
+    <div className="w-full text-center animate-fadeInUp">
       <div className="flex justify-center">
         <AnimatedTextCharacter text="Reset Your Password" className="text-3xl font-bold text-charcoal mb-2" />
       </div>

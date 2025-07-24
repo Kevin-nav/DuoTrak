@@ -1,8 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/(app)/pending-acceptance/page": "app/(app)/pending-acceptance/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(app)/invite-partner/page": "app/(app)/invite-partner/page.js",
-  "/(auth)/signup/page": "app/(auth)/signup/page.js",
-  "/(app)/dashboard/page": "app/(app)/dashboard/page.js"
-}

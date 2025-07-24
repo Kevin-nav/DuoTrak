@@ -1,0 +1,68 @@
+# Dependencies
+/node_modules
+/package-lock.json
+
+# Next.js
+/.next/
+/out/
+
+# Local Environment Variables
+.env.local
+.env*.local
+
+# Backend
+/backend/.env
+/backend/duotrak_dev.db
+/backend/logs/
+/backend/migrations/
+/backend/supabase/.temp/
+/backend/app/__pycache__/
+/backend/alembic/__pycache__/
+/backend/__pycache__/
+
+# Secrets
+firebase-adminsdk.json
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor/Tooling
+.vscode/
+.idea/
+.DS_Store
+.VSCodeCounter/
+
+# Local Files
+/cxt/
+/History/
+/errors/
+
+# Generated Reports
+/auth_flow_analysis_report.md
+/authentication_redirection_report.md
+/authentication_redirection_solution_documentation.md
+/backend_implentation.md
+/backend_integration_guide.md
+/backend_overview.md
+/bug_report_auth_redirection.md
+/DuoTrak_Login_Error_Analysis.md
+/logout_alignment_report.md
+/logout_functionality_analysis_report.md
+/logout_issue_summary.md
+/race_condition_analysis_and_solution_proposal.md
+/session_summary.md
+
+# Other
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.node_repl_history
+*.tgz
+.yarn-integrity
+.pnp.js
+.pnp.cjs

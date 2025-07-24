@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { DuoTrakLogo, TwitterIcon, GithubIcon, LinkedInIcon } from '@/components/ui/icons';
+import { DuoTrakLogo, XIcon, GithubIcon, LinkedInIcon } from '@/components/ui/icons';
 
 export default function Footer() {
   return (
@@ -35,7 +35,7 @@ export default function Footer() {
           <div>
             <h3 className="font-bold text-lg mb-4">Connect With Us</h3>
             <div className="flex justify-center md:justify-start space-x-4">
-              <a href="#" className="hover:text-primary-blue transition-colors"><TwitterIcon className="h-6 w-6" /></a>
+              <a href="#" className="hover:text-primary-blue transition-colors"><XIcon className="h-6 w-6" /></a>
               <a href="#" className="hover:text-primary-blue transition-colors"><GithubIcon className="h-6 w-6" /></a>
               <a href="#" className="hover:text-primary-blue transition-colors"><LinkedInIcon className="h-6 w-6" /></a>
             </div>

@@ -3,11 +3,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface ProfileDropdownProps {
-  userName: string;
-  userImageUrl: string;
-  onLogout: () => void;
+  userName: string | null;
+  userImageUrl: string | null;
   onProfileClick: () => void;
 }
 
@@ -16,7 +16,13 @@ const dropdownVariants = {
   visible: { opacity: 1, y: 0, scale: 1 },
 };
 
-const ProfileDropdown = ({ userName, userImageUrl, onLogout, onProfileClick }: ProfileDropdownProps) => {
+const ProfileDropdown = ({ userName, userImageUrl, onProfileClick }: ProfileDropdownProps) => {
+  const router = useRouter();
+
+  const handleLogoutClick = () => {
+    router.push('/logout');
+  };
+
   return (
     <motion.div
       variants={dropdownVariants}
@@ -40,7 +46,7 @@ const ProfileDropdown = ({ userName, userImageUrl, onLogout, onProfileClick }: P
       </div>
       <div className="py-1">
         <button
-          onClick={onLogout}
+          onClick={handleLogoutClick}
           className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-pearl-gray rounded-md"
         >
           Logout
