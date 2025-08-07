@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # These are optional settings with default values
     PROJECT_NAME: str = "DuoTrak API"
     API_V1_STR: str = "/api/v1"
+    BACKEND_CORS_ORIGINS: list[str] = ["http://127.0.0.1:3000"]
 
     class Config:
         # Pydantic-settings will automatically search for a .env file.

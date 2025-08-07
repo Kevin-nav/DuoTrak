@@ -1,33 +1,31 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useUser } from '@/contexts/UserContext';
-import { useRouter, usePathname } from 'next/navigation';
 import FullPageSpinner from '@/components/ui/FullPageSpinner';
 
+/**
+ * A client-side component that protects routes by ensuring user data is loaded.
+ * It does NOT handle redirection. Redirection is the sole responsibility of the middleware.
+ * Its only job is to show a loading state while the user session is being verified.
+ */
 export function RouteGuard({ children }: { children: React.ReactNode }) {
-  const { userDetails, isLoading, isAuthenticating, setPendingRedirect } = useUser();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { userDetails, isLoading } = useUser();
 
-  useEffect(() => {
-    // Only redirect if not loading, not authenticating, and no user details
-    if (!isLoading && !isAuthenticating && !userDetails) {
-      setPendingRedirect(pathname); // Store intended path
-      router.push('/login'); // Redirect to login
-    }
-  }, [userDetails, isLoading, isAuthenticating, pathname, router, setPendingRedirect]);
-
-  // Show loading while determining auth state or if authentication is in progress
-  if (isLoading || isAuthenticating) {
+  // While the useQuery in UserContext is fetching the user's session state,
+  // show a loading spinner.
+  if (isLoading) {
     return <FullPageSpinner />;
   }
 
-  // If no user details after loading, assume redirect to login is in progress
+  // If loading is complete but there are no user details, it means the middleware
+  // has already initiated a redirect to the login page. We show a spinner
+  // to prevent any flash of content while the redirect is in progress.
   if (!userDetails) {
     return <FullPageSpinner />;
   }
 
-  // User is authenticated, render protected content
+  // If loading is complete and user details are present, the user is authenticated.
+  // Render the protected page content.
   return <>{children}</>;
 }

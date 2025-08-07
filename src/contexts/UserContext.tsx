@@ -1,130 +1,102 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
-import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useQueryClient } from '@tanstack/react-query';
-import { handleAuthSuccess } from '@/lib/auth-flow';
-import { persistentLog } from '@/lib/logger';
-import { apiFetch } from '@/lib/api/core'; // Import apiFetch to trigger CSRF fetch
 
-// ... (interface definitions remain the same)
-export interface UserDetails { // (Interface details omitted for brevity) 
+const SESSION_COOKIE_NAME = '__session';
+
+export interface UserDetails {
     id: string;
+    firebase_uid: string;
     email: string;
     full_name: string | null;
+    bio: string | null;
+    timezone: string;
+    profile_picture_url: string | null;
     onboarding_complete: boolean;
-    partnership_status: string;
-    // ... other fields
+    notifications_enabled: boolean;
+    current_streak: number;
+    longest_streak: number;
+    total_tasks_completed: number;
+    goals_conquered: number;
+    // Partnership fields
+    partner_id: string | null;
+    partnership_id: string | null;
+    partnership_status: 'active' | 'pending' | 'inactive' | 'not_partnered';
+    partner_full_name: string | null;
+    // Invitation fields
+    sent_invitation: any | null; // Define more specific types if available
+    received_invitation: any | null; // Define more specific types if available
+    // Badge fields
+    badges: any[]; // Define more specific types if available
 }
 
 interface UserContextType {
-    firebaseUser: FirebaseUser | null;
-    userDetails: UserDetails | null;
+    userDetails: UserDetails | null | undefined; // undefined on initial load, null if not authenticated
     isLoading: boolean;
-    isAuthenticating: boolean; // New: separate loading state for auth flow
-    pendingRedirect: string | null; // New: track pending redirects
-    setPendingRedirect: (url: string | null) => void;
-    logoutCompleteTimestamp: number | null; // New: To signal logout completion
+    logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const fetchUser = async (): Promise<UserDetails | null> => {
+  console.log('--- [UserContext] fetchUser called ---');
+  try {
+    // This endpoint now verifies our JWT session token
+    const data = await apiClient.getCurrentUser();
+        console.log('--- [UserContext] apiClient.getCurrentUser() returned:', data);
+        return data; // Return the user object directly
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('401')) {
+          // This is an expected "error" for unauthenticated users, so we don't log it.
+        } else {
+          interceptConsoleError('--- [UserContext] Failed to fetch user:', error);
+        }
+        return null;
+      }
+};
+
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-    const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-    const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isAuthenticating, setIsAuthenticating] = useState(false);
-    const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
-    const [logoutCompleteTimestamp, setLogoutCompleteTimestamp] = useState<number | null>(null); // New state
-    const router = useRouter();
     const queryClient = useQueryClient();
 
-    // Effect to pre-fetch the CSRF token on initial load
-    useEffect(() => {
-        const initializeSession = async () => {
-            try {
-                // This call will automatically handle fetching and setting the CSRF token
-                // because of the logic we added in api/core.ts.
-                await apiFetch('/api/v1/auth/csrf', { method: 'GET' });
-                persistentLog('CSRF token pre-fetched successfully.');
-            } catch (error) {
-                persistentLog('Failed to pre-fetch CSRF token.', { error });
-            }
-        };
-        initializeSession();
-    }, []);
+    const { data: userDetails, isLoading, isError, error } = useQuery({
+    queryKey: ['user', 'me'],
+    queryFn: fetchUser,
+    retry: false, // Do not retry failed requests
+    refetchOnWindowFocus: false, // Optional: prevent refetching on window focus
+  });
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            persistentLog('onAuthStateChanged: Fired', { hasUser: !!user });
-            setFirebaseUser(user);
-            
-            if (user) {
-                setIsAuthenticating(true);
-                try {
-                    persistentLog('onAuthStateChanged: User found, syncing with backend...');
-                    const details = await handleAuthSuccess(user);
-                    setUserDetails(details);
-                    queryClient.setQueryData(['userDetails'], details); // Also update react-query cache
-                    persistentLog('onAuthStateChanged: Sync successful.');
+    const logout = async () => {
+        try {
+            await apiClient.logout();
+            // The apiClient handles the redirect and cache clearing is done via window reload
+            toast.success("You have been logged out.");
+        } catch (error) {
+            console.error("Logout failed:", error);
+            toast.error("Logout failed. Please try again.");
+            // As a fallback, force clear and redirect
+            queryClient.clear();
+            window.location.href = '/login';
+        }
+    };
 
-                    // Handle pending redirect AFTER state is set
-                    if (pendingRedirect) {
-                        const redirectUrl = pendingRedirect;
-                        persistentLog('onAuthStateChanged: Executing pending redirect', { redirectUrl });
-                        setPendingRedirect(null); // Clear the redirect state
-                        // Use setTimeout to ensure state updates are processed before navigation
-                        setTimeout(() => {
-                            router.push(redirectUrl);
-                        }, 100);
-                    }
-                } catch (error) {
-                    persistentLog('onAuthStateChanged: Auth sync error', { error });
-                    setUserDetails(null);
-                    queryClient.setQueryData(['userDetails'], null);
-                    setPendingRedirect(null); // Auth failed, clear any pending redirect
-                    await signOut(auth); // Sign out from firebase to be safe
-                } finally {
-                    persistentLog('onAuthStateChanged: Authentication process finished.');
-                    setIsAuthenticating(false);
-                }
-            } else {
-                // No user, clear everything
-                persistentLog('onAuthStateChanged: No user found, clearing session.');
-                setUserDetails(null);
-                queryClient.setQueryData(['userDetails'], null);
-                setPendingRedirect(null);
-                setIsAuthenticating(false);
-                setLogoutCompleteTimestamp(Date.now()); // New: Set timestamp on logout
-            }
-            
-            setIsLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [pendingRedirect, router, queryClient]);
+    const refreshUser = async () => {
+        await refetch();
+    };
 
     return (
-        <UserContext.Provider value={{
-            firebaseUser,
-            userDetails,
-            isLoading,
-            isAuthenticating,
-            pendingRedirect,
-            setPendingRedirect,
-            logoutCompleteTimestamp, // New: Provide timestamp to consumers
-        }}>
+        <UserContext.Provider value={{ userDetails, isLoading, logout, refreshUser }}>
             {children}
         </UserContext.Provider>
     );
-}
+};
 
 export const useUser = () => {
     const context = useContext(UserContext);
-    if (!context) {
+    if (context === undefined) {
         throw new Error('useUser must be used within a UserProvider');
     }
     return context;

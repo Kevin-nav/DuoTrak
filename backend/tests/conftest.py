@@ -6,8 +6,9 @@ from typing import AsyncGenerator
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -41,7 +42,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def test_app() -> FastAPI:
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
@@ -52,7 +53,7 @@ async def test_app() -> FastAPI:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def client(test_app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(app=test_app, base_url="http://test") as c:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
         yield c

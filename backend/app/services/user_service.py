@@ -45,6 +45,23 @@ class UserService:
         result = await db.execute(stmt)
         return result.scalars().first()
 
+    async def get_user_by_id(self, db: AsyncSession, user_id: int):
+        """
+        Retrieve a user by their primary key ID, ensuring all columns and badges are loaded.
+        """
+        stmt = select(User).options(
+            selectinload(User.user_badges),
+            load_only(
+                User.id, User.firebase_uid, User.email, User.full_name, User.onboarding_complete,
+                User.partnership_status, User.bio, User.profile_picture_url, User.timezone,
+                User.notifications_enabled, User.current_streak, User.longest_streak,
+                User.total_tasks_completed, User.goals_conquered, User.current_partner_id,
+                User.created_at, User.updated_at
+            )
+        ).filter(User.id == user_id)
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
     async def sync_user_profile(self, db: AsyncSession, *, user_in: UserCreate) -> User:
         """
         Synchronizes a user profile from a Firebase ID token.

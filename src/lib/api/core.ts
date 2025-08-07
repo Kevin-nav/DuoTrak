@@ -1,152 +1,83 @@
-import { toast } from 'sonner';
-import { env } from '@/lib/env';
+// src/lib/api/core.ts
 
-// --- CSRF Protection ---
-// A local variable to cache the CSRF token.
-let csrfToken: string | null = null;
+import { toast } from 'sonner';
 
 /**
- * Fetches the CSRF token from the backend if it hasn't been fetched yet.
- * This function is called automatically by apiFetch before making a request.
+ * Reads a cookie from the document.cookie string.
+ * @param name The name of the cookie to read.
+ * @returns The cookie value or an empty string if not found.
  */
-const getCsrfToken = async (): Promise<string> => {
-  if (csrfToken) {
-    return csrfToken;
+function getCookie(name: string): string {
+  if (typeof document === 'undefined') {
+    return '';
   }
-
-  try {
-    // Use a direct fetch call to avoid circular dependency with apiFetch
-    const response = await fetch(`${env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/csrf`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch CSRF token');
-    }
-    
-    // The library sets a cookie named 'fastapi-csrf-token'. We need to read
-    // this cookie's value to send it in the 'X-CSRF-Token' header.
-    const match = document.cookie.match(/fastapi-csrf-token=([^;]+)/);
-    if (!match) {
-        throw new Error('CSRF token cookie not found');
-    }
-    csrfToken = match[1];
-    return csrfToken;
-
-  } catch (error) {
-    console.error('CSRF token fetch error:', error);
-    toast.error('Failed to initialize secure session. Please try refreshing the page.');
-    throw error;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || '';
   }
-};
-
-
-export class ApiError extends Error {
-  constructor(public detail: string, public status: number) {
-    super(detail);
-    this.name = 'ApiError';
-  }
+  return '';
 }
 
-export async function apiFetch(endpoint: string, options: RequestInit = {}) {
-  const defaultOptions: RequestInit = {
-    credentials: 'include',
-    cache: 'no-store', // Ensure we always get the freshest data
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  };
+/**
+ * A global fetch wrapper that provides centralized logic for API calls.
+ * 1. Automatically adds the CSRF token to unsafe requests.
+ * 2. Automatically handles 401 Unauthorized errors by redirecting to the login page.
+ *
+ * @param url The URL to fetch.
+ * @param options The options for the fetch request.
+ * @returns The response from the fetch request.
+ */
+export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // All API calls are now relative (e.g., /api/v1/users/me).
+  // The Next.js server will proxy them to the FastAPI backend based on the
+  // `rewrites` configuration in `next.config.mjs`.
+  // This makes all requests same-origin from the browser's perspective.
+  const absoluteUrl = url;
 
-  const config = {
-    ...defaultOptions,
+  console.log(`[apiFetch] Making same-origin request to: ${absoluteUrl}`);
+
+  const headers = new Headers(options.headers || {});
+
+  // Set default Content-Type for POST/PUT/PATCH requests if not already set
+  if (['POST', 'PUT', 'PATCH'].includes(options.method?.toUpperCase() || '')) {
+    if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+  }
+
+  // Add CSRF token for unsafe methods
+  if (options.method && !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())) {
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
+    } else {
+      console.warn('CSRF token not found. Making request without it.');
+    }
+  }
+
+  const newOptions: RequestInit = {
     ...options,
-  };
-
-  // For any method that is not GET, ensure we have a CSRF token and add it to the headers.
-  if (config.method && config.method.toUpperCase() !== 'GET') {
-    const token = await getCsrfToken();
-    if (token) {
-      (config.headers as Record<string, string>)['X-CSRF-Token'] = token;
-    }
-  }
-
-  const fullUrl = `${env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`;
-
-  try {
-    const response = await fetch(fullUrl, config);
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        errorData = { detail: 'An unknown error occurred. The server response was not valid JSON.' };
-      }
-      console.error('API Error:', errorData);
-      throw new ApiError(errorData.detail || `HTTP error! status: ${response.status}`, response.status);
-    }
-
-    if (response.status === 204) { // No Content
-      return null;
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Network or fetch error:', error);
-    // Only show a generic toast if it's NOT an ApiError, which should be handled by the caller.
-    if (!(error instanceof ApiError)){
-        toast.error('A network error occurred. Please check your connection.');
-    }
-    throw error;
-  }
-}
-
-export async function apiFetchWithFile(endpoint: string, formData: FormData) {
-  // Ensure CSRF token is fetched and available
-  const token = await getCsrfToken();
-
-  const config: RequestInit = {
-    method: 'POST', // File uploads are typically POST requests
+    headers,
+    // This is the crucial fix. It tells the browser to send cookies along with this request,
+    // which is necessary for the server to know who is making the request. It also allows
+    // the browser to accept the `Set-Cookie` header from the login response.
     credentials: 'include',
-    cache: 'no-store',
-    body: formData,
-    headers: {
-        // Add the CSRF token to the headers for file uploads as well.
-        'X-CSRF-Token': token,
-    }
-    // NOTE: We DO NOT set the 'Content-Type' header.
-    // The browser will automatically set it to 'multipart/form-data'
-    // with the correct boundary, which is crucial for file uploads.
   };
 
-  const fullUrl = `${env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, newOptions);
 
-  try {
-    const response = await fetch(fullUrl, config);
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        errorData = { detail: 'An unknown error occurred during file upload.' };
-      }
-      console.error('API File Upload Error:', errorData);
-      throw new ApiError(errorData.detail || `HTTP error! status: ${response.status}`, response.status);
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Network or fetch error during file upload:', error);
-    if (!(error instanceof ApiError)){
-        toast.error('A network error occurred during file upload.');
-    }
-    throw error;
+  // Graceful handling of session expiry
+  if (response.status === 401) {
+    toast.error('Your session has expired. Please log in again.');
+    // Redirect to login page, clearing any query params
+    window.location.href = '/login';
+    // Return a mock response to prevent further processing by the caller
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
+
+  return response;
 }

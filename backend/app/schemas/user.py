@@ -2,10 +2,6 @@
 
 import uuid
 from enum import Enum
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
-import uuid
-from enum import Enum
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING, List
@@ -53,20 +49,6 @@ class UserUpdate(BaseModel):
     profile_picture_url: Optional[str] = None
     timezone: Optional[str] = None
     notifications_enabled: Optional[bool] = None
-    current_streak: Optional[int] = None
-    longest_streak: Optional[int] = None
-    total_tasks_completed: Optional[int] = None
-    goals_conquered: Optional[int] = None
-    onboarding_complete: Optional[bool] = None
-    full_name: Optional[str] = None
-    bio: Optional[str] = None
-    profile_picture_url: Optional[str] = None
-    timezone: Optional[str] = None
-    notifications_enabled: Optional[bool] = None
-    current_streak: Optional[int] = None
-    longest_streak: Optional[int] = None
-    total_tasks_completed: Optional[int] = None
-    goals_conquered: Optional[int] = None
     onboarding_complete: Optional[bool] = None
 
 # Properties to return to the client (from the API)
@@ -105,10 +87,12 @@ class UserInDB(UserBase):
     class Config:
         from_attributes = True
 
-# Schema for syncing user profile from Firebase
+# Schema for syncing user profile from the Next.js backend
 class UserProfileSync(BaseModel):
-    full_name: str | None = None
-    invitation_token: str | None = None
+    firebase_uid: str
+    email: EmailStr
+    full_name: Optional[str] = None
+    invitation_token: Optional[str] = None
 
 class SessionLoginRequest(BaseModel):
     token: str

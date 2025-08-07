@@ -1,65 +1,142 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { cookies } from 'next/headers'; // Import the new async cookies store
+import { jwtVerify } from 'jose';
 
-// Define a type for the user object we expect from our API
-interface User {
-  id: string;
-  partnership_status: 'partnered' | 'no_partner';
-  sent_invitation: object | null;
-  received_invitation: object | null;
-  // Add other user properties as needed
+const SESSION_COOKIE_NAME = '__session';
+// This secret key must be the same as the one used in your FastAPI backend.
+// It should be stored in an environment variable.
+const JWT_SECRET = new TextEncoder().encode(process.env.SECRET_KEY || 'your-secret-key');
+
+// Define route configurations
+const ROUTE_CONFIG = {
+  // Routes that don't require authentication
+  public: ['/', '/login', '/signup', '/api/auth/csrf-token'],
+  // Routes that authenticated users should be redirected away from
+  authRedirect: ['/login', '/signup'],
+  // API routes that need different handling
+  api: {
+    public: ['/api/auth/csrf-token', '/api/health', '/api/auth/verify'],
+    protected: ['/api/user', '/api/dashboard']
+  }
+} as const;
+
+// ... (ROUTE_CONFIG and helper functions remain the same)
+
+async function verifySession(sessionCookie: string): Promise<boolean> {
+  try {
+    const { payload } = await jwtVerify(sessionCookie, JWT_SECRET);
+    // You can add additional checks here, e.g., check payload.type === 'session'
+    return payload.uid != null;
+  } catch (error) {
+    console.error('[Middleware] JWT Verification Error:', error);
+    return false;
+  }
 }
 
-interface AuthData {
-  isAuthenticated: boolean;
-  user: User | null;
+// ... (The rest of the middleware function)
+// The call to verifySession will need to be updated to remove the `request` argument.
+// Example: const isValid = await verifySession(sessionCookie);
+
+
+function isPublicRoute(pathname: string): boolean {
+  return ROUTE_CONFIG.public.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
 }
 
-export function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('auth_token')?.value;
+function shouldRedirectAuthenticated(pathname: string): boolean {
+  return ROUTE_CONFIG.authRedirect.includes(pathname);
+}
+
+function isPublicApiRoute(pathname: string): boolean {
+  return ROUTE_CONFIG.api.public.some(route => pathname.startsWith(route));
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  const protectedRoutes = ['/dashboard', '/invite-partner', '/pending-acceptance'];
-  const publicRoutes = ['/login', '/signup', '/'];
-
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  const isPublicRoute = publicRoutes.includes(pathname);
-
-  // If user has a token and tries to access a public route (like /login),
-  // redirect them to the dashboard.
-  if (authToken && isPublicRoute) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  const origin = request.nextUrl.origin;
+  
+  // Skip middleware for static files and Next.js internals
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/public/') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
   }
 
-  // If user does NOT have a token and tries to access a protected route,
-  // redirect them to the login page.
-  if (!authToken && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Use the new async cookies() store
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  
+  // Handle API routes differently
+  if (pathname.startsWith('/api/')) {
+    if (isPublicApiRoute(pathname)) {
+      return NextResponse.next();
+    }
+    
+    if (!sessionCookie) {
+      return NextResponse.json(
+        { error: 'Authentication required' }, 
+        { status: 401 }
+      );
+    }
+    
+    const isValid = await verifySession(sessionCookie);
+    if (!isValid) {
+      const response = NextResponse.json(
+        { error: 'Invalid session' }, 
+        { status: 401 }
+      );
+      // Use the async cookieStore to delete the cookie
+      response.cookies.delete(SESSION_COOKIE_NAME);
+      return response;
+    }
+    
+    return NextResponse.next();
   }
 
-  // All other data-dependent redirection logic (e.g., based on partnership status)
-  // should be handled on the client-side after user data is fetched.
-  // The middleware's only job is to handle coarse-grained auth protection.
-
+  // Handle page routes
+  if (sessionCookie) {
+    const isValid = await verifySession(sessionCookie);
+    
+    if (isValid) {
+      // User is authenticated
+      if (shouldRedirectAuthenticated(pathname)) {
+        console.log(`[Middleware] Authenticated user accessing ${pathname}, redirecting to dashboard`);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    } else {
+      // Invalid session cookie
+      console.log(`[Middleware] Invalid session cookie, clearing and redirecting to login`);
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      // Use the async cookieStore to delete the cookie
+      response.cookies.delete(SESSION_COOKIE_NAME);
+      return response;
+    }
+  } else {
+    // No session cookie
+    if (!isPublicRoute(pathname)) {
+      console.log(`[Middleware] Unauthenticated access to ${pathname}, redirecting to login`);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
 
   return NextResponse.next();
 }
 
+// Configure which paths the middleware should run on
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - public (public files)
      */
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 };

@@ -1,17 +1,18 @@
 "use client"
 
 import type React from "react"
-
 import { motion } from "framer-motion"
 import { Camera, Edit3, Flame } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import MouseGlowEffect from "./mouse-glow-effect"
 import { useUser } from "@/contexts/UserContext"
-import { apiFetch, apiFetchWithFile } from "@/lib/api"
+import { apiFetch } from "@/lib/api/core"
 import { toast } from "sonner"
+import { avatarLibrary } from "@/lib/avatars"
+import { cn } from "@/lib/utils"
 
 interface ProfileHeaderProps {
   username: string
@@ -21,14 +22,13 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({ username, profilePicture: initialProfilePicture, bio, currentStreak }: ProfileHeaderProps) {
-  const { userDetails, refetchUserDetails } = useUser()
+  const { refetchUserDetails } = useUser()
   const [isEditingBio, setIsEditingBio] = useState(false)
   const [currentBio, setCurrentBio] = useState(bio)
   const [tempBio, setTempBio] = useState(bio)
   const [isProfilePictureDialogOpen, setIsProfilePictureDialogOpen] = useState(false)
   const [profilePicture, setProfilePicture] = useState(initialProfilePicture)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null)
 
   useEffect(() => {
     setCurrentBio(bio)
@@ -44,7 +44,7 @@ export default function ProfileHeader({ username, profilePicture: initialProfile
       })
       setCurrentBio(tempBio)
       setIsEditingBio(false)
-      refetchUserDetails() // Refresh user data in context
+      refetchUserDetails()
       toast.success("Bio updated successfully!")
     } catch (error) {
       console.error("Failed to update bio:", error)
@@ -57,71 +57,23 @@ export default function ProfileHeader({ username, profilePicture: initialProfile
     setIsEditingBio(false)
   }
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    console.log("File selected:", file)
-    if (file) {
-      setSelectedFile(file)
-      setPreviewUrl(URL.createObjectURL(file))
-    } else {
-      setSelectedFile(null)
-      setPreviewUrl(null)
-    }
-  }
-
-  const handleSaveProfilePicture = async () => {
-    if (!selectedFile) {
-      toast.error("Please select a file first.");
+  const handleSaveSelectedAvatar = async () => {
+    if (!selectedAvatar) {
+      toast.error("Please select an avatar first.");
       return;
     }
-
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
     try {
-      const updatedUser = await apiFetchWithFile("/api/v1/users/me/profile-picture", formData);
-
-      if (updatedUser && updatedUser.profile_picture_url) {
-        setProfilePicture(updatedUser.profile_picture_url);
-        toast.success("Profile picture updated successfully!");
-      }
-      
-      setIsProfilePictureDialogOpen(false);
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      refetchUserDetails(); // This is key to update the global state
-
-    } catch (error) {
-      console.error("Failed to update profile picture:", error);
-      toast.error("Failed to update profile picture. Please try again.");
-    }
-  }
-
-  const handleCancelProfilePictureChange = () => {
-    setIsProfilePictureDialogOpen(false)
-    setSelectedFile(null)
-    setPreviewUrl(null)
-  }
-
-  const handleRemoveProfilePicture = async () => {
-    try {
-      const updatedUser = await apiFetch("/api/v1/users/me/profile-picture", {
-        method: "DELETE",
+      await apiFetch("/api/v1/users/me", {
+        method: "PUT",
+        body: JSON.stringify({ profile_picture_url: selectedAvatar }),
       });
-
-      if (updatedUser) {
-        setProfilePicture(""); // Set to empty string or a placeholder
-        toast.success("Profile picture removed successfully!");
-      }
-      
-      setIsProfilePictureDialogOpen(false);
-      setSelectedFile(null);
-      setPreviewUrl(null);
+      setProfilePicture(selectedAvatar);
       refetchUserDetails();
-
+      setIsProfilePictureDialogOpen(false);
+      toast.success("Avatar updated successfully!");
     } catch (error) {
-      console.error("Failed to remove profile picture:", error);
-      toast.error("Failed to remove profile picture. Please try again.");
+      console.error("Failed to update avatar:", error);
+      toast.error("Failed to update avatar.");
     }
   }
 
@@ -150,51 +102,39 @@ export default function ProfileHeader({ username, profilePicture: initialProfile
                     </div>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>Change Profile Picture</DialogTitle>
+                    <DialogTitle>Choose Your Avatar</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex justify-center">
-                      <img
-                        src={previewUrl || profilePicture || "/placeholder.svg"}
-                        alt="Profile preview"
-                        className="w-24 h-24 rounded-full object-cover border-2 border-cool-gray dark:border-gray-600"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="profile-upload"
-                        className="block text-sm font-medium text-charcoal dark:text-gray-200"
-                      >
-                        Choose new picture
-                      </label>
-                      <input
-                        id="profile-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="block w-full text-sm text-stone-gray dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-blue file:text-white hover:file:bg-primary-blue-hover"
-                      />
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        {profilePicture && (
-                          <Button variant="destructive" size="sm" onClick={handleRemoveProfilePicture}>
-                            Remove
-                          </Button>
+                  <div className="grid grid-cols-4 gap-4 py-4">
+                    {avatarLibrary.map((avatarUrl) => (
+                      <button
+                        key={avatarUrl}
+                        onClick={() => setSelectedAvatar(avatarUrl)}
+                        className={cn(
+                          "rounded-full transition-all duration-200 ease-in-out",
+                          "focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-primary-blue",
+                          selectedAvatar === avatarUrl
+                            ? "ring-4 ring-offset-2 ring-primary-blue"
+                            : "ring-0 hover:ring-4 hover:ring-primary-blue/50"
                         )}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" onClick={handleCancelProfilePictureChange}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleSaveProfilePicture} disabled={!selectedFile}>
-                          Confirm
-                        </Button>
-                      </div>
-                    </div>
+                      >
+                        <img
+                          src={avatarUrl}
+                          alt="Avatar option"
+                          className="w-24 h-24 rounded-full object-cover"
+                        />
+                      </button>
+                    ))}
                   </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleSaveSelectedAvatar} disabled={!selectedAvatar}>
+                      Confirm
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             </motion.div>

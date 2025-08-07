@@ -2,11 +2,12 @@
 
 import firebase_admin
 from firebase_admin import auth, credentials
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Request, Security
+from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select
+import hmac
 
 from app.db import models
 from app.db.session import get_db
@@ -14,6 +15,28 @@ from app.db.session import get_db
 from app.core.config import settings
 from app.schemas.user import UserCreate
 from datetime import timedelta
+
+# Define the API Key Header security scheme
+api_key_header = APIKeyHeader(name="X-Internal-API-Key", auto_error=False)
+
+def api_key_security(key: str = Security(api_key_header)):
+    """
+    Dependency to verify the internal API key.
+    This protects server-to-server communication.
+    """
+    if not key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing internal API key."
+        )
+    # Use hmac.compare_digest for secure, constant-time comparison
+    # to mitigate timing attacks.
+    if not hmac.compare_digest(key.encode(), settings.SECRET_KEY.encode()):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid internal API key."
+        )
+    return True
 
 # Initialize Firebase Admin SDK
 # We explicitly use the service account file specified in the .env file.
@@ -114,7 +137,7 @@ def get_current_user_from_cookie(request: Request) -> dict:
     FastAPI dependency to get the current user from the session cookie.
     This will protect API endpoints that require authentication.
     """
-    session_cookie = request.cookies.get("auth_token")
+    session_cookie = request.cookies.get("__session")
     if not session_cookie:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,167 +1,332 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
-from app.core.limiter import limiter
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-from firebase_admin import auth
+# backend/app/api/v1/auth.py - Enhanced authentication endpoints
+from fastapi import APIRouter, HTTPException, Response, Request, Depends, status
+from fastapi.responses import JSONResponse
+from fastapi_csrf_protect import CsrfProtect
+from pydantic import BaseModel
+import firebase_admin
+from firebase_admin import auth as firebase_auth
+from datetime import datetime, timedelta, timezone
+import jwt
+import secrets
+from typing import Optional
+import httpx
 
-from app.core.security import get_current_user, create_session_cookie_from_token
 from app.core.config import settings
 from app.db.session import get_db
-from app.db import models
-from app.schemas.user import UserRead, UserCreate, UserProfileSync, SessionLoginRequest, UserSyncResponse
 from app.services.user_service import user_service
-from app.services.partner_invitation_service import accept_invitation
-from app import schemas
+from app.schemas.user import UserCreate, UserRead
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
-@router.post("/session-login")
-@limiter.limit("10/minute")
-async def session_login(request: Request, data: SessionLoginRequest, response: Response):
+# Pydantic models
+class LoginRequest(BaseModel):
+    firebase_token: str
+
+class SessionResponse(BaseModel):
+    user: dict
+    expires_at: datetime
+    csrf_token: str
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+# Configuration
+SESSION_COOKIE_NAME = "__session"
+REFRESH_COOKIE_NAME = "__refresh"
+CSRF_COOKIE_NAME = "csrf_token"
+SESSION_DURATION = timedelta(hours=1)  # Shorter session duration
+REFRESH_DURATION = timedelta(days=7)   # Longer refresh duration
+
+async def verify_firebase_token(token: str) -> dict:
+    """Verify Firebase ID token and return user data"""
+    try:
+        # Add a clock skew tolerance to handle potential time sync issues
+        decoded_token = firebase_auth.verify_id_token(token, clock_skew_seconds=15)
+        return {
+            'uid': decoded_token['uid'],
+            'email': decoded_token.get('email'),
+            'email_verified': decoded_token.get('email_verified', False),
+            'name': decoded_token.get('name'),
+            'picture': decoded_token.get('picture')
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Firebase token: {str(e)}"
+        )
+
+def create_session_token(user_data: dict) -> tuple[str, datetime]:
+    """Create a JWT session token"""
+    expires_at = datetime.now(timezone.utc) + SESSION_DURATION
+    payload = {
+        'uid': str(user_data['id']), # Use the database UUID as the primary identifier
+        'email': user_data['email'],
+        'exp': expires_at,
+        'iat': datetime.now(timezone.utc),
+        'type': 'session'
+    }
+    
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    return token, expires_at
+
+def create_refresh_token(user_uid: str) -> tuple[str, datetime]:
+    """Create a refresh token"""
+    expires_at = datetime.now(timezone.utc) + REFRESH_DURATION
+    payload = {
+        'uid': user_uid,
+        'exp': expires_at,
+        'iat': datetime.now(timezone.utc),
+        'type': 'refresh',
+        'jti': secrets.token_urlsafe(32)  # Unique token ID for revocation
+    }
+    
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    return token, expires_at
+
+async def sync_user_profile(db: AsyncSession, user_data: dict) -> UserRead:
+    """Sync user profile with your database and return the full user object."""
+    logger.info(f"Syncing profile for firebase_uid: {user_data.get('uid')}")
+    user_in = UserCreate(
+        firebase_uid=user_data['uid'],
+        email=user_data.get('email'),
+        full_name=user_data.get('name')
+    )
+    db_user = await user_service.sync_user_profile(db=db, user_in=user_in)
+    logger.info(f"User synced, ID: {db_user.id}. Attempting to serialize with UserRead.")
+    try:
+        user_read = UserRead.from_orm(db_user)
+        logger.info("Serialization successful.")
+        return user_read
+    except Exception as e:
+        logger.exception("Pydantic serialization failed!")
+        # Re-raise the exception to let FastAPI handle it
+        raise e
+
+
+
+@router.post("/session-login", response_model=SessionResponse)
+async def session_login(
+    request: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    csrf_protect: CsrfProtect = Depends()
+):
     """
-    Takes a Firebase ID token, creates a session cookie, and sets it in the user's browser.
+    Atomic session login endpoint.
+    Replaces the Next.js proxy pattern with direct communication.
     """
     try:
-        session_cookie, expires_in = create_session_cookie_from_token(data.token)
-        response.set_cookie(
-            key="auth_token",
-            value=session_cookie,
-            max_age=expires_in,
-            httponly=True,
-            secure=settings.ENVIRONMENT == "production",
-            samesite="lax",
-            path="/"
-        )
-        return {"status": "success"}
+        # 1. Verify Firebase token
+        user_data = await verify_firebase_token(request.firebase_token)
     except HTTPException as e:
+        # If token verification fails, immediately raise the exception
         raise e
+    
+    try:
+        # 2. Sync user profile in database and get the full user object
+        db_user = await sync_user_profile(db, user_data)
+        
+        # 3. Create session and refresh tokens
+        session_token, session_expires = create_session_token(db_user.model_dump())
+        refresh_token, refresh_expires = create_refresh_token(user_data['uid'])
+        
+        # 4. Generate CSRF tokens
+        unsigned_token, signed_token = csrf_protect.generate_csrf_tokens()
+        
+        # 5. Set secure cookies
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=session_token,
+            expires=session_expires,
+            httponly=True,
+            secure=True,
+            samesite='lax',
+            path='/'
+        )
+        
+        response.set_cookie(
+            key=REFRESH_COOKIE_NAME,
+            value=refresh_token,
+            expires=refresh_expires,
+            httponly=True,
+            secure=True,
+            samesite='lax',
+            path='/api/v1/auth'  # Restrict to auth endpoints
+        )
+        
+        response.set_cookie(
+            key=CSRF_COOKIE_NAME,
+            value=signed_token,
+            expires=session_expires,
+            httponly=False,  # JavaScript needs access
+            secure=True,
+            samesite='lax',
+            path='/'
+        )
+        
+        return SessionResponse(
+            user=db_user.model_dump(),
+            expires_at=session_expires,
+            csrf_token=unsigned_token
+        )
+        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred during session login: {str(e)}"
+            detail=f"Login failed: {str(e)}"
         )
 
+@router.get("/verify-session")
+async def verify_session(request: Request):
+    """
+    Verify session token - used by middleware and frontend
+    """
+    logger.info("Attempting to verify session...")
+    session_token = request.cookies.get(SESSION_COOKIE_NAME)
+    
+    if not session_token:
+        logger.warning("No session token found in cookies.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No session token provided"
+        )
+    
+    try:
+        logger.info(f"Session token found: {session_token[:15]}...")
+        # Verify JWT token
+        payload = jwt.decode(session_token, settings.SECRET_KEY, algorithms=["HS256"])
+        logger.info(f"JWT decoded successfully for UID: {payload.get('uid')}")
+        
+        if payload.get('type') != 'session':
+            logger.error(f"Invalid token type: {payload.get('type')}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        
+        response_data = {
+            'valid': True,
+            'uid': payload['uid'],
+            'email': payload['email'],
+            'expires_at': datetime.fromtimestamp(payload['exp'], tz=timezone.utc)
+        }
+        logger.info("Session verification successful.")
+        return response_data
+        
+    except jwt.ExpiredSignatureError:
+        logger.warning("Session token has expired.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired"
+        )
+    except jwt.InvalidTokenError as e:
+        logger.error(f"Invalid token error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session token"
+        )
+    except Exception as e:
+        logger.exception("An unexpected error occurred during session verification.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred."
+        )
+
+@router.post("/refresh-session")
+async def refresh_session(
+    request: Request,
+    response: Response,
+    csrf_protect: CsrfProtect = Depends()
+):
+    """
+    Refresh session using refresh token
+    """
+    refresh_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token provided"
+        )
+    
+    try:
+        # Verify refresh token
+        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
+        
+        if payload.get('type') != 'refresh':
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        
+        # Get user data (you might want to fetch from DB here)
+        user_data = {'uid': payload['uid'], 'email': ''} # Minimal data for refresh
+        
+        # Create new session token
+        session_token, session_expires = create_session_token(user_data)
+        unsigned_token, signed_token = csrf_protect.generate_csrf_tokens()
+        
+        # Set new session cookie
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=session_token,
+            expires=session_expires,
+            httponly=True,
+            secure=True,
+            samesite='lax',
+            path='/'
+        )
+        
+        response.set_cookie(
+            key=CSRF_COOKIE_NAME,
+            value=signed_token,
+            expires=session_expires,
+            httponly=False,
+            secure=True,
+            samesite='lax',
+            path='/'
+        )
+        
+        return {
+            'message': 'Session refreshed',
+            'expires_at': session_expires,
+            'csrf_token': unsigned_token
+        }
+        
+    except jwt.ExpiredSignatureError:
+        # Clear expired refresh token
+        response.delete_cookie(REFRESH_COOKIE_NAME, path='/api/v1/auth')
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token expired"
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
 
 @router.post("/logout")
 async def logout(response: Response):
     """
-    Clears the session cookie.
+    Logout endpoint - clears all auth cookies
     """
-    response.delete_cookie(key="auth_token", path="/")
-    return {"status": "success"}
+    response.delete_cookie(SESSION_COOKIE_NAME, path='/')
+    response.delete_cookie(REFRESH_COOKIE_NAME, path='/api/v1/auth')
+    response.delete_cookie(CSRF_COOKIE_NAME, path='/')
+    
+    return {'message': 'Logged out successfully'}
 
-
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-bearer_scheme = HTTPBearer()
-
-@router.post("/verify-and-sync-profile", response_model=UserSyncResponse, status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
-async def verify_and_sync_profile(
-    *,
-    response: Response,
-    request: Request, # Add request for the limiter
-    db: AsyncSession = Depends(get_db),
-    profile_in: UserProfileSync,
-    firebase_user: dict = Depends(get_current_user),
-    token: HTTPAuthorizationCredentials = Depends(bearer_scheme)
-):
+@router.get("/csrf-token")
+def get_csrf_token(csrf_protect: CsrfProtect = Depends()):
     """
-    Verify Firebase token, create/update user profile, and return full user status.
+    Get CSRF token for forms that need it
     """
-    user_in = UserCreate(
-        firebase_uid=firebase_user["uid"],
-        email=firebase_user["email"],
-        full_name=profile_in.full_name or firebase_user.get("name")
-    )
-
-    try:
-        db_user = await user_service.sync_user_profile(db=db, user_in=user_in)
-
-        # If an invitation token is provided, accept it now atomically.
-        if profile_in.invitation_token:
-            try:
-                # The service returns the updated user object
-                db_user = await accept_invitation(
-                    db=db,
-                    invitation_id_str=profile_in.invitation_token,
-                    user=db_user
-                )
-            except HTTPException as e:
-                # If invitation is invalid, we can choose to ignore it and proceed
-                # or raise an error. For now, we'll let it raise.
-                raise e
-
-        has_partner = db_user.current_partner_id is not None
-
-        auth.set_custom_user_claims(firebase_user['uid'], {'has_partner': has_partner})
-
-        # --- Fetch invitation status ---
-        sent_stmt = (
-            select(models.PartnerInvitation)
-            .options(selectinload(models.PartnerInvitation.receiver))
-            .where(
-                models.PartnerInvitation.sender_id == db_user.id,
-                models.PartnerInvitation.status == 'pending',
-            )
-        )
-        sent_result = await db.execute(sent_stmt)
-        sent_invitation = sent_result.scalars().first()
-
-        received_stmt = (
-            select(models.PartnerInvitation)
-            .options(selectinload(models.PartnerInvitation.sender))
-            .where(
-                models.PartnerInvitation.receiver_email.ilike(db_user.email),
-                models.PartnerInvitation.status == 'pending',
-            )
-        )
-        received_result = await db.execute(received_stmt)
-        received_invitation = received_result.scalars().first()
-
-        user_read = schemas.UserRead(
-            id=db_user.id,
-            email=db_user.email,
-            full_name=db_user.full_name,
-            onboarding_complete=db_user.onboarding_complete,
-            partnership_status=db_user.partnership_status,
-            partner_id=getattr(db_user, 'current_partner_id', None),
-            partner_full_name=getattr(db_user, 'partner_full_name', None),
-            partnership_id=getattr(db_user, 'partnership_id', None),
-            sent_invitation=sent_invitation,
-            received_invitation=received_invitation,
-            bio=getattr(db_user, 'bio', None),
-            profile_picture_url=getattr(db_user, 'profile_picture_url', None),
-            timezone=getattr(db_user, 'timezone', 'UTC'),
-            notifications_enabled=getattr(db_user, 'notifications_enabled', True),
-            current_streak=getattr(db_user, 'current_streak', 0),
-            longest_streak=getattr(db_user, 'longest_streak', 0),
-            total_tasks_completed=getattr(db_user, 'total_tasks_completed', 0),
-            goals_conquered=getattr(db_user, 'goals_conquered', 0),
-            badges=getattr(db_user, 'badges', [])
-        )
-
-        # Create and set the session cookie in the same atomic transaction
-        id_token = token.credentials
-        session_cookie, expires_in = create_session_cookie_from_token(id_token)
-        response.set_cookie(
-            key="auth_token",
-            value=session_cookie,
-            max_age=expires_in,
-            httponly=True,
-            secure=settings.ENVIRONMENT == "production",
-            samesite="lax",
-            path="/",
-            domain="127.0.0.1"  # Explicitly set the domain for the cookie
-        )
-
-        return {"user": user_read, "has_partner": has_partner}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}"
-        )
+    unsigned_token, _ = csrf_protect.generate_csrf_tokens()
+    return {'csrf_token': unsigned_token}

@@ -9,7 +9,7 @@ from typing import List
 
 from app import schemas
 from app.db.session import get_db
-from app.core.security import get_current_active_user
+from app.api.v1.endpoints.users import get_current_user_from_cookie
 from app.db import models
 from app.core.limiter import limiter
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def read_goals(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(get_current_user_from_cookie)
 ):
     """
     Get all goals for the current user.

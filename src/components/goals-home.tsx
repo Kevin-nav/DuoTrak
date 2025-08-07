@@ -17,7 +17,7 @@ import {
   Copy,
   Archive,
 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import MouseGlowEffect from "./mouse-glow-effect"
 import SharedGoalWizard from "./shared-goal-wizard"
 import GoalInvitationReview from "./goal-invitation-review"
@@ -48,14 +48,11 @@ export default function GoalsHome({}: GoalsHomeProps) {
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null)
   const [showGoalEditor, setShowGoalEditor] = useState<Goal | null>(null)
 
-  const [filteredGoals, setFilteredGoals] = useState<Goal[]>([])
   const [filterBy, setFilterBy] = useState<"all" | "active" | "completed" | "shared">("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [showGoalDetail, setShowGoalDetail] = useState<Goal | null>(null)
-  const [showEditGoal, setShowEditGoal] = useState<Goal | null>(null)
 
-  useEffect(() => {
-    const filtered = goals.filter((goal) => {
+  const filteredGoals = useMemo(() => {
+    return goals.filter((goal) => {
       const matchesSearch =
         goal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (goal.category && goal.category.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -63,7 +60,6 @@ export default function GoalsHome({}: GoalsHomeProps) {
       // Milestone 1: Filtering by status/type is disabled as this data is not yet in the backend.
       return matchesSearch;
     });
-    setFilteredGoals(filtered);
   }, [goals, filterBy, searchQuery]);
 
   const getStatusEmoji = (status: any) => "🎯"; // Placeholder

@@ -7,10 +7,19 @@ import PartnerDisplay from "./partner-display"
 import AccountSettings from "./account-settings"
 import SupportSection from "./support-section"
 import { useUser } from "@/contexts/UserContext"
+import { useUserProfile } from "@/hooks/useUserProfile"
 import { Loader2 } from "lucide-react"
 
 export default function ProfileContent() {
-  const { userDetails: user, isLoading } = useUser()
+  // Step 1: Get the basic authentication status.
+  const { userDetails: authUser, isLoading: isAuthLoading } = useUser();
+
+  // Step 2: Enable the detailed profile fetch only AFTER auth is confirmed.
+  const { data: userProfile, isLoading: isProfileLoading } = useUserProfile(!!authUser);
+
+  // The page is loading if either the auth check or the profile fetch is in progress.
+  const isLoading = isAuthLoading || isProfileLoading;
+  const user = userProfile; // Use the detailed profile data for rendering.
 
   if (isLoading || !user) {
     return (

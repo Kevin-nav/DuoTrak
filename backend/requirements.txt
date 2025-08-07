@@ -12,3 +12,5 @@ alembic
 psycopg2-binary
 supabase
 fastapi-csrf-protect
+PyJWT  
+fastapi-csrf-protect 
