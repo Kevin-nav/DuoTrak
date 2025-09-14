@@ -6,6 +6,7 @@ from .goal import GoalCreate, GoalRead, TaskCreate, TaskRead
 from .user import PartnershipStatus, UserBase, UserCreate, UserInDB, UserRead, UserUpdate
 from .partner_invitation import (
     InvitationAction,
+    InvitationActionWithToken,
     InvitationStatus,
     PartnerInvitation,
     PartnerInvitationBase,
@@ -13,11 +14,13 @@ from .partner_invitation import (
     PartnerInvitationInDBBase,
     PartnerInvitationResponse,
     PartnerInvitationUpdate,
+    PublicInvitationDetails,
 )
 
 # Define the public API for the schemas package.
 __all__ = [
     "InvitationAction",
+    "InvitationActionWithToken",
     "InvitationStatus",
     "Msg",
     "PartnerInvitation",
@@ -26,6 +29,7 @@ __all__ = [
     "PartnerInvitationInDBBase",
     "PartnerInvitationResponse",
     "PartnerInvitationUpdate",
+    "PublicInvitationDetails",
     "GoalCreate",
     "GoalRead",
     "TaskCreate",

@@ -36,7 +36,8 @@ export default function LoginForm() {
       queryClient.setQueryData(['user', 'me'], response.user);
       
       // This forces a full page reload, which is necessary to ensure the
-      // new session cookie is sent to the server for the middleware to read.
+      // new session cookie is sent to the server for the middleware to read,
+      // and guarantees a fresh data fetch on the dashboard.
       window.location.href = '/dashboard';
 
     } catch (err) {

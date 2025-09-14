@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser } from '@/contexts/UserContext';
-import AccountSettings from '@/components/account-settings';
+import ProfileContent from '@/components/profile-content';
 import FullPageSpinner from '@/components/ui/FullPageSpinner';
 import DashboardLayout from '@/components/dashboard-layout';
 
@@ -21,7 +21,7 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <AccountSettings user={userDetails} />
+      <ProfileContent />
     </DashboardLayout>
   );
 }

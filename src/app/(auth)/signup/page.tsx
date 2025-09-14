@@ -9,34 +9,60 @@ import { Input } from '@/components/ui/input';
 import AnimatedTextCharacter from '@/components/ui/AnimatedTextCharacter';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import { useUser } from '@/contexts/UserContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
 import {
-  getAuth,
   createUserWithEmailAndPassword,
+  updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { persistentLog, clearPersistentLogs } from '@/lib/logger';
 import { toast } from 'sonner';
+import { persistentLog, clearPersistentLogs } from '@/lib/logger';
+import { auth } from '@/lib/firebase';
 
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const { userDetails } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const auth = getAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isFormShaking, setIsFormShaking] = useState(false);
+  const [hasTriggeredAccept, setHasTriggeredAccept] = useState(false);
   const [validationCriteria, setValidationCriteria] = useState({
     minLength: false,
     hasUpper: false,
     hasNumber: false,
     hasSymbol: false,
   });
+
+  const inviteToken = searchParams.get('invite_token');
+
+  const { mutate: acceptInvitation } = useMutation({
+    mutationFn: (token: string) => apiClient.post('/partner-invitations/accept', { invitation_token: token }),
+    onSuccess: () => {
+      toast.success("Invitation accepted!", {
+        description: "Your partnership is confirmed. Welcome to DuoTrak!",
+      });
+      // The middleware will handle the redirect to the dashboard on the next navigation.
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.detail || 'Failed to auto-accept invitation.';
+      toast.error('Partnership Error', { description: errorMessage });
+    },
+  });
+
+  useEffect(() => {
+    if (userDetails) {
+      setError('You already have an account. Please log in.');
+    }
+  }, [userDetails]);
 
   useEffect(() => {
     setValidationCriteria({
@@ -48,6 +74,32 @@ export default function SignupPage() {
   }, [password]);
 
   const allCriteriaMet = Object.values(validationCriteria).every(Boolean);
+
+  const handleAuthSuccess = async (firebaseToken: string) => {
+    try {
+      const response = await apiClient.post('/api/v1/auth/session-login', {
+        firebase_token: firebaseToken
+      });
+
+      if (typeof window !== 'undefined' && response.csrf_token) {
+        localStorage.setItem('csrf_token', response.csrf_token);
+      }
+
+      // Manually set the user data in the React Query cache
+      // This avoids the need for a follow-up request and prevents the race condition
+      queryClient.setQueryData(['user', 'me'], response.user);
+      
+      // This forces a full page reload, which is necessary to ensure the
+      // new session cookie is sent to the server for the middleware to read,
+      // and guarantees a fresh data fetch on the dashboard.
+      window.location.href = '/invite-partner';
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during login.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,24 +116,13 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       persistentLog('Email account created. Updating profile...');
       
-      // *** THIS IS THE FIX ***
-      // Update the user's profile with the full name.
       await updateProfile(userCredential.user, {
         displayName: fullName,
       });
       persistentLog('Profile updated with display name.');
       
-      // The UserContext's onAuthStateChanged will now handle the backend sync.
-      // It will automatically pick up the displayName.
-      
-      // We still need to pass the token for the invitation flow.
-      const invitationToken = searchParams.get('token');
-      if (invitationToken) {
-        // Redirect to a page that can handle the token after auth context is set.
-        // Or, we can rely on the context to handle it.
-        // For now, let's just let the context do its job.
-        // A redirect will be handled by the RouteGuard.
-      }
+      const firebaseToken = await userCredential.user.getIdToken();
+      await handleAuthSuccess(firebaseToken);
 
     } catch (error: any) {
       persistentLog('!!! Email Sign-Up FAILED !!!', { 
@@ -107,9 +148,10 @@ export default function SignupPage() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
       persistentLog('Google Sign-Up Popup Successful');
-      // The UserContext will handle the rest. The display name is already set by Google.
+      const firebaseToken = await result.user.getIdToken();
+      await handleAuthSuccess(firebaseToken);
       
     } catch (error: any) {
       let friendlyError = 'An unexpected error occurred during Google Sign-Up.';

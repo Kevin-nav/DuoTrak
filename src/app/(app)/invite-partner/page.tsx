@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { persistentLog } from '@/lib/logger';
-import { sendInvitation } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,10 +21,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 export default function InvitePartnerPage() {
-  // Protect this route: user must be authenticated and NOT have a partner.
-  useProtectedRoute({ protected: true, requiresNoPartner: true });
-
-  const { isLoading: isUserLoading } = useUser();
+  const { userDetails, isLoading: isUserLoading, sendInvitation } = useUser();
   const router = useRouter();
 
   const {
@@ -43,13 +38,9 @@ export default function InvitePartnerPage() {
     setError('root', { message: '' }); // Clear previous root errors
 
     try {
-      await sendInvitation({
-        receiver_name: data.partnerName,
-        receiver_email: data.partnerEmail,
-        expires_in_days: 7, // Default expiration
-      });
-      persistentLog('Invitation successfully created. Redirecting to pending page.');
-      router.push('/invite-partner/pending');
+      await sendInvitation(data.partnerEmail, data.partnerName);
+      persistentLog('Invitation successfully created. Redirecting to inviter setup page.');
+      router.push('/onboarding/setup');
 
     } catch (err: any) {
       persistentLog('Error inviting partner.', { error: err.message, stack: err.stack });

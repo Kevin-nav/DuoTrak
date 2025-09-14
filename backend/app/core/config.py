@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     FIREBASE_SERVICE_ACCOUNT_JSON_PATH: str
     FIREBASE_PROJECT_ID: str
-    CLIENT_ORIGIN_URL: str = "http://localhost:3000"
+    CLIENT_ORIGIN_URL: str = "https://localhost:3000"
     REDIS_URL: str
     RESEND_API_KEY: str
     DEFAULT_FROM_EMAIL: str
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "DuoTrak API"
     API_V1_STR: str = "/api/v1"
     BACKEND_CORS_ORIGINS: list[str] = ["http://127.0.0.1:3000"]
+    SESSION_COOKIE_NAME: str = "__session"
 
     class Config:
         # Pydantic-settings will automatically search for a .env file.

@@ -26,12 +26,11 @@ DuoTrak is a full-stack web application designed as a shared goals and tasks das
 ## Architecture & Key Concepts
 
 - **Monorepo Structure:** Frontend and backend code are in the same repository but are separate applications.
-- **Authentication Flow:**
-    1.  User signs in/up via Firebase on the client.
-    2.  Firebase ID token is sent to the backend.
-    3.  Backend validates the token, creates a session, and returns an HTTP-only `auth_token` cookie.
-    4.  The `middleware.ts` protects routes based on the presence of this cookie.
-    5.  The `UserContext.tsx` (powered by React Query) manages user state on the client.
+- **Authentication Flow:** The application uses a hybrid authentication model that leverages Firebase for identity verification and a custom backend for session management. This provides the security and convenience of Firebase Auth while giving the application full control over user sessions.
+    1.  **Step 1: Firebase Authentication (Client-Side):** The user signs in or signs up on the frontend using the Firebase SDK (Google OAuth or email/password). Upon success, the client receives a short-lived Firebase ID Token.
+    2.  **Step 2: Backend Session Handshake:** The frontend immediately sends the Firebase ID Token to the backend's `/api/v1/auth/session-login` endpoint. The backend, using the Firebase Admin SDK, verifies the token's authenticity. If valid, it creates or retrieves the user from its own database and generates a secure, `HttpOnly` session cookie named `__session`.
+    3.  **Step 3: Session Persistence & Middleware:** The browser stores this `__session` cookie and automatically sends it with every subsequent request to the backend. The `middleware.ts` intercepts all page navigations, checks for this cookie, and makes a server-to-server call to the backend's `/api/v1/users/me/status` endpoint to determine if the user is authorized to access the requested route based on their account status (e.g., `AWAITING_ONBOARDING`, `ACTIVE`).
+    4.  **Step 4: Client-Side State Hydration:** Once a user is on a protected page, the `UserContext.tsx` (powered by React Query) makes a client-side request to `/api/v1/users/me` to fetch the full, detailed user profile. The `RouteGuard.tsx` component uses this data to manage the UI state, such as showing loading spinners or performing client-side redirects, ensuring a smooth user experience.
 - **Routing:** Next.js App Router is used.
     - `(app)`: Main application routes (authenticated).
     - `(auth)`: Authentication-related routes.

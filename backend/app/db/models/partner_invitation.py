@@ -7,6 +7,7 @@ from sqlalchemy import Column, String, DateTime, ForeignKey, Index, text, Enum
 from sqlalchemy.dialects.postgresql import UUID
 
 
+
 from app.db.base import Base
 
 
@@ -82,6 +83,10 @@ class PartnerInvitation(Base):
         nullable=False, 
         server_default=text('now()'),
         onupdate=text('now()')
+    )
+    last_nudged_at = Column(
+        DateTime(timezone=True),
+        nullable=True
     )
     
     # Relationships to User are configured in app/db/models/__init__.py

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.db.base import Base
-from app.schemas.user import PartnershipStatus
+from app.schemas.user import AccountStatus
 
 if TYPE_CHECKING:
     from .partner_invitation import PartnerInvitation  # noqa: F401
@@ -24,7 +24,11 @@ class User(Base):
     firebase_uid = Column(String(255), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     full_name = Column(String(255), nullable=True)
-    onboarding_complete = Column(Boolean, default=False, nullable=False)
+    account_status = Column(
+    Enum('AWAITING_ONBOARDING', 'AWAITING_PARTNERSHIP', 'ACTIVE', name='accountstatus', create_type=False),
+    default='AWAITING_ONBOARDING',
+    nullable=False
+)
     partnership_status = Column(
     Enum('active', 'pending', 'no_partner', name='partnershipstatus', create_type=False),
     default='no_partner',

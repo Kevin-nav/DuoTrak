@@ -37,6 +37,7 @@ class PartnerInvitationInDBBase(PartnerInvitationBase):
     status: InvitationStatus
     created_at: datetime
     expires_at: datetime
+    last_nudged_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -48,6 +49,10 @@ class PartnerInvitation(PartnerInvitationInDBBase):
 class InvitationAction(BaseModel):
     invitation_id: uuid.UUID
 
+class InvitationActionWithToken(BaseModel):
+    invitation_token: str
+
+
 
 class PartnerInvitationResponse(BaseModel):
     """Response schema for partner invitation operations."""
@@ -55,4 +60,11 @@ class PartnerInvitationResponse(BaseModel):
     invitation: Optional[PartnerInvitation] = None
 
 # Forward reference resolution is handled in app.schemas.__init__.py
+
+class PublicInvitationDetails(BaseModel):
+    """Schema for public invitation details."""
+    sender_name: str
+    receiver_name: str
+    expires_at: datetime
+
 

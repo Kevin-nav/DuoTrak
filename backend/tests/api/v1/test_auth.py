@@ -1,8 +1,10 @@
 import pytest
 from httpx import AsyncClient
 from unittest.mock import AsyncMock
+import uuid
 
 from fastapi import HTTPException
+
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -34,10 +36,12 @@ async def test_session_login_success(client: AsyncClient, monkeypatch):
     # Mock the function that syncs the user profile to the DB
     # It should return a mock user object that includes DB-specific fields
     mock_db_user = type('User', (), {
+        'id': uuid.uuid4(), # Add the missing ID
         'firebase_uid': mock_user_data['uid'],
         'email': mock_user_data['email'],
         'onboarding_complete': False,
         'model_dump': lambda *args, **kwargs: {
+            'id': uuid.uuid4(),
             'firebase_uid': mock_user_data['uid'],
             'email': mock_user_data['email'],
             'onboarding_complete': False

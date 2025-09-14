@@ -16,12 +16,15 @@ from app.db.session import get_db
 from app.services.user_service import user_service
 from app.schemas.user import UserCreate, UserRead
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.limiter import limiter
 
 
+from starlette.datastructures import URL
 import logging
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
 
 
 # Pydantic models
@@ -37,7 +40,6 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 # Configuration
-SESSION_COOKIE_NAME = "__session"
 REFRESH_COOKIE_NAME = "__refresh"
 CSRF_COOKIE_NAME = "csrf_token"
 SESSION_DURATION = timedelta(hours=1)  # Shorter session duration
@@ -46,8 +48,12 @@ REFRESH_DURATION = timedelta(days=7)   # Longer refresh duration
 async def verify_firebase_token(token: str) -> dict:
     """Verify Firebase ID token and return user data"""
     try:
-        # Add a clock skew tolerance to handle potential time sync issues
-        decoded_token = firebase_auth.verify_id_token(token, clock_skew_seconds=15)
+        # Add a clock skew tolerance and check for revoked tokens
+        decoded_token = firebase_auth.verify_id_token(
+            token, 
+            check_revoked=True,
+            clock_skew_seconds=15
+        )
         return {
             'uid': decoded_token['uid'],
             'email': decoded_token.get('email'),
@@ -56,6 +62,8 @@ async def verify_firebase_token(token: str) -> dict:
             'picture': decoded_token.get('picture')
         }
     except Exception as e:
+        # Log the specific Firebase error for better debugging
+        logger.error(f"Firebase token verification failed with error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Firebase token: {str(e)}"
@@ -111,25 +119,27 @@ async def sync_user_profile(db: AsyncSession, user_data: dict) -> UserRead:
 
 
 @router.post("/session-login", response_model=SessionResponse)
+@limiter.limit("5/minute")
 async def session_login(
-    request: LoginRequest,
+    request: Request,
+    login_request: LoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
     csrf_protect: CsrfProtect = Depends()
 ):
     """
     Atomic session login endpoint.
-    Replaces the Next.js proxy pattern with direct communication.
+    This now dynamically sets the cookie domain based on the request's origin
+    to support cross-domain authentication during development and in production.
     """
     try:
         # 1. Verify Firebase token
-        user_data = await verify_firebase_token(request.firebase_token)
+        user_data = await verify_firebase_token(login_request.firebase_token)
     except HTTPException as e:
-        # If token verification fails, immediately raise the exception
         raise e
-    
+
     try:
-        # 2. Sync user profile in database and get the full user object
+        # 2. Sync user profile in database
         db_user = await sync_user_profile(db, user_data)
         
         # 3. Create session and refresh tokens
@@ -138,16 +148,26 @@ async def session_login(
         
         # 4. Generate CSRF tokens
         unsigned_token, signed_token = csrf_protect.generate_csrf_tokens()
-        
-        # 5. Set secure cookies
+
+        # 5. Dynamically determine cookie domain from request origin
+        origin = request.headers.get('origin')
+        cookie_domain = None
+        if origin:
+            origin_url = URL(origin)
+            cookie_domain = origin_url.hostname
+            # For production, you might want to add more validation here
+            # to ensure the origin is one of your allowed client domains.
+
+        # 6. Set secure cookies with the dynamic domain
         response.set_cookie(
-            key=SESSION_COOKIE_NAME,
+            key=settings.SESSION_COOKIE_NAME,
             value=session_token,
             expires=session_expires,
             httponly=True,
             secure=True,
             samesite='lax',
-            path='/'
+            path='/',
+            domain=cookie_domain
         )
         
         response.set_cookie(
@@ -157,17 +177,19 @@ async def session_login(
             httponly=True,
             secure=True,
             samesite='lax',
-            path='/api/v1/auth'  # Restrict to auth endpoints
+            path='/api/v1/auth',
+            domain=cookie_domain
         )
         
         response.set_cookie(
             key=CSRF_COOKIE_NAME,
             value=signed_token,
             expires=session_expires,
-            httponly=False,  # JavaScript needs access
+            httponly=False,
             secure=True,
             samesite='lax',
-            path='/'
+            path='/',
+            domain=cookie_domain
         )
         
         return SessionResponse(
@@ -177,6 +199,7 @@ async def session_login(
         )
         
     except Exception as e:
+        logger.error(f"Error in session_login after token verification: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Login failed: {str(e)}"
@@ -188,7 +211,7 @@ async def verify_session(request: Request):
     Verify session token - used by middleware and frontend
     """
     logger.info("Attempting to verify session...")
-    session_token = request.cookies.get(SESSION_COOKIE_NAME)
+    session_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
     
     if not session_token:
         logger.warning("No session token found in cookies.")
@@ -239,6 +262,7 @@ async def verify_session(request: Request):
         )
 
 @router.post("/refresh-session")
+@limiter.limit("10/minute")
 async def refresh_session(
     request: Request,
     response: Response,
@@ -274,7 +298,7 @@ async def refresh_session(
         
         # Set new session cookie
         response.set_cookie(
-            key=SESSION_COOKIE_NAME,
+            key=settings.SESSION_COOKIE_NAME,
             value=session_token,
             expires=session_expires,
             httponly=True,
@@ -317,7 +341,7 @@ async def logout(response: Response):
     """
     Logout endpoint - clears all auth cookies
     """
-    response.delete_cookie(SESSION_COOKIE_NAME, path='/')
+    response.delete_cookie(settings.SESSION_COOKIE_NAME, path='/')
     response.delete_cookie(REFRESH_COOKIE_NAME, path='/api/v1/auth')
     response.delete_cookie(CSRF_COOKIE_NAME, path='/')
     

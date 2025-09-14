@@ -7,7 +7,7 @@ export class ApiClient {
   private refreshPromise: Promise<void> | null = null;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
     console.log('--- [ApiClient] Initialized with baseUrl:', this.baseUrl);
   }
 
@@ -200,6 +200,31 @@ export class ApiClient {
   async getCurrentUser(): Promise<any> {
     console.log('--- [ApiClient] getCurrentUser called ---');
     return this.get('/api/v1/users/me');
+  }
+
+  // Invitation specific methods
+  async sendInvitation(email: string, name: string): Promise<any> {
+    return this.post('/api/v1/partner-invitations/invite', { receiver_email: email, receiver_name: name });
+  }
+
+  async withdrawInvitation(invitationId: string): Promise<any> {
+    return this.delete(`/api/v1/partner-invitations/invitations/${invitationId}`);
+  }
+
+  async getPublicInvitationDetails(token: string): Promise<{ sender_name: string; receiver_email: string; }> {
+    return this.get(`/api/v1/partner-invitations/details/${token}`);
+  }
+
+  async getUserStatusByEmail(email: string): Promise<{ user_exists: boolean; partnership_status: string | null }> {
+    return this.get(`/api/v1/users/status-by-email?email=${encodeURIComponent(email)}`);
+  }
+
+  async acceptInvitation(token: string): Promise<any> {
+    return this.post('/api/v1/partner-invitations/accept', { invitation_token: token });
+  }
+
+  async nudgePartner(invitationId: string): Promise<any> {
+    return this.post(`/api/v1/partner-invitations/invitations/${invitationId}/nudge`);
   }
 }
 

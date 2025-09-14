@@ -15,10 +15,14 @@ from app.core.config import settings
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.goals import router as goals_router
+from app.api.v1.endpoints.partner_invitations import router as partner_invitations_router
 from app.core.logging_config import setup_logging
-from app.core.limiter import limiter
+from app.core.limiter import limiter, key_func
 import firebase_admin
 from firebase_admin import credentials
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
@@ -39,16 +43,57 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Add the rate limiter to the application state and exception handler
+# Add the rate limiter to the application state
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Custom rate limit exceeded handler
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    """
+    Custom handler for rate limit exceeded errors.
+    Logs the user ID (if available), IP address, and the endpoint that was hit.
+    """
+    user_identifier = key_func(request)
+    logger.warning(
+        f"Rate limit exceeded for identifier: {user_identifier}. "
+        f"Path: {request.scope['path']}. "
+        f"Detail: {exc.detail}"
+    )
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": f"Rate limit exceeded: {exc.detail}"},
+    )
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Set up CORS middleware
+# Define allowed origins for local development to handle both localhost and 127.0.0.1
+allowed_origins = [
+    "https://localhost:3000",
+    "http://localhost:3000",
+    "https://127.0.0.1:3000",
+    "http://127.0.0.1:3000",
+]
+
+# In a production environment, you would fetch this from settings
+# if os.environ.get("ENV") == "production":
+#     allowed_origins = [settings.CLIENT_URL]
+
 # Set up CORS middleware
-# Set up CORS middleware
+# Define allowed origins for local development to handle both localhost and 127.0.0.1
+allowed_origins = [
+    "https://127.0.0.1:3000",
+    "http://127.0.0.1:3000",
+    "https://localhost:3000",
+    "http://localhost:3000",
+]
+
+# In a production environment, you would fetch this from settings
+# if os.environ.get("ENV") == "production":
+#     allowed_origins = [settings.CLIENT_URL]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,10 +120,18 @@ def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError):
 async def root():
     return {"message": "Welcome to the DuoTrak API"}
 
+@app.get("/test-rate-limit", tags=["Test"])
+@limiter.limit("2/minute")
+async def test_rate_limit(request: Request):
+    return {"message": "Success"}
+
+
+
 # Include the authentication router
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
 app.include_router(goals_router, prefix="/api/v1/goals", tags=["goals"])
+app.include_router(partner_invitations_router, prefix="/api/v1/partner-invitations", tags=["partner-invitations"])
 
 # ... (keep other routers if any)
 

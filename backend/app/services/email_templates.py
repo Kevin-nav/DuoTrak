@@ -292,3 +292,104 @@ def get_invitation_rejected_email(
     
     return subject, html_content
 
+
+def get_nudge_email(
+    sender_name: str,
+    receiver_name: str,
+    accept_url: str,
+) -> tuple[str, str]:
+    """
+    Generate the subject and HTML content for a nudge email.
+    """
+    subject = f"A friendly reminder from {sender_name}!"
+    
+    html_content = f'''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{subject}</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Ubuntu, sans-serif;
+                background-color: #f0f2f5;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 20px auto;
+                background-color: #ffffff;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            }}
+            .header {{
+                background: linear-gradient(135deg, #facc15 0%, #fb923c 100%);
+                color: #422006;
+                padding: 40px;
+                text-align: center;
+            }}
+            .header h1 {{
+                margin: 0;
+                font-size: 28px;
+                font-weight: 700;
+            }}
+            .content {{
+                padding: 30px 40px;
+                line-height: 1.7;
+                color: #555;
+            }}
+            .content p {{
+                margin: 0 0 15px;
+            }}
+            .button-container {{
+                text-align: center;
+                margin: 30px 0;
+            }}
+            .button {{
+                display: inline-block;
+                padding: 15px 30px;
+                background-color: #5850ec;
+                color: #ffffff !important;
+                text-decoration: none;
+                border-radius: 50px;
+                font-weight: 600;
+                transition: background-color 0.3s ease;
+            }}
+            .button:hover {{
+                background-color: #473ddb;
+            }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                font-size: 12px;
+                color: #999;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Just a Friendly Nudge!</h1>
+            </div>
+            <div class="content">
+                <p>Hi {receiver_name},</p>
+                <p>Just a friendly reminder that <strong>{sender_name}</strong> is excited to start a partnership with you on DuoTrak.</p>
+                <p>Your invitation is still waiting. Join them to start tracking goals and achieving more together!</p>
+                <div class="button-container">
+                    <a href="{accept_url}" class="button">View Invitation</a>
+                </div>
+            </div>
+            <div class="footer">
+                <p>&copy; 2025 DuoTrak. Let's achieve more, together.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return subject, html_content
+

@@ -9,6 +9,8 @@ import logging
 from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 
 from app import schemas
 from app.db import models
@@ -120,12 +122,22 @@ class PartnerInvitationService:
         )
         logger.info(f"All validation passed. Creating invitation object for '{invitation.receiver_email}'.")
 
+        # Update the sender's status to reflect that they are waiting for a partner
+        sender.account_status = schemas.AccountStatus.AWAITING_PARTNERSHIP
+        logger.info(f"Updating sender {sender.id} status to AWAITING_PARTNERSHIP.")
+
         # --- Database Transaction ---
         try:
             logger.info("Adding invitation to the database session.")
             self.db.add(invitation)
             await self.db.commit()
             await self.db.refresh(invitation)
+            
+            # Eagerly load the sender relationship for the response model
+            stmt = select(PartnerInvitationModel).options(selectinload(PartnerInvitationModel.sender)).where(PartnerInvitationModel.id == invitation.id)
+            result = await self.db.execute(stmt)
+            invitation = result.scalars().one()
+
             logger.info(f"Successfully committed invitation {invitation.id} to the database.")
         except Exception as e:
             # THIS IS THE MOST IMPORTANT LOG. IT WILL SHOW THE ROOT CAUSE.
@@ -158,6 +170,51 @@ class PartnerInvitationService:
             )
 
         return invitation
+
+    async def accept_invitation_by_token(
+        self,
+        token: str,
+        user: User,
+    ) -> PartnerInvitationModel:
+        """
+        Accept a partner invitation using the invitation token.
+        This method includes the crucial security check.
+        """
+        invitation = await self._get_invitation_by_token(token)
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invitation not found, is invalid, or has expired."
+            )
+        
+        return await self.respond_to_invitation(
+            invitation_id=invitation.id,
+            user=user,
+            accept=True
+        )
+
+    async def get_public_invitation_details(
+        self, 
+        token: str
+    ) -> Optional[schemas.PublicInvitationDetails]:
+        """
+        Get public details of an invitation by its token.
+        Does not require authentication.
+        """
+        invitation = await self._get_invitation_by_token(token)
+        if not invitation:
+            return None
+        
+        sender = await self.db.get(User, invitation.sender_id)
+        if not sender:
+            # This case is unlikely but handled for robustness
+            return None
+
+        return schemas.PublicInvitationDetails(
+            sender_name=sender.full_name or "A DuoTrak User",
+            receiver_name=invitation.receiver_name or "a friend",
+            expires_at=invitation.expires_at,
+        )
 
     async def get_invitation_by_token(
         self, 
@@ -251,6 +308,13 @@ class PartnerInvitationService:
                 detail="Invitation not found or already responded to"
             )
         
+        # SECURITY CHECK: Verify the logged-in user is the intended recipient
+        if invitation.receiver_email.lower() != user.email.lower():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to respond to this invitation."
+            )
+        
         # Check if the invitation has expired
         if invitation.is_expired:
             invitation.status = schemas.InvitationStatus.EXPIRED
@@ -310,8 +374,8 @@ class PartnerInvitationService:
                 # Update the user who accepted the invitation
                 user.current_partner_id = sender.id
                 user.partnership_status = schemas.PartnershipStatus.ACTIVE
-                user.onboarding_complete = True
-                sender.onboarding_complete = True
+                user.account_status = schemas.AccountStatus.ACTIVE
+                sender.account_status = schemas.AccountStatus.ACTIVE
                 
                 # Update the invitation
                 invitation.accepted_at = datetime.now(timezone.utc)
@@ -406,6 +470,33 @@ class PartnerInvitationService:
         
         return invitation
 
+    async def nudge_invitation(self, invitation_id: uuid.UUID, user: User):
+        """Send a nudge for a pending invitation."""
+        invitation = await self.db.get(PartnerInvitationModel, invitation_id)
+
+        if not invitation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitation not found.")
+
+        if invitation.sender_id != user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to nudge this invitation.")
+
+        if invitation.status != schemas.InvitationStatus.PENDING:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invitation is not pending.")
+
+        if invitation.last_nudged_at and datetime.now(timezone.utc) - invitation.last_nudged_at < timedelta(days=1):
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="You can only send one nudge per day.")
+
+        email_service = EmailService()
+        email_service.send_nudge_email(
+            sender=user,
+            receiver_email=invitation.receiver_email,
+            receiver_name=invitation.receiver_name,
+            invitation_token=str(invitation.invitation_token),
+        )
+
+        invitation.last_nudged_at = datetime.now(timezone.utc)
+        await self.db.commit()
+
 async def accept_invitation(db: AsyncSession, invitation_id_str: str, user: User) -> User:
     """
     Accepts a partner invitation using the invitation token string.
@@ -448,7 +539,7 @@ async def accept_invitation(db: AsyncSession, invitation_id_str: str, user: User
     # Refresh the user object and eagerly load related badges and all columns
     await db.refresh(user, attribute_names=[
         "user_badges",
-        "id", "firebase_uid", "email", "full_name", "onboarding_complete",
+        "id", "firebase_uid", "email", "full_name", "account_status",
         "partnership_status", "bio", "profile_picture_url", "timezone",
         "notifications_enabled", "current_streak", "longest_streak",
         "total_tasks_completed", "goals_conquered", "current_partner_id",

@@ -10,6 +10,8 @@ from app.db.models.user import User
 from .email_templates import (
     get_partner_invitation_email,
     get_invitation_accepted_email,
+    get_invitation_rejected_email,
+    get_nudge_email,
 )
 
 # Configure logging
@@ -163,6 +165,43 @@ class EmailService:
         # Send the email
         return cls._send_email(
             to=sender.email,
+            subject=subject,
+            html=html_content,
+        )
+
+    @classmethod
+    def send_nudge_email(
+        cls,
+        sender: User,
+        receiver_email: str,
+        invitation_token: str,
+        receiver_name: Optional[str] = None,
+    ) -> dict:
+        """
+        Send a nudge (reminder) email for a pending invitation.
+        
+        Args:
+            sender: The user who sent the invitation
+            receiver_email: Email address of the recipient
+            invitation_token: The invitation token
+            receiver_name: Optional name of the recipient
+            
+        Returns:
+            Response from Resend API
+        """
+        if receiver_name is None:
+            receiver_name = receiver_email.split('@')[0]
+        
+        accept_url = f"{settings.CLIENT_ORIGIN_URL}/invite/{invitation_token}"
+        
+        subject, html_content = get_nudge_email(
+            sender_name=sender.full_name or sender.email.split('@')[0],
+            receiver_name=receiver_name,
+            accept_url=accept_url,
+        )
+        
+        return cls._send_email(
+            to=receiver_email,
             subject=subject,
             html=html_content,
         )

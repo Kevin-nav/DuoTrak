@@ -16,6 +16,8 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.core.security import get_current_user
+from app.db import models
+from app.schemas.user import AccountStatus
 
 # Use an in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
@@ -57,3 +59,58 @@ async def test_app() -> FastAPI:
 async def client(test_app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
         yield c
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    async with engine.begin() as connection:
+        async with TestingSessionLocal(bind=connection) as session:
+            yield session
+            await session.flush()
+            await session.rollback()
+            await connection.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def user_awaiting_onboarding(db_session: AsyncSession) -> models.User:
+    """Creates a user who has just signed up."""
+    user = models.User(
+        firebase_uid="test_uid_onboarding",
+        email="onboarding@test.com",
+        full_name="Onboarding User",
+        account_status=AccountStatus.AWAITING_ONBOARDING,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture(scope="function")
+async def user_awaiting_partnership(db_session: AsyncSession) -> models.User:
+    """Creates a user who has completed onboarding but has no partner."""
+    user = models.User(
+        firebase_uid="test_uid_partnership",
+        email="partnership@test.com",
+        full_name="Partnership User",
+        account_status=AccountStatus.AWAITING_PARTNERSHIP,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture(scope="function")
+async def active_user(db_session: AsyncSession) -> models.User:
+    """Creates a user who is fully active."""
+    user = models.User(
+        firebase_uid="test_uid_active",
+        email="active@test.com",
+        full_name="Active User",
+        account_status=AccountStatus.ACTIVE,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user

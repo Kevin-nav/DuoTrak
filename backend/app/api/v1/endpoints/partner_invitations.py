@@ -2,6 +2,9 @@
 from typing import Any, List, Optional
 import uuid
 import logging
+import jwt
+from jwt import PyJWTError
+
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import select
@@ -9,14 +12,56 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
 from app.db.session import get_db
-from app.core.security import get_current_active_user
+from app.core.config import settings
 from app.db import models
 from app.services.partner_invitation_service import PartnerInvitationService
+from app.services.user_service import UserService
 from app.core.limiter import limiter
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+user_service = UserService()
+
+async def get_current_user_from_cookie(
+    request: Request, db: AsyncSession = Depends(get_db)
+) -> models.User:
+    """
+    Dependency to get the current user from the session cookie.
+    """
+    session_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
+    if not session_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    try:
+        payload = jwt.decode(
+            session_token, settings.SECRET_KEY, algorithms=["HS256"]
+        )
+        user_id_str = payload.get("uid")
+        if user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+            )
+        try:
+            user_id = uuid.UUID(user_id_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user ID in token"
+            )
+            
+        user = await user_service.get_user_by_id(db, user_id=user_id)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+        return user
+    except PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
 
 
 @router.post(
@@ -29,7 +74,7 @@ async def create_partner_invitation(
     request: Request,
     invitation_in: schemas.PartnerInvitationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(get_current_user_from_cookie),
 ) -> Any:
     logger.info(
         f"User '{current_user.email}' ({current_user.id}) is attempting to invite a partner."
@@ -87,7 +132,7 @@ async def list_partner_invitations(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(get_current_user_from_cookie),
 ) -> List[schemas.PartnerInvitation]:
     """
     List all partner invitations for the current user.
@@ -116,7 +161,7 @@ async def get_partner_invitation(
     request: Request,
     invitation_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(get_current_user_from_cookie),
 ) -> Any:
     """
     Get a specific partner invitation by ID.
@@ -157,18 +202,41 @@ async def get_partner_invitation(
     }
 
 
+@router.get(
+    "/invitations/details/{token}",
+    response_model=schemas.PublicInvitationDetails,
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("15/minute")
+async def get_public_invitation_details(
+    request: Request,
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Get public details of an invitation using the token.
+    This endpoint is not authenticated and only returns non-sensitive information.
+    """
+    service = PartnerInvitationService(db)
+    details = await service.get_public_invitation_details(token)
+    if not details:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found or has expired.",
+        )
+    return details
+
+
 @router.post("/accept", response_model=schemas.PartnerInvitationResponse)
 @limiter.limit("10/minute")
 async def accept_partner_invitation(
     request: Request,
-    payload: schemas.InvitationAction,
+    payload: schemas.InvitationActionWithToken,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(get_current_user_from_cookie),
 ) -> Any:
     """
-    Accept a partner invitation.
-    
-    - **invitation_id**: The ID of the invitation to accept
+    Accept a partner invitation using an invitation token.
     """
     # Check if user already has a partner
     if current_user.current_partner_id:
@@ -179,10 +247,12 @@ async def accept_partner_invitation(
     
     service = PartnerInvitationService(db)
     
-
-    
     try:
-        invitation = await service.respond_to_invitation(payload.invitation_id, current_user, accept=True)
+        # The service now handles the token lookup and acceptance
+        invitation = await service.accept_invitation_by_token(
+            token=payload.invitation_token, 
+            user=current_user
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -205,7 +275,7 @@ async def reject_partner_invitation(
     request: Request,
     payload: schemas.InvitationAction,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(get_current_user_from_cookie),
 ) -> Any:
     """
     Reject a partner invitation.
@@ -243,7 +313,7 @@ async def revoke_partner_invitation(
     request: Request,
     invitation_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(get_current_user_from_cookie),
 ) -> Any:
     """
     Revoke a sent partner invitation.
@@ -276,3 +346,39 @@ async def revoke_partner_invitation(
         "message": "Invitation revoked successfully",
         "data": invitation
     }
+
+
+@router.post(
+    "/invitations/{invitation_id}/nudge",
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("3/day")
+async def nudge_partner(
+    request: Request,
+    invitation_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user_from_cookie),
+):
+    """
+    Send a reminder nudge for a pending invitation.
+    """
+    service = PartnerInvitationService(db)
+    try:
+        invitation_uuid = uuid.UUID(invitation_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid invitation ID format"
+        )
+
+    try:
+        await service.nudge_invitation(invitation_uuid, current_user)
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while sending the nudge."
+        )
+
+    return {"message": "Nudge sent successfully"}

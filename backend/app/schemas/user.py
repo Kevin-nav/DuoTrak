@@ -10,6 +10,12 @@ from typing import Optional, TYPE_CHECKING, List
 if TYPE_CHECKING:
     from .partner_invitation import PartnerInvitation
 
+class AccountStatus(str, Enum):
+    """Enum for account statuses."""
+    AWAITING_ONBOARDING = "AWAITING_ONBOARDING"
+    AWAITING_PARTNERSHIP = "AWAITING_PARTNERSHIP"
+    ACTIVE = "ACTIVE"
+
 class PartnershipStatus(str, Enum):
     """Enum for partnership statuses."""
     ACTIVE = "active"
@@ -49,12 +55,13 @@ class UserUpdate(BaseModel):
     profile_picture_url: Optional[str] = None
     timezone: Optional[str] = None
     notifications_enabled: Optional[bool] = None
-    onboarding_complete: Optional[bool] = None
+    account_status: Optional[AccountStatus] = None
 
 # Properties to return to the client (from the API)
 class UserRead(UserBase):
     id: uuid.UUID
-    onboarding_complete: bool
+    firebase_uid: str
+    account_status: AccountStatus
     partnership_status: PartnershipStatus
     partner_id: Optional[uuid.UUID] = None
     partner_full_name: Optional[str] = None
@@ -80,7 +87,7 @@ class UserRead(UserBase):
 class UserInDB(UserBase):
     id: uuid.UUID
     firebase_uid: str
-    onboarding_complete: bool = False
+    account_status: AccountStatus = AccountStatus.AWAITING_ONBOARDING
     partnership_status: PartnershipStatus = PartnershipStatus.NO_PARTNER
     current_partner_id: Optional[uuid.UUID] = None
 

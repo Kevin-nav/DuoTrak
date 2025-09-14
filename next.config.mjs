@@ -51,7 +51,9 @@ const envSchema = z.object({
 
 console.log('[next.config.mjs] 3. About to validate environment variables...');
 try {
-  envSchema.parse(process.env);
+  // Use the parsed variables from dotenv result directly for validation
+  const envToValidate = { ...dotenvResult.parsed, ...process.env };
+  envSchema.parse(envToValidate);
   console.log('✅ [next.config.mjs] 4. Environment variables validated successfully.');
 } catch (error) {
   console.error('❌ [next.config.mjs] 4. FATAL: Invalid environment variables. Crashing build.', error.errors);
@@ -60,16 +62,7 @@ try {
 
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: process.env.FASTAPI_URL || 'https://127.0.0.1:8000/api/:path*',
-      },
-    ]
-  },
-};
+const nextConfig = {};
 
 console.log('--- [next.config.mjs] End of file ---');
 

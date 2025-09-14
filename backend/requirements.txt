@@ -9,8 +9,14 @@ slowapi
 redis
 resend==0.8.0
 alembic
-psycopg2-binary
 supabase
 fastapi-csrf-protect
 PyJWT  
 fastapi-csrf-protect 
+asyncpg
+httpx
+pytest
+pytest-asyncio
+aiosqlite
+email-validator
+python-multipart

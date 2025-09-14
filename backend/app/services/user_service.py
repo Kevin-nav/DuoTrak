@@ -5,12 +5,24 @@ from sqlalchemy.future import select
 from fastapi import HTTPException, status
 
 from app.db.models.user import User
+from app.db.models.partner_invitation import PartnerInvitation
 from app.schemas.user import UserCreate, UserUpdate
 
 from sqlalchemy.orm import selectinload, load_only
 
 
+
 class UserService:
+    async def has_pending_invitation(self, db: AsyncSession, user: User) -> bool:
+        """
+        Checks if the user has a pending invitation that they have sent.
+        """
+        stmt = select(PartnerInvitation).where(
+            PartnerInvitation.sender_id == user.id,
+            PartnerInvitation.status == 'pending'
+        )
+        result = await db.execute(stmt)
+        return result.scalars().first() is not None
     async def get_user_by_firebase_uid(self, db: AsyncSession, firebase_uid: str):
         """
         Retrieve a user by their Firebase UID, ensuring all columns and badges are loaded.
@@ -18,7 +30,7 @@ class UserService:
         stmt = select(User).options(
             selectinload(User.user_badges),
             load_only(
-                User.id, User.firebase_uid, User.email, User.full_name, User.onboarding_complete,
+                User.id, User.firebase_uid, User.email, User.full_name, User.account_status,
                 User.partnership_status, User.bio, User.profile_picture_url, User.timezone,
                 User.notifications_enabled, User.current_streak, User.longest_streak,
                 User.total_tasks_completed, User.goals_conquered, User.current_partner_id,
@@ -35,7 +47,7 @@ class UserService:
         stmt = select(User).options(
             selectinload(User.user_badges),
             load_only(
-                User.id, User.firebase_uid, User.email, User.full_name, User.onboarding_complete,
+                User.id, User.firebase_uid, User.email, User.full_name, User.account_status,
                 User.partnership_status, User.bio, User.profile_picture_url, User.timezone,
                 User.notifications_enabled, User.current_streak, User.longest_streak,
                 User.total_tasks_completed, User.goals_conquered, User.current_partner_id,
@@ -52,7 +64,7 @@ class UserService:
         stmt = select(User).options(
             selectinload(User.user_badges),
             load_only(
-                User.id, User.firebase_uid, User.email, User.full_name, User.onboarding_complete,
+                User.id, User.firebase_uid, User.email, User.full_name, User.account_status,
                 User.partnership_status, User.bio, User.profile_picture_url, User.timezone,
                 User.notifications_enabled, User.current_streak, User.longest_streak,
                 User.total_tasks_completed, User.goals_conquered, User.current_partner_id,

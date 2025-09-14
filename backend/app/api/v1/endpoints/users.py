@@ -1,23 +1,32 @@
 # backend/app/api/v1/endpoints/users.py
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 from jwt import PyJWTError
 from fastapi import Request
 import logging
+from pydantic import BaseModel, EmailStr
 
 from app.db.session import get_db
-from app.schemas.user import UserRead, UserUpdate
+from app.schemas.user import UserRead, UserUpdate, PartnershipStatus, AccountStatus
 from app.services.user_service import UserService # Import the class
 from app.services import storage_service # Keep this import
 from app.core.config import settings
-from app.api.v1.endpoints.auth import SESSION_COOKIE_NAME
 from app.core.limiter import limiter
-
+from app.db.models import PartnerInvitation
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 user_service = UserService() # Create a local instance
+
+class MiddlewareStatusResponse(BaseModel):
+    account_status: AccountStatus
+    has_pending_invitation: bool
+
+class UserStatusResponse(BaseModel):
+    user_exists: bool
+    partnership_status: PartnershipStatus | None = None
+
 
 async def get_current_user_from_cookie(
     request: Request, db: AsyncSession = Depends(get_db)
@@ -25,7 +34,7 @@ async def get_current_user_from_cookie(
     """
     Dependency to get the current user from the session cookie.
     """
-    session_token = request.cookies.get(SESSION_COOKIE_NAME)
+    session_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
     if not session_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,6 +70,20 @@ async def read_users_me(
     """
     return current_user
 
+@router.get("/me/status", response_model=MiddlewareStatusResponse)
+async def get_user_status_for_middleware(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserRead = Depends(get_current_user_from_cookie),
+):
+    """
+    A lightweight endpoint for the frontend middleware to check the user's status.
+    """
+    has_pending = await user_service.has_pending_invitation(db, current_user)
+    return {
+        "account_status": current_user.account_status,
+        "has_pending_invitation": has_pending,
+    }
+
 @router.patch("/me", response_model=UserRead)
 @limiter.limit("10/minute")
 async def update_user_profile(
@@ -73,9 +96,8 @@ async def update_user_profile(
     Update the current user's profile.
     """
     logger.info(f"--- Updating profile for user_id: {current_user.id} ---")
-    # This call requires the user object, not just the ID
     updated_user = await user_service.update_user(
-        db=db, user=current_user, user_update=user_update
+        db=db, user_id=current_user.id, user_in=user_update
     )
     logger.info(f"Successfully updated profile for user {current_user.id}")
     return updated_user
@@ -137,3 +159,30 @@ async def remove_profile_picture(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while removing the profile picture.",
         )
+
+@router.get("/status-by-email", response_model=UserStatusResponse)
+@limiter.limit("20/minute")
+async def get_user_status_by_email(
+    request: Request,
+    email: EmailStr = Query(..., description="The email address to check."),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Check if a user exists by email and get their partnership status.
+    This is a public endpoint and does not require authentication.
+    """
+    logger.info(f"--- Checking status for email: {email} ---")
+    user = await user_service.get_user_by_email(db, email=email)
+    
+    if user:
+        logger.info(f"User found for email {email}. Status: {user.partnership_status}")
+        return {
+            "user_exists": True,
+            "partnership_status": user.partnership_status,
+        }
+    else:
+        logger.info(f"No user found for email {email}.")
+        return {
+            "user_exists": False,
+            "partnership_status": None,
+        }
