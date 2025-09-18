@@ -28,10 +28,14 @@ export default function ProfileContent() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [currentPasswordForReauth, setCurrentPasswordForReauth] = useState("")
+  const [nickname, setNickname] = useState("")
 
   useEffect(() => {
     if (userDetails) {
       setNewEmail(userDetails.email)
+      // You might need to adjust your API to return the user's own nickname for their partner
+      // For now, we'll initialize it as empty or from a placeholder
+      setNickname(userDetails.nickname || "")
     }
   }, [userDetails])
 
@@ -62,6 +66,20 @@ export default function ProfileContent() {
     { value: "Asia/Tokyo", label: "Japan Standard Time (JST)" },
     { value: "Australia/Sydney", label: "Sydney (AET)" },
   ]
+
+  const handleNicknameSave = async () => {
+    try {
+      await apiFetch("/api/v1/users/me", {
+        method: "PUT",
+        body: JSON.stringify({ nickname: nickname }),
+      })
+      refetchUserDetails()
+      toast.success("Nickname updated successfully!")
+    } catch (error) {
+      toast.error("Failed to update nickname.")
+      console.error("Failed to update nickname:", error)
+    }
+  }
 
   const handleEmailSave = async () => {
     const auth = getAuth()
@@ -402,6 +420,32 @@ export default function ProfileContent() {
                 </div>
               </DialogContent>
             </Dialog>
+          </div>
+
+          <Separator />
+
+          {/* Nickname */}
+          <div className="flex items-center justify-between p-4 rounded-lg hover:bg-[var(--theme-muted)] transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[var(--theme-accent)]">
+                <User className="w-5 h-5 text-[var(--theme-primary)]" />
+              </div>
+              <div>
+                <h3 className="font-medium text-[var(--theme-foreground)]">Nickname</h3>
+                <p className="text-sm text-[var(--theme-secondary)]">Set a nickname for your partner to see</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                className="w-48"
+                placeholder="e.g., Alex"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+              />
+              <Button variant="outline" size="sm" onClick={handleNicknameSave}>
+                Save
+              </Button>
+            </div>
           </div>
 
           <Separator />

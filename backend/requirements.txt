@@ -20,3 +20,4 @@ pytest-asyncio
 aiosqlite
 email-validator
 python-multipart
+psycopg2-binary

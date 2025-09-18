@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, ForeignKey, UniqueConstraint, CheckConstraint, TIMESTAMP
+from sqlalchemy import Column, ForeignKey, UniqueConstraint, CheckConstraint, TIMESTAMP, String, DateTime, text
 from sqlalchemy.dialects.postgresql import ENUM, UUID
 
 from sqlalchemy.sql import func
@@ -12,7 +12,12 @@ class Partnership(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user1_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    user2_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user2_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    user1_nickname = Column(String(100), nullable=True)
+    user2_nickname = Column(String(100), nullable=True)
+    status = Column(String, default='active')
+    start_date = Column(DateTime(timezone=True), server_default=text('now()'))
+    end_date = Column(DateTime(timezone=True), nullable=True)
     start_date = Column(TIMESTAMP(timezone=True), nullable=False)
     status = Column(
         ENUM(PartnershipStatus, name="partnership_status_enum", create_type=False),

@@ -1,4 +1,4 @@
-"""Service for handling partner invitation operations."""
+'''Service for handling partner invitation operations.'''
 
 import uuid
 
@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 class PartnerInvitationService:
-    """Service class for partner invitation operations."""
+    '''Service class for partner invitation operations.'''
 
     def __init__(self, db: AsyncSession):
-        """Initialize with database session."""
+        '''Initialize with database session.'''
         self.db = db
 
     async def _get_user_by_email(self, email: str) -> Optional[User]:
-        """Get a user by email."""
+        '''Get a user by email.'''
         stmt = select(User).where(User.email == email)
         result = await self.db.execute(stmt)
         return result.scalars().first()
@@ -41,7 +41,7 @@ class PartnerInvitationService:
         token: str,
         include_expired: bool = False
     ) -> Optional[PartnerInvitationModel]:
-        """Get an invitation by its token."""
+        '''Get an invitation by its token.'''
         try:
             invitation_uuid = uuid.UUID(token)
         except ValueError:
@@ -61,7 +61,7 @@ class PartnerInvitationService:
         sender: User, 
         invitation_in: schemas.PartnerInvitationCreate
     ) -> PartnerInvitationModel:
-        """Create a new partner invitation.
+        '''Create a new partner invitation.
         
         Args:
             sender: The user sending the invitation
@@ -72,7 +72,7 @@ class PartnerInvitationService:
             
         Raises:
             HTTPException: If the invitation cannot be created
-        """
+        '''
         # Rule 1: Cannot invite yourself
         logger.info(f"Rule 1: Checking if sender '{sender.email}' is inviting themselves.")
         if sender.email.lower() == invitation_in.receiver_email.lower():
@@ -118,6 +118,7 @@ class PartnerInvitationService:
             sender_id=sender.id,
             receiver_name=invitation_in.receiver_name,
             receiver_email=invitation_in.receiver_email,
+            message=invitation_in.message,  # Save the custom message
             expires_at=datetime.now(timezone.utc) + timedelta(days=invitation_in.expires_in_days),
         )
         logger.info(f"All validation passed. Creating invitation object for '{invitation.receiver_email}'.")
@@ -138,7 +139,6 @@ class PartnerInvitationService:
             result = await self.db.execute(stmt)
             invitation = result.scalars().one()
 
-            logger.info(f"Successfully committed invitation {invitation.id} to the database.")
         except Exception as e:
             # THIS IS THE MOST IMPORTANT LOG. IT WILL SHOW THE ROOT CAUSE.
             logger.critical(
@@ -152,6 +152,7 @@ class PartnerInvitationService:
                 detail="A critical error occurred while saving the invitation."
             ) from e
 
+        logger.info(f"Successfully committed invitation {invitation.id} with token {invitation.invitation_token} to the database.")
         try:
             email_service = EmailService()
             email_service.send_partner_invitation(
@@ -159,6 +160,7 @@ class PartnerInvitationService:
                 receiver_email=invitation_in.receiver_email,
                 receiver_name=invitation_in.receiver_name,
                 invitation_token=str(invitation.invitation_token),
+                message=invitation_in.message,
                 expires_in_days=7
             )
             logger.info(f"Invitation email sent to {invitation.receiver_email}")
@@ -176,10 +178,10 @@ class PartnerInvitationService:
         token: str,
         user: User,
     ) -> PartnerInvitationModel:
-        """
+        '''
         Accept a partner invitation using the invitation token.
         This method includes the crucial security check.
-        """
+        '''
         invitation = await self._get_invitation_by_token(token)
         if not invitation:
             raise HTTPException(
@@ -197,10 +199,10 @@ class PartnerInvitationService:
         self, 
         token: str
     ) -> Optional[schemas.PublicInvitationDetails]:
-        """
+        '''
         Get public details of an invitation by its token.
         Does not require authentication.
-        """
+        '''
         invitation = await self._get_invitation_by_token(token)
         if not invitation:
             return None
@@ -212,7 +214,9 @@ class PartnerInvitationService:
 
         return schemas.PublicInvitationDetails(
             sender_name=sender.full_name or "A DuoTrak User",
+            sender_profile_picture_url=sender.profile_picture_url,
             receiver_name=invitation.receiver_name or "a friend",
+            custom_message=invitation.message,
             expires_at=invitation.expires_at,
         )
 
@@ -221,7 +225,7 @@ class PartnerInvitationService:
         token: str,
         include_expired: bool = False
     ) -> Optional[PartnerInvitationModel]:
-        """Get an invitation by its token.
+        '''Get an invitation by its token.
         
         Args:
             token: The invitation token
@@ -229,7 +233,7 @@ class PartnerInvitationService:
             
         Returns:
             The invitation if found, None otherwise
-        """
+        '''
         return await self._get_invitation_by_token(token, include_expired)
 
     async def get_user_invitations(
@@ -239,7 +243,7 @@ class PartnerInvitationService:
         limit: int = 100,
         skip: int = 0
     ) -> Tuple[List[PartnerInvitationModel], int]:
-        """Get all invitations for a user.
+        '''Get all invitations for a user.
         
         Args:
             user: The user to get invitations for
@@ -249,7 +253,7 @@ class PartnerInvitationService:
             
         Returns:
             A tuple of (invitations, total_count)
-        """
+        '''
         # Base query for filtering invitations
         base_query = select(PartnerInvitationModel).where(
             (PartnerInvitationModel.sender_id == user.id) | 
@@ -277,7 +281,7 @@ class PartnerInvitationService:
         user: User,
         accept: bool
     ) -> PartnerInvitationModel:
-        """Respond to a partner invitation.
+        '''Respond to a partner invitation.
         
         Args:
             invitation_id: The ID of the invitation to respond to
@@ -289,7 +293,7 @@ class PartnerInvitationService:
             
         Raises:
             HTTPException: If the invitation is not found or cannot be responded to
-        """
+        '''
         # Get the invitation
         stmt = (
             select(PartnerInvitationModel)
@@ -374,7 +378,7 @@ class PartnerInvitationService:
                 # Update the user who accepted the invitation
                 user.current_partner_id = sender.id
                 user.partnership_status = schemas.PartnershipStatus.ACTIVE
-                user.account_status = schemas.AccountStatus.ACTIVE
+                user.account_status = schemas.AccountStatus.ONBOARDING_PARTNERED
                 sender.account_status = schemas.AccountStatus.ACTIVE
                 
                 # Update the invitation
@@ -428,7 +432,7 @@ class PartnerInvitationService:
         invitation_id: uuid.UUID,
         user: User
     ) -> PartnerInvitationModel:
-        """Revoke a sent invitation with detailed validation.
+        '''Revoke a sent invitation with detailed validation.
         
         Args:
             invitation_id: The ID of the invitation to revoke
@@ -439,7 +443,7 @@ class PartnerInvitationService:
             
         Raises:
             HTTPException: If the invitation is not found or cannot be revoked
-        """
+        '''
         # Step 1: Find the invitation by ID
         invitation = await self.db.get(PartnerInvitationModel, invitation_id)
         if not invitation:
@@ -471,7 +475,7 @@ class PartnerInvitationService:
         return invitation
 
     async def nudge_invitation(self, invitation_id: uuid.UUID, user: User):
-        """Send a nudge for a pending invitation."""
+        '''Send a nudge for a pending invitation.'''
         invitation = await self.db.get(PartnerInvitationModel, invitation_id)
 
         if not invitation:
@@ -497,8 +501,44 @@ class PartnerInvitationService:
         invitation.last_nudged_at = datetime.now(timezone.utc)
         await self.db.commit()
 
+    async def get_most_recent_sent_invitation(self, user: User) -> Optional[PartnerInvitationModel]:
+        """
+        Get the most recent pending invitation sent by the current user.
+        """
+        stmt = (
+            select(PartnerInvitationModel)
+            .where(
+                PartnerInvitationModel.sender_id == user.id,
+                PartnerInvitationModel.status == schemas.InvitationStatus.PENDING
+            )
+            .order_by(PartnerInvitationModel.created_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def mark_invitation_as_viewed(self, token: str) -> Optional[PartnerInvitationModel]:
+        """
+        Mark an invitation as 'viewed' if it's currently pending.
+        """
+        invitation = await self._get_invitation_by_token(token)
+
+        if not invitation:
+            logger.warning(f"Attempted to mark non-existent or expired invitation as viewed with token: {token}")
+            return None
+
+        if invitation.status == schemas.InvitationStatus.PENDING:
+            invitation.status = schemas.InvitationStatus.VIEWED
+            await self.db.commit()
+            await self.db.refresh(invitation)
+            logger.info(f"Invitation {invitation.id} marked as VIEWED.")
+            return invitation
+        else:
+            logger.info(f"Invitation {invitation.id} (status: {invitation.status}) not marked as VIEWED because it's not pending.")
+            return invitation
+
 async def accept_invitation(db: AsyncSession, invitation_id_str: str, user: User) -> User:
-    """
+    '''
     Accepts a partner invitation using the invitation token string.
 
     This is a convenience function that wraps the PartnerInvitationService
@@ -513,8 +553,8 @@ async def accept_invitation(db: AsyncSession, invitation_id_str: str, user: User
         The updated user object after accepting the invitation.
 
     Raises:
-        HTTPException: If the invitation is not found, invalid, or expired.
-    """
+        HTTPException: If the invitation is not found, invalid, or has expired.
+    '''
     service = PartnerInvitationService(db)
     
     # Step 1: Find the invitation by its token string.

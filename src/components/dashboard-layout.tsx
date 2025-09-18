@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { motion } from "framer-motion"
+import Image from 'next/image';
 import { Home, Target, Users, User, Circle, TrendingUp } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
@@ -77,10 +78,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="relative">
-              <Circle className="w-8 h-8 text-[var(--theme-primary)] fill-current" />
-              <Circle className="w-6 h-6 text-[var(--theme-primary)] fill-current absolute top-1 left-1 opacity-60" />
-            </div>
+            <Image src="/navbar-logo.png" alt="DuoTrak Logo" width={32} height={32} />
             <h1 className="text-xl font-bold text-[var(--theme-foreground)]">DuoTrak</h1>
           </motion.div>
 

@@ -1,24 +1,26 @@
-"use client"
+'use client';
 
-import { motion } from "framer-motion"
-import { Flame } from "lucide-react"
-import QuickActions from "./quick-actions"
-import DuoStreakHero from "./duo-streak-hero"
-import MouseGlowEffect from "./mouse-glow-effect"
-import ProgressViewerCard from "./progress-viewer-card"
-import VerificationQueue from "./verification-queue"
-import TodaysTasks from "./todays-tasks"
-import GoalsHighlights from "./goals-highlights"
-import { useState } from "react"
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Flame, Loader2 } from 'lucide-react';
+import QuickActions from './quick-actions';
+import DuoStreakHero from './duo-streak-hero';
+import MouseGlowEffect from './mouse-glow-effect';
+import ProgressViewerCard from './progress-viewer-card';
+import VerificationQueue from './verification-queue';
+import TodaysTasks from './todays-tasks';
+import GoalsHighlights from './goals-highlights';
+import { useUser } from '@/contexts/UserContext';
 
 interface DashboardContentProps {
-  userName?: string
-  streak?: number
-  hasPartner?: boolean
-  partnerName?: string
-  pendingVerifications?: number
-  userProgress?: boolean
-  partnerProgress?: boolean
+  userName?: string;
+  streak?: number;
+  hasPartner?: boolean;
+  partnerName?: string;
+  pendingVerifications?: number;
+  userProgress?: boolean;
+  partnerProgress?: boolean;
 }
 
 const getInitials = (name: string = "") => {
@@ -26,23 +28,35 @@ const getInitials = (name: string = "") => {
     .split(" ")
     .map((n) => n[0])
     .join("")
-    .toUpperCase()
-}
+    .toUpperCase();
+};
 
 export default function DashboardContent({
   userName,
   streak,
   hasPartner,
   partnerName,
-  pendingVerifications = 2, // This can remain as it's not partner-specific
+  pendingVerifications = 2,
   userProgress,
   partnerProgress,
 }: DashboardContentProps) {
-  const [goalStates, setGoalStates] = useState({
-    1: false,
-    2: true,
-    3: false,
-  })
+  const { userDetails } = useUser();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (userDetails) {
+      if (userDetails.account_status === 'ONBOARDING_PARTNERED') {
+        router.push('/onboarding/start');
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, [userDetails, router]);
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -53,7 +67,7 @@ export default function DashboardContent({
         delayChildren: 0.2,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -65,35 +79,26 @@ export default function DashboardContent({
         ease: "easeOut",
       },
     },
-  }
-
-  const handleGoalToggle = (goalId: number, checked: boolean) => {
-    setGoalStates((prev) => ({ ...prev, [goalId]: checked }))
-  }
+  };
 
   const handleTaskComplete = (taskId: string) => {
-    console.log("Task completed:", taskId)
-    // Handle task completion logic
-  }
+    console.log("Task completed:", taskId);
+  };
 
   const handleTaskVerificationSubmit = (taskId: string, imageFile?: File) => {
-    console.log("Task verification submitted:", taskId, imageFile)
-    // Handle verification submission logic
-  }
+    console.log("Task verification submitted:", taskId, imageFile);
+  };
 
   const handleVerify = (itemId: string) => {
-    console.log("Verified item:", itemId)
-    // Handle verification logic
-  }
+    console.log("Verified item:", itemId);
+  };
 
   const handleReject = (itemId: string, reason: string) => {
-    console.log("Rejected item:", itemId, "Reason:", reason)
-    // Handle rejection logic
-  }
+    console.log("Rejected item:", itemId, "Reason:", reason);
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-      {/* Hero Duo Streak Section */}
       <DuoStreakHero
         streakCount={streak}
         partnerName={partnerName}
@@ -102,12 +107,11 @@ export default function DashboardContent({
         hasPartner={hasPartner}
       />
 
-      {/* Section 1: Welcome & Motivation */}
       <MouseGlowEffect glowColor="#F0F3F4" intensity="low">
         <motion.section
           variants={itemVariants}
           whileHover={{ scale: 1.01 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border-cool-gray dark:border-gray-700"
         >
           <div className="space-y-4">
             <h1 className="text-2xl md:text-3xl font-bold text-charcoal dark:text-gray-100">
@@ -135,24 +139,20 @@ export default function DashboardContent({
         </motion.section>
       </MouseGlowEffect>
 
-      {/* Section 2: Verification Queue (High Priority) */}
       {pendingVerifications > 0 && (
         <motion.section variants={itemVariants}>
           <VerificationQueue onVerify={handleVerify} onReject={handleReject} />
         </motion.section>
       )}
 
-      {/* Section 3: Today's Tasks */}
       <motion.section variants={itemVariants}>
         <TodaysTasks onTaskComplete={handleTaskComplete} onTaskVerificationSubmit={handleTaskVerificationSubmit} />
       </motion.section>
 
-      {/* Section 4: Goals Highlights */}
       <motion.section variants={itemVariants}>
         <GoalsHighlights />
       </motion.section>
 
-      {/* Section 5: Progress Viewer (Replaces Invite Partner) */}
       <motion.section variants={itemVariants}>
         {!hasPartner ? (
           <ProgressViewerCard userName={userName} />
@@ -179,8 +179,7 @@ export default function DashboardContent({
         )}
       </motion.section>
 
-      {/* Section 6: Quick Actions */}
       <QuickActions hasPartner={hasPartner} />
     </motion.div>
-  )
+  );
 }

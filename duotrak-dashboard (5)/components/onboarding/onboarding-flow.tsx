@@ -1,0 +1,142 @@
+"use client"
+
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import WelcomeStep from "./welcome-step"
+import PartnerInvitationStep from "./partner-invitation-step"
+import GoalDiscoveryStep from "./goal-discovery-step"
+import GoalCreationStep from "./goal-creation-step"
+import PreferencesStep from "./preferences-step"
+import FirstSuccessStep from "./first-success-step"
+
+const steps = [
+  { id: "welcome", title: "Welcome", component: WelcomeStep },
+  { id: "partner", title: "Invite Partner", component: PartnerInvitationStep },
+  { id: "discovery", title: "Discover Goals", component: GoalDiscoveryStep },
+  { id: "create-goal", title: "Create Goal", component: GoalCreationStep },
+  { id: "preferences", title: "Preferences", component: PreferencesStep },
+  { id: "success", title: "Success!", component: FirstSuccessStep },
+]
+
+export default function OnboardingFlow() {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  const [isCurrentStepValid, setIsCurrentStepValid] = useState(false)
+  const [onboardingData, setOnboardingData] = useState<any>({})
+
+  const updateData = (updates: any) => {
+    setOnboardingData((prevData: any) => ({ ...prevData, ...updates }))
+  }
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCompletedSteps((prev) => [...prev, currentStep])
+      setCurrentStep(currentStep + 1)
+      setIsCurrentStepValid(false) // Reset validity for the next step
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1)
+      setIsCurrentStepValid(true) // Assume previous step was valid when going back
+    }
+  }
+
+  const handleValidationChange = (isValid: boolean) => {
+    setIsCurrentStepValid(isValid)
+  }
+
+  const progress = ((currentStep + 1) / steps.length) * 100
+  const CurrentStepComponent = steps[currentStep].component
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col">
+      {/* Progress Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">Get Started with DuoTrak</h1>
+            <span className="text-sm text-gray-500">
+              Step {currentStep + 1} of {steps.length}
+            </span>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <Progress value={progress} className="h-2" />
+            <div className="flex justify-between">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex flex-col items-center">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
+                      completedSteps.includes(index)
+                        ? "bg-green-500 text-white"
+                        : index === currentStep
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    {completedSteps.includes(index) ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      index + 1
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500 mt-1 hidden sm:block">
+                    {step.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Step Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <CurrentStepComponent
+                data={onboardingData}
+                updateData={updateData}
+                onValidationChange={handleValidationChange}
+                onComplete={handleNext}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      {currentStep < steps.length - 1 && (
+        <div className="bg-white border-t p-4">
+          <div className="max-w-4xl mx-auto flex justify-between">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+            <Button onClick={handleNext} disabled={!isCurrentStepValid}>
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

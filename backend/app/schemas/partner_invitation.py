@@ -16,6 +16,7 @@ class InvitationStatus(str, Enum):
     REJECTED = "rejected"
     REVOKED = "revoked"
     EXPIRED = "expired"
+    VIEWED = "viewed"
 
 class PartnerInvitationBase(BaseModel):
     """Base schema for partner invitation."""
@@ -24,6 +25,7 @@ class PartnerInvitationBase(BaseModel):
 class PartnerInvitationCreate(PartnerInvitationBase):
     """Schema for creating a new partner invitation."""
     receiver_name: str = Field(..., min_length=1, max_length=100, description="Name of the user being invited")
+    message: Optional[str] = Field(None, max_length=500, description="Optional custom message from the sender")
     expires_in_days: int = Field(7, description="Number of days until the invitation expires")
 
 class PartnerInvitationUpdate(BaseModel):
@@ -64,7 +66,9 @@ class PartnerInvitationResponse(BaseModel):
 class PublicInvitationDetails(BaseModel):
     """Schema for public invitation details."""
     sender_name: str
+    sender_profile_picture_url: Optional[str] = None
     receiver_name: str
+    custom_message: Optional[str] = None
     expires_at: datetime
 
 

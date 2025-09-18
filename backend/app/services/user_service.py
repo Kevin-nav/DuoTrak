@@ -129,9 +129,56 @@ class UserService:
             setattr(db_user, field, value)
 
         db.add(db_user)
+        # If nickname is provided, update it in the partnership
+        if user_in.nickname is not None and db_user.current_partner_id:
+            partnership = await self._get_partnership_by_user_id(db, db_user.id)
+            if partnership:
+                if partnership.user1_id == db_user.id:
+                    partnership.user1_nickname = user_in.nickname
+                else:
+                    partnership.user2_nickname = user_in.nickname
+                db.add(partnership)
+
         await db.commit()
         await db.refresh(db_user)
-        return db_user
+        return await self._get_user_read(db, db_user)
+
+    async def _get_user_read(self, db: AsyncSession, user: User) -> UserRead:
+        partner_full_name: Optional[str] = None
+        partner_nickname: Optional[str] = None
+        partnership_id: Optional[uuid.UUID] = None
+
+        if user.current_partner_id:
+            partner = await self.get_user_by_id(db, user.current_partner_id)
+            if partner:
+                partner_full_name = partner.full_name
+            
+            partnership = await self._get_partnership_by_user_id(db, user.id)
+            if partnership:
+                partnership_id = partnership.id
+                if partnership.user1_id == user.id:
+                    partner_nickname = partnership.user2_nickname
+                else:
+                    partner_nickname = partnership.user1_nickname
+
+        user_read_data = {
+            **user.__dict__,
+            "partner_id": user.current_partner_id,
+            "partner_full_name": partner_full_name,
+            "partner_nickname": partner_nickname,
+            "partnership_id": partnership_id,
+            "sent_invitation": await self._get_pending_invitation(db, user.id),
+            "received_invitation": await self._get_received_invitation(db, user.email),
+            "badges": [{"badge": ub.badge, "earned_at": ub.earned_at} for ub in user.user_badges]
+        }
+        return UserRead.model_validate(user_read_data)
+
+    async def _get_partnership_by_user_id(self, db: AsyncSession, user_id: uuid.UUID) -> Optional[Partnership]:
+        stmt = select(Partnership).where(
+            (Partnership.user1_id == user_id) | (Partnership.user2_id == user_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().first()
 
 
 user_service = UserService()

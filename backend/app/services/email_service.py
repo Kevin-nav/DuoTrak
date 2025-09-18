@@ -72,6 +72,7 @@ class EmailService:
         receiver_email: str,
         invitation_token: str,
         receiver_name: Optional[str] = None,
+        message: Optional[str] = None,
         expires_in_days: int = 7,
     ) -> dict:
         """
@@ -82,6 +83,7 @@ class EmailService:
             receiver_email: Email address of the recipient
             invitation_token: The invitation token
             receiver_name: Optional name of the recipient
+            message: Optional custom message from the sender
             expires_in_days: Number of days until the invitation expires
             
         Returns:
@@ -98,6 +100,7 @@ class EmailService:
             sender_name=sender.full_name or sender.email.split('@')[0],
             receiver_name=receiver_name,
             accept_url=accept_url,
+            custom_message=message,
         )
         
         # Send the email
@@ -192,7 +195,7 @@ class EmailService:
         if receiver_name is None:
             receiver_name = receiver_email.split('@')[0]
         
-        accept_url = f"{settings.CLIENT_ORIGIN_URL}/invite/{invitation_token}"
+        accept_url = f"{settings.CLIENT_ORIGIN_URL}/invite-acceptance?token={invitation_token}"
         
         subject, html_content = get_nudge_email(
             sender_name=sender.full_name or sender.email.split('@')[0],

@@ -203,15 +203,15 @@ export class ApiClient {
   }
 
   // Invitation specific methods
-  async sendInvitation(email: string, name: string): Promise<any> {
-    return this.post('/api/v1/partner-invitations/invite', { receiver_email: email, receiver_name: name });
+  async sendInvitation(email: string, name: string, customMessage?: string): Promise<any> {
+    return this.post('/api/v1/partner-invitations/invite', { receiver_email: email, receiver_name: name, message: customMessage });
   }
 
   async withdrawInvitation(invitationId: string): Promise<any> {
     return this.delete(`/api/v1/partner-invitations/invitations/${invitationId}`);
   }
 
-  async getPublicInvitationDetails(token: string): Promise<{ sender_name: string; receiver_email: string; }> {
+  async getPublicInvitationDetails(token: string): Promise<{ sender_name: string; sender_profile_picture_url?: string; receiver_email: string; custom_message?: string; }> {
     return this.get(`/api/v1/partner-invitations/details/${token}`);
   }
 
@@ -225,6 +225,22 @@ export class ApiClient {
 
   async nudgePartner(invitationId: string): Promise<any> {
     return this.post(`/api/v1/partner-invitations/invitations/${invitationId}/nudge`);
+  }
+
+  async completePartneredOnboarding(): Promise<any> {
+    return this.patch('/api/v1/users/me/complete-onboarding');
+  }
+
+  async getSentInvitationStatus(): Promise<any> {
+    return this.get('/api/v1/partner-invitations/me/sent-status');
+  }
+
+  async markInvitationAsViewed(token: string): Promise<any> {
+    return this.patch(`/api/v1/partner-invitations/${token}/viewed`);
+  }
+
+  async createOnboardingGoal(goal: any, task: any): Promise<any> {
+    return this.post('/api/v1/goals/onboarding', { goal, task });
   }
 }
 

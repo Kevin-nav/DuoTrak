@@ -5,6 +5,7 @@ import "./globals.css"
 import { UserProvider } from "@/contexts/UserContext"
 import { Providers } from "@/components/providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
+import { MockAuthIndicator } from "@/components/dev/MockAuthIndicator"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] })
 
@@ -21,10 +22,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.png" sizes="any" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body className={plusJakartaSans.className}>
         <ErrorBoundary>
           <Providers>
-            <UserProvider>{children}</UserProvider>
+            <UserProvider>
+              {children}
+              {process.env.NODE_ENV === 'development' && <MockAuthIndicator />}
+            </UserProvider>
           </Providers>
         </ErrorBoundary>
       </body>

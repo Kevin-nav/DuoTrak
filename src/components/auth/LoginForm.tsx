@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,24 @@ export default function LoginForm() {
   const [error, setError] = useState<string>('');
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('token');
+
+  const { mutate: acceptInvitation } = useMutation({
+    mutationFn: (token: string) => apiClient.acceptInvitation(token),
+    onSuccess: () => {
+      toast.success("Invitation accepted!", {
+        description: "Your partnership is confirmed. Welcome to DuoTrak!",
+      });
+      window.location.href = '/dashboard';
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.detail || 'Failed to auto-accept invitation.';
+      toast.error('Partnership Error', { description: errorMessage });
+      // Still redirect to dashboard even if invitation fails, user is logged in.
+      window.location.href = '/dashboard';
+    },
+  });
 
   const handleAuthSuccess = async (firebaseToken: string) => {
     try {
@@ -31,14 +49,13 @@ export default function LoginForm() {
         localStorage.setItem('csrf_token', response.csrf_token);
       }
 
-      // Manually set the user data in the React Query cache
-      // This avoids the need for a follow-up request and prevents the race condition
       queryClient.setQueryData(['user', 'me'], response.user);
       
-      // This forces a full page reload, which is necessary to ensure the
-      // new session cookie is sent to the server for the middleware to read,
-      // and guarantees a fresh data fetch on the dashboard.
-      window.location.href = '/dashboard';
+      if (inviteToken) {
+        acceptInvitation(inviteToken);
+      } else {
+        window.location.href = '/dashboard';
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during login.';

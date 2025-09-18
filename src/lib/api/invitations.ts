@@ -32,3 +32,7 @@ export const declineInvitation = (invitationId: string) => {
     body: JSON.stringify({ invitation_id: invitationId }),
   });
 };
+
+export const getPublicInvitationDetails = (token: string) => {
+  return apiFetch(`/api/v1/partner-invitations/invitations/details/${token}`);
+};

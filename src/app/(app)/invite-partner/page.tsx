@@ -2,53 +2,13 @@
 
 import React from 'react';
 import { useUser } from '@/contexts/UserContext';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
-import { persistentLog } from '@/lib/logger';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-
-// Define the Zod schema for form validation
-const formSchema = z.object({
-  partnerName: z.string().min(1, { message: "Partner's name is required." }),
-  partnerEmail: z.string().email({ message: "Invalid email address." }),
-});
-
-type FormData = z.infer<typeof formSchema>;
+import InvitePartnerForm from '@/components/invitation/InvitePartnerForm';
+import { motion } from 'framer-motion';
+import { Heart } from 'lucide-react';
 
 export default function InvitePartnerPage() {
-  const { userDetails, isLoading: isUserLoading, sendInvitation } = useUser();
-  const router = useRouter();
+  const { isLoading: isUserLoading } = useUser();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
-  } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-  });
-
-  const onSubmit = async (data: FormData) => {
-    persistentLog('Invite partner form submitted.', data);
-    setError('root', { message: '' }); // Clear previous root errors
-
-    try {
-      await sendInvitation(data.partnerEmail, data.partnerName);
-      persistentLog('Invitation successfully created. Redirecting to inviter setup page.');
-      router.push('/onboarding/setup');
-
-    } catch (err: any) {
-      persistentLog('Error inviting partner.', { error: err.message, stack: err.stack });
-      setError('root', { message: err.message });
-    }
-  };
-
-  // While checking user status, show a loading state.
   if (isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -58,48 +18,41 @@ export default function InvitePartnerPage() {
   }
 
   return (
-    <div className="text-center animate-fadeInUp">
-      <div className="w-24 h-24 bg-accent-light-blue rounded-full mx-auto mb-6 flex items-center justify-center text-4xl">🤝</div>
-      <h1 className="text-2xl font-bold text-charcoal mb-2">Invite Your Partner</h1>
-      <p className="text-base text-stone-gray mb-8">Enter your partner's name and email to send them an invitation.</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="max-w-lg w-full">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-8"
+        >
+          <motion.div
+            animate={{
+              scale: [1, 1.05, 1],
+              rotate: [0, 5, -5, 0],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "easeInOut",
+            }}
+            className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <Heart className="w-8 h-8 text-white" />
+          </motion.div>
 
-      <div className="mx-auto max-w-lg">
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div>
-            <Input
-              type="text"
-              placeholder="Partner's Name"
-              {...register('partnerName')}
-              disabled={isSubmitting}
-            />
-            {errors.partnerName && (
-              <p className="text-red-500 text-sm mt-1 text-left">{errors.partnerName.message}</p>
-            )}
-          </div>
-          <div>
-            <Input
-              type="email"
-              placeholder="Partner's Email Address"
-              {...register('partnerEmail')}
-              disabled={isSubmitting}
-            />
-            {errors.partnerEmail && (
-              <p className="text-red-500 text-sm mt-1 text-left">{errors.partnerEmail.message}</p>
-            )}
-          </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending...' : 'Send Invitation'}
-          </Button>
-        </form>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Invite Your Partner</h1>
+          <p className="text-gray-600">DuoTrak works best with a partner. Invite someone to join you on your journey!</p>
+        </motion.div>
 
-        {errors.root && (
-          <Alert variant="destructive" className="mt-4 text-left">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errors.root.message}</AlertDescription>
-          </Alert>
-        )}
-
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden p-8"
+        >
+          <InvitePartnerForm />
+        </motion.div>
       </div>
     </div>
   );

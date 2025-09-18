@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getInitials } from '@/lib/utils';
+
 // A small self-contained loading component
 const LoadingState = () => (
   <div className="flex flex-col items-center justify-center text-center">
@@ -36,7 +39,9 @@ function InviteAcceptanceContent() {
   const [error, setError] = useState<string | null>(null);
   const [invitationDetails, setInvitationDetails] = useState<{
     senderName: string;
+    sender_profile_picture_url?: string;
     receiverEmail: string;
+    custom_message?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -51,7 +56,9 @@ function InviteAcceptanceContent() {
         const details = await apiClient.getPublicInvitationDetails(token);
         setInvitationDetails({
           senderName: details.sender_name,
+          sender_profile_picture_url: details.sender_profile_picture_url,
           receiverEmail: details.receiver_email,
+          custom_message: details.custom_message,
         });
       } catch (e: any) {
         setError(e.message || 'This invitation is no longer valid or has expired.');
@@ -61,6 +68,16 @@ function InviteAcceptanceContent() {
     };
 
     fetchInvitationDetails();
+  }, [token]);
+
+  // Mark invitation as viewed when the component loads
+  useEffect(() => {
+    if (token) {
+      apiClient.markInvitationAsViewed(token).catch(e => {
+        console.error("Failed to mark invitation as viewed:", e);
+        // Do not block the user flow if marking as viewed fails
+      });
+    }
   }, [token]);
 
   const handleAccept = async () => {
@@ -97,19 +114,44 @@ function InviteAcceptanceContent() {
     return <ErrorState message={error || 'Could not load invitation details.'} />;
   }
 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+    },
+  };
+
   return (
     <div className="text-center">
-      <div className="w-24 h-24 bg-accent-light-blue rounded-full mx-auto mb-6 flex items-center justify-center text-4xl">💌</div>
-      <h1 className="text-3xl font-bold text-charcoal mb-2">
+      <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.2, duration: 0.5 }}>
+        <Avatar className="w-24 h-24 mx-auto mb-6 ring-4 ring-blue-100">
+          <AvatarImage src={invitationDetails.sender_profile_picture_url} alt={invitationDetails.senderName} />
+          <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-3xl font-bold">
+            {getInitials(invitationDetails.senderName)}
+          </AvatarFallback>
+        </Avatar>
+      </motion.div>
+
+      <motion.h1 variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.4, duration: 0.5 }} className="text-3xl font-bold text-charcoal mb-2">
         <span className="text-primary-blue">{invitationDetails.senderName}</span> has invited you!
-      </h1>
-      <p className="text-base text-stone-gray mb-8">
-        You've been invited to join a partnership on DuoTrak to achieve your goals together.
-      </p>
-      <Button onClick={handleAccept} className="w-full max-w-xs mx-auto" disabled={isProcessing}>
-        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-        {isProcessing ? 'Checking...' : 'Accept Invitation'}
-      </Button>
+      </motion.h1>
+      <motion.p variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.6, duration: 0.5 }} className="text-base text-stone-gray mb-8">
+        to join a partnership on DuoTrak to achieve your goals together.
+      </motion.p>
+
+      {invitationDetails.custom_message && (
+        <motion.blockquote variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.8, duration: 0.5 }} className="mb-8 p-4 bg-gray-100 border-l-4 border-blue-300 text-gray-700 italic">
+          <p>"{invitationDetails.custom_message}"</p>
+        </motion.blockquote>
+      )}
+
+      <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 1.0, duration: 0.5 }}>
+        <Button onClick={handleAccept} className="w-full max-w-xs mx-auto" disabled={isProcessing}>
+          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          {isProcessing ? 'Checking...' : 'Accept Invitation'}
+        </Button>
+      </motion.div>
     </div>
   );
 }

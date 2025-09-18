@@ -126,11 +126,62 @@ async def test_full_invitation_and_acceptance_flow(
     )
     assert response_accept.status_code == 200, f"Accept failed: {response_accept.text}"
 
-    # 5. Verify that both users are now ACTIVE and linked
+    # 5. Verify that the invitee is in onboarding and the inviter is active
     await db_session.refresh(inviter)
     await db_session.refresh(invitee)
 
     assert inviter.account_status == AccountStatus.ACTIVE
-    assert invitee.account_status == AccountStatus.ACTIVE
+    assert invitee.account_status == AccountStatus.ONBOARDING_PARTNERED
     assert str(inviter.current_partner_id) == str(invitee.id)
     assert str(invitee.current_partner_id) == str(inviter.id)
+
+async def test_complete_onboarding_flow(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch,
+):
+    """
+    Tests that a user can complete the partnered onboarding flow.
+    """
+    # 1. Create and set up users to the point where invitee is ONBOARDING_PARTNERED
+    inviter = models.User(
+        firebase_uid="onboarding_inviter_uid",
+        email="onboarding_inviter@test.com",
+        full_name="Onboarding Inviter",
+        account_status=AccountStatus.AWAITING_PARTNERSHIP,
+    )
+    invitee = models.User(
+        firebase_uid="onboarding_invitee_uid",
+        email="onboarding_invitee@test.com",
+        full_name="Onboarding Invitee",
+        account_status=AccountStatus.AWAITING_ONBOARDING,
+    )
+    db_session.add_all([inviter, invitee])
+    await db_session.commit()
+    await db_session.refresh(inviter)
+    await db_session.refresh(invitee)
+
+    authed_client_inviter = await get_authenticated_client(client, inviter, db_session)
+    monkeypatch.setattr('app.services.email_service.EmailService.send_partner_invitation', lambda *args, **kwargs: None)
+    response_invite = await authed_client_inviter.post(
+        "/api/v1/partner-invitations/invite",
+        json={"receiver_email": invitee.email, "receiver_name": invitee.full_name}
+    )
+    invitation_token = response_invite.json()['invitation']['invitation_token']
+
+    authed_client_invitee = await get_authenticated_client(client, invitee, db_session)
+    monkeypatch.setattr('app.services.email_service.EmailService.send_invitation_accepted', lambda *args, **kwargs: None)
+    await authed_client_invitee.post(
+        "/api/v1/partner-invitations/accept",
+        json={"invitation_token": invitation_token}
+    )
+    await db_session.refresh(invitee)
+    assert invitee.account_status == AccountStatus.ONBOARDING_PARTNERED
+
+    # 2. As the invitee, call the complete-onboarding endpoint
+    response = await authed_client_invitee.patch("/api/v1/users/me/complete-onboarding")
+    
+    # 3. Assert success and status change
+    assert response.status_code == 200
+    await db_session.refresh(invitee)
+    assert invitee.account_status == AccountStatus.ACTIVE

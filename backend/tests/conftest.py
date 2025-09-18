@@ -114,3 +114,17 @@ async def active_user(db_session: AsyncSession) -> models.User:
     await db_session.commit()
     await db_session.refresh(user)
     return user
+
+@pytest_asyncio.fixture(scope="function")
+async def user_onboarding_partnered(db_session: AsyncSession) -> models.User:
+    """Creates a user who has accepted an invitation and is in the partnered onboarding state."""
+    user = models.User(
+        firebase_uid="onboarding_partnered_uid",
+        email="onboarding_partnered@test.com",
+        full_name="Onboarding Partnered User",
+        account_status=AccountStatus.ONBOARDING_PARTNERED,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user

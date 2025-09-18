@@ -102,6 +102,30 @@ async def update_user_profile(
     logger.info(f"Successfully updated profile for user {current_user.id}")
     return updated_user
 
+@router.patch("/me/complete-onboarding", response_model=UserRead)
+@limiter.limit("5/minute")
+async def complete_partnered_onboarding(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserRead = Depends(get_current_user_from_cookie),
+):
+    """
+    Mark the partnered onboarding as complete.
+    """
+    logger.info(f"--- Completing partnered onboarding for user_id: {current_user.id} ---")
+    if current_user.account_status != AccountStatus.ONBOARDING_PARTNERED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not in the required onboarding state.",
+        )
+
+    user_update = UserUpdate(account_status=AccountStatus.ACTIVE)
+    updated_user = await user_service.update_user(
+        db=db, user_id=current_user.id, user_in=user_update
+    )
+    logger.info(f"Successfully completed partnered onboarding for user {current_user.id}")
+    return updated_user
+
 @router.post("/me/profile-picture", response_model=UserRead)
 @limiter.limit("5/minute")
 async def upload_profile_picture(

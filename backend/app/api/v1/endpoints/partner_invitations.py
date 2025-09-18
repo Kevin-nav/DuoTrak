@@ -153,6 +153,24 @@ async def list_partner_invitations(
 
 
 @router.get(
+    "/me/sent-status",
+    response_model=Optional[schemas.PartnerInvitation],
+)
+@limiter.limit("10/minute")
+async def get_my_sent_invitation_status(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: models.User = Depends(get_current_user_from_cookie),
+) -> Optional[schemas.PartnerInvitation]:
+    """
+    Get the most recent pending invitation sent by the current user.
+    """
+    service = PartnerInvitationService(db)
+    invitation = await service.get_most_recent_sent_invitation(current_user)
+    return invitation
+
+
+@router.get(
     "/invitations/{invitation_id}",
     response_model=schemas.PartnerInvitationResponse,
 )
@@ -225,6 +243,30 @@ async def get_public_invitation_details(
             detail="Invitation not found or has expired.",
         )
     return details
+
+
+@router.patch(
+    "/{token}/viewed",
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("15/minute")
+async def mark_invitation_as_viewed(
+    request: Request,
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Mark an invitation as 'viewed' by its token.
+    This endpoint is not authenticated.
+    """
+    service = PartnerInvitationService(db)
+    invitation = await service.mark_invitation_as_viewed(token)
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found or already responded to.",
+        )
+    return {"message": "Invitation marked as viewed", "data": invitation}
 
 
 @router.post("/accept", response_model=schemas.PartnerInvitationResponse)

@@ -47,6 +47,7 @@
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.1",
     "embla-carousel-react": "8.5.1",
+    "favicons": "^7.2.0",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.4.0",
     "framer-motion": "latest",

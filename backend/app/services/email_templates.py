@@ -4,13 +4,22 @@ def get_partner_invitation_email(
     sender_name: str,
     receiver_name: str,
     accept_url: str,
+    custom_message: str = None,
     expires_in_days: int = 7,
 ) -> tuple[str, str]:
     """
     Generate the subject and HTML content for a partner invitation email.
     """
     subject = f"You're invited to team up with {sender_name} on DuoTrak!"
-    
+
+    custom_message_html = f'''
+    <p><strong>A message from {sender_name}:</strong></p>
+    <blockquote style="border-left: 4px solid #ccc; padding-left: 1em; margin-left: 1em;">
+        {custom_message}
+    </blockquote>
+    <hr style="margin: 20px 0;">
+    ''' if custom_message else ''
+
     html_content = f'''
     <!DOCTYPE html>
     <html lang="en">
@@ -85,14 +94,15 @@ def get_partner_invitation_email(
     <body>
         <div class="container">
             <div class="header">
-                <!-- Placeholder for DuoTrak Logo -->
-                <!-- <img src="[URL_TO_YOUR_LOGO]" alt="DuoTrak Logo" class="logo"> -->
+                <img src="https://app.duotrak.com/mascot/Invitation_Sent_Mascot.png" alt="DuoTrak Mascot" style="width: 150px; height: auto; margin-bottom: 20px;">
                 <h1>A partnership awaits!</h1>
             </div>
             <div class="content">
                 <p>Hi {receiver_name},</p>
-                <p>Great news! <strong>{sender_name}</strong> has invited you to become accountability partners on DuoTrak.</p>
-                <p>Together, you can track goals, celebrate wins, and stay motivated on your journey to success.</p>
+                {custom_message_html}
+                <p>You've been invited to team up on DuoTrak!</p>
+                <p>DuoTrak is a revolutionary new app designed to help partners like you achieve their goals together. It's all about teamwork, motivation, and celebrating your wins, big and small.</p>
+                <p>Ready to join forces and make amazing things happen? We can't wait to see what you'll accomplish together.</p>
                 <div class="button-container">
                     <a href="{accept_url}" class="button">Accept Invitation</a>
                 </div>
@@ -190,6 +200,7 @@ def get_invitation_accepted_email(
     <body>
         <div class="container">
             <div class="header">
+                <img src="https://duotrak.org/mascot/Invitation_Accepted_Mascot.png" alt="DuoTrak Mascot" style="width: 150px; height: auto; margin-bottom: 20px;">
                 <h1>It's Official!</h1>
             </div>
             <div class="content">
@@ -274,6 +285,7 @@ def get_invitation_rejected_email(
     <body>
         <div class="container">
             <div class="header">
+                <img src="https://duotrak.org/mascot/Invitation_Declined_or_Re-invite_Mascot.png" alt="DuoTrak Mascot" style="width: 150px; height: auto; margin-bottom: 20px;">
                 <h1>Partnership Update</h1>
             </div>
             <div class="content">

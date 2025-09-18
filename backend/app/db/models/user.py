@@ -25,7 +25,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     full_name = Column(String(255), nullable=True)
     account_status = Column(
-    Enum('AWAITING_ONBOARDING', 'AWAITING_PARTNERSHIP', 'ACTIVE', name='accountstatus', create_type=False),
+    Enum('AWAITING_ONBOARDING', 'AWAITING_PARTNERSHIP', 'ONBOARDING_PARTNERED', 'ACTIVE', name='accountstatus', create_type=False),
     default='AWAITING_ONBOARDING',
     nullable=False
 )
@@ -40,6 +40,9 @@ class User(Base):
     profile_picture_url = Column(sa.Text(), nullable=True)
     timezone = Column(String(100), server_default='UTC', default='UTC', nullable=False)
     notifications_enabled = Column(Boolean, server_default=sa.text('true'), default=True, nullable=False)
+    notification_time = Column(String(50), server_default='morning', default='morning', nullable=False)
+    theme = Column(String(50), server_default='system', default='system', nullable=False)
+    privacy_setting = Column(String(50), server_default='partner-only', default='partner-only', nullable=False)
     current_streak = Column(sa.Integer(), server_default='0', default=0, nullable=False)
     longest_streak = Column(sa.Integer(), server_default='0', default=0, nullable=False)
     total_tasks_completed = Column(sa.Integer(), server_default='0', default=0, nullable=False)

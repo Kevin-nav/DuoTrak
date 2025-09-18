@@ -14,6 +14,7 @@ class AccountStatus(str, Enum):
     """Enum for account statuses."""
     AWAITING_ONBOARDING = "AWAITING_ONBOARDING"
     AWAITING_PARTNERSHIP = "AWAITING_PARTNERSHIP"
+    ONBOARDING_PARTNERED = "ONBOARDING_PARTNERED"
     ACTIVE = "ACTIVE"
 
 class PartnershipStatus(str, Enum):
@@ -51,10 +52,14 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
+    nickname: Optional[str] = None
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
     timezone: Optional[str] = None
     notifications_enabled: Optional[bool] = None
+    notification_time: Optional[str] = None
+    theme: Optional[str] = None
+    privacy_setting: Optional[str] = None
     account_status: Optional[AccountStatus] = None
 
 # Properties to return to the client (from the API)
@@ -65,6 +70,7 @@ class UserRead(UserBase):
     partnership_status: PartnershipStatus
     partner_id: Optional[uuid.UUID] = None
     partner_full_name: Optional[str] = None
+    partner_nickname: Optional[str] = None
     partnership_id: Optional[uuid.UUID] = None
     sent_invitation: Optional["PartnerInvitation"] = None
     received_invitation: Optional["PartnerInvitation"] = None

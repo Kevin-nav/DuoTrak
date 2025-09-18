@@ -34,7 +34,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isFormShaking, setIsFormShaking] = useState(false);
-  const [hasTriggeredAccept, setHasTriggeredAccept] = useState(false);
   const [validationCriteria, setValidationCriteria] = useState({
     minLength: false,
     hasUpper: false,
@@ -42,15 +41,16 @@ export default function SignupPage() {
     hasSymbol: false,
   });
 
-  const inviteToken = searchParams.get('invite_token');
+  const inviteToken = searchParams.get('token');
 
   const { mutate: acceptInvitation } = useMutation({
-    mutationFn: (token: string) => apiClient.post('/partner-invitations/accept', { invitation_token: token }),
+    mutationFn: (token: string) => apiClient.acceptInvitation(token),
     onSuccess: () => {
       toast.success("Invitation accepted!", {
         description: "Your partnership is confirmed. Welcome to DuoTrak!",
       });
       // The middleware will handle the redirect to the dashboard on the next navigation.
+      window.location.href = '/dashboard';
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.detail || 'Failed to auto-accept invitation.';
@@ -85,14 +85,13 @@ export default function SignupPage() {
         localStorage.setItem('csrf_token', response.csrf_token);
       }
 
-      // Manually set the user data in the React Query cache
-      // This avoids the need for a follow-up request and prevents the race condition
       queryClient.setQueryData(['user', 'me'], response.user);
       
-      // This forces a full page reload, which is necessary to ensure the
-      // new session cookie is sent to the server for the middleware to read,
-      // and guarantees a fresh data fetch on the dashboard.
-      window.location.href = '/invite-partner';
+      if (inviteToken) {
+        acceptInvitation(inviteToken);
+      } else {
+        window.location.href = '/onboarding/start';
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during login.';

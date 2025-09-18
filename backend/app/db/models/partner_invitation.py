@@ -18,6 +18,7 @@ class InvitationStatus(str, Enum):
     REJECTED = "rejected"
     REVOKED = "revoked"
     EXPIRED = "expired"
+    VIEWED = "viewed"
 
 
 class PartnerInvitation(Base):
@@ -50,6 +51,7 @@ class PartnerInvitation(Base):
         nullable=False,
         index=True
     )
+    message = Column(String(500), nullable=True)
     invitation_token = Column(
         UUID(as_uuid=True), 
         nullable=False, 
@@ -58,7 +60,7 @@ class PartnerInvitation(Base):
     )
     status = Column(
         Enum(
-            "pending", "accepted", "rejected", "revoked", "expired",
+            "pending", "accepted", "rejected", "revoked", "expired", "viewed",
             name='invitation_status',
             native_enum=False
         ),

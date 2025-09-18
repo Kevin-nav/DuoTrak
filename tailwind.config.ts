@@ -52,6 +52,12 @@ const config: Config = {
         "cool-gray": "#DCE2E5",
         "off-white": "#FAFBFB",
         "error-red": "#EF4444",
+        // Mascot Colors
+        "poko-green": "#36C95F",
+        "lumo-teal": "#3AB8C2",
+        "energy-yellow": "#FFD54F",
+        "celebration-purple": "#9B6EF3",
+        "accent-blue": "#4A90E2",
       },
       borderRadius: {
         lg: "var(--radius)",

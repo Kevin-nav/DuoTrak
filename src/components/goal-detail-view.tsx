@@ -249,6 +249,11 @@ export default function GoalDetailView({
           )}
         </AnimatePresence>
 
+        import Mascot from '@/components/mascot/Mascot';
+
+// ... (imports)
+
+// ... (inside component)
         {/* Celebration Animation */}
         <AnimatePresence>
           {showCelebration && (
@@ -294,6 +299,7 @@ export default function GoalDetailView({
             </motion.div>
           )}
         </AnimatePresence>
+// ... (rest of component)
       </div>
     </div>
   )

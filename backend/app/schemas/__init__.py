@@ -3,7 +3,7 @@
 # Import all schemas from their respective files first.
 from .msg import Msg
 from .goal import GoalCreate, GoalRead, TaskCreate, TaskRead
-from .user import PartnershipStatus, UserBase, UserCreate, UserInDB, UserRead, UserUpdate
+from .user import AccountStatus, PartnershipStatus, UserBase, UserCreate, UserInDB, UserRead, UserUpdate
 from .partner_invitation import (
     InvitationAction,
     InvitationActionWithToken,
@@ -19,6 +19,7 @@ from .partner_invitation import (
 
 # Define the public API for the schemas package.
 __all__ = [
+    "AccountStatus",
     "InvitationAction",
     "InvitationActionWithToken",
     "InvitationStatus",

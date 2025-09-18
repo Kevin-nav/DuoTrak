@@ -132,15 +132,19 @@ export default function DuoStreakHero({
         )}
       </AnimatePresence>
 
+      import Mascot from '@/components/mascot/Mascot';
+
+// ... (imports)
+
+// ... (inside component)
       <div className="relative z-10 text-center space-y-6">
         <div className="space-y-2">
           <div className="flex justify-center items-center space-x-4">
-            <Flame className="w-10 h-10 text-orange-500" />
-            <Zap className="w-10 h-10 text-yellow-400" />
-            <Star className="w-10 h-10 text-red-500" />
+            <Mascot variant="streak" size={128} />
           </div>
 
           <div className="relative inline-block">
+// ... (rest of component)
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
