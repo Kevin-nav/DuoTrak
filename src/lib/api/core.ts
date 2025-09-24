@@ -29,13 +29,10 @@ function getCookie(name: string): string {
  * @returns The response from the fetch request.
  */
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  // All API calls are now relative (e.g., /api/v1/users/me).
-  // The Next.js server will proxy them to the FastAPI backend based on the
-  // `rewrites` configuration in `next.config.mjs`.
-  // This makes all requests same-origin from the browser's perspective.
-  const absoluteUrl = url;
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const absoluteUrl = `${baseUrl}/api/v1${url}`;
 
-  console.log(`[apiFetch] Making same-origin request to: ${absoluteUrl}`);
+  console.log(`[apiFetch] Making request to: ${absoluteUrl}`);
 
   const headers = new Headers(options.headers || {});
 

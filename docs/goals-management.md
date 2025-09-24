@@ -1,77 +1,83 @@
 # Goals Management
 
-## Description
-This feature allows users to view and manage their personal goals within the DuoTrak application. It provides a dashboard-like interface to display goals, with basic search functionality. The current implementation focuses on reading existing goals, with creation, update, and deletion functionalities planned for future development.
+This feature allows users to view, create, and manage their personal and shared goals within the DuoTrak application. It provides a dashboard-like interface to display goals, with basic search functionality.
 
-## Frontend Implementation
+## 1. Goal Creation Flow
 
-### Pages/Routes
-- `src/app/(app)/goals/page.tsx`:
-    - **Purpose:** The entry point for the goals management section.
-    - **Mechanism:** This page is a simple wrapper that renders the `GoalsHome` component, passing minimal props.
+The goal creation process is a multi-step wizard designed to guide users through defining their objectives and generating actionable plans. It starts with selecting the type of goal.
 
-### Components
-- `src/components/goals-home.tsx`:
-    - **Purpose:** The central component for displaying and managing a user's goals.
-    - **Mechanism:**
-        - **Data Fetching:** Uses the `useGoals()` custom hook to fetch a list of `GoalRead` objects from the backend.
-        - **State Management:** Manages local UI states such as `activeTab` (personal/shared), `showTypeSelector`, `showPersonalWizard`, `showSharedWizardState`, `showReview`, `selectedGoal`, `showGoalEditor` for various modals and editors (though many are currently disabled).
-        - **Search Functionality:** Filters displayed goals based on `searchQuery` matching `goal.name` or `goal.category`.
-        - **Goal Display:** Iterates through `filteredGoals` and renders each goal, showing its name, category, creation date, and number of tasks. Uses `framer-motion` for animations and `MouseGlowEffect` for visual flair.
-        - **Empty State:** Displays a dynamic message when no goals are found or no search results are present.
-        - **Disabled Functionality:** Many goal management actions (create, edit, delete, archive, duplicate, save) are present as handlers but are currently disabled or commented out, indicating they are part of future development milestones.
-    - **Dependencies:** `useGoals` hook, `GoalRead` schema, `framer-motion`, `lucide-react`, `MouseGlowEffect`, `DashboardLayout`, and other goal-related wizard/editor components (currently unreachable).
+### Step 1: Choose Goal Type (`src/components/goal-type-selector.tsx`)
 
-### Contexts/Hooks/Libs
-- `src/hooks/useGoals.ts`:
-    - **Purpose:** A custom React Query hook to fetch the list of goals for the authenticated user.
-    - **Mechanism:** Uses `useQuery` from `@tanstack/react-query` with `queryKey: ['goals']` and `queryFn: getGoals` (from `@/lib/api/goals`).
-- `src/lib/api/goals.ts`:
-    - **Purpose:** Provides client-side functions for interacting with the backend goals API.
-    - **`getGoals` Function:** Asynchronously fetches an array of `GoalRead` objects by making a GET request to `/api/v1/goals/` using `apiClient.get`.
-- `src/schemas/goal.ts`:
-    - **Purpose:** Defines the Zod schemas (`TaskSchema`, `GoalSchema`) for client-side data validation and type inference for tasks and goals.
-    - **Types:** Exports `TaskRead` and `GoalRead` types.
+This is the initial screen where the user decides if the goal is personal or shared.
 
-### Data Flow (Frontend)
-1.  `GoalsHome` component calls `useGoals()` hook.
-2.  `useGoals()` hook calls `getGoals()` from `@/lib/api/goals.ts`.
-3.  `getGoals()` uses `apiClient.get` to make an HTTP GET request to `/api/v1/goals/`.
-4.  The backend responds with a list of `GoalRead` objects.
-5.  `useGoals()` caches and provides this data to `GoalsHome`.
-6.  `GoalsHome` filters and displays the goals.
+*   **Question:** "What kind of goal?"
+*   **Input Method:** The user selects one of two large **Buttons**.
+*   **Options:**
+    1.  **"Just for Me"**: For personal goals.
+    2.  **"With My Duo"**: For shared goals with a partner.
 
-## Backend Implementation
+### Step 2 (Option A): Personal Goal Wizard (`src/components/goal-creation-wizard.tsx`)
+
+If "Just for Me" is selected, the user proceeds through this 5-step wizard:
+
+*   **Screen 1: Your Goal**
+    *   **Question:** "What do you want to achieve?"
+    *   **Input Method:** A **Text Field**.
+
+*   **Screen 2: Your Why**
+    *   **Question:** "What drives you?"
+    *   **Input Method:** A **Text Area**.
+
+*   **Screen 3: Your Schedule**
+    *   **Question:** "When can you work on this?"
+    *   **Input Method:** **Checkboxes** (user can select multiple).
+    *   **Options:** `Mornings (6-9 AM)`, `Lunchtime (12-2 PM)`, `Evnings (6-9 PM)`, `Weekends only`, `I'm flexible`.
+
+*   **Screen 4: Time Investment**
+    *   **Question:** "How much time can you dedicate?"
+    *   **Input Methods:** This screen has both **Radio Buttons** (for pre-defined options) and a **Text Field** (for a custom entry).
+    *   **Radio Button Options:** `15-30 mins daily`, `1 hour weekly`, `Suggest optimal based on my input`.
+
+*   **Screen 5: Accountability**
+    *   **Question:** "How will you track completion?"
+    *   **Input Methods:** This screen uses **Radio Buttons**. If the second option is chosen, a **Text Field** appears.
+    *   **Radio Button Options:** `Visual Proof (Recommended)`, `Time-Bound Action`.
+
+### Step 2 (Option B): Shared Goal Wizard (`src/components/shared-goal-wizard.tsx`)
+
+If "With My Duo" is selected, the user proceeds through this 5-step wizard:
+
+*   **Screen 1: Shared Goal**
+    *   **Question:** "What do you and [Partner's Name] want to achieve?"
+    *   **Input Method:** A **Text Field**.
+
+*   **Screen 2: Your Why**
+    *   **Question:** "Why is this goal important to both of you?"
+    *   **Input Method:** A **Text Area**.
+
+*   **Screen 3: Combined Schedule**
+    *   **Question:** "Tell us about your combined availability"
+    *   **Input Methods:** This screen uses **Checkboxes** and a **Text Field**.
+    *   **Checkbox Options:** `Early Mornings (6-8 AM)`, `Lunch Break (12-2 PM)`, `Evenings (6-9 PM)`, `Weekend Mornings`, `Weekend Evenings`, `We're flexible`.
+
+*   **Screen 4: Time Together**
+    *   **Question:** "How much time will you dedicate together?"
+    *   **Input Methods:** This screen uses **Radio Buttons** and a **Text Field**.
+    *   **Radio Button Options:** `30 mins daily together`, `1 hour, 3x per week`, `2 hours on weekends`, `Suggest optimal based on our input`.
+
+*   **Screen 5: Duo Accountability**
+    *   **Question:** "How will you ensure accountability?"
+    *   **Input Methods:** This screen uses **Radio Buttons**. If the second option is chosen, a **Text Field** appears.
+    *   **Radio Button Options:** `Strict Photo Verification (Recommended)`, `System-Verified Punctuality`.
+
+## 2. Goal Management
+
+### `src/components/goals-home.tsx`
+
+This component serves as the central hub for displaying and managing a user's goals. It fetches goal data from the backend using the `useGoals()` hook and displays them in a searchable list. While the UI elements for editing, deleting, and archiving goals are present, their full backend integration is part of future development milestones.
 
 ### API Endpoints
-- `backend/app/api/v1/endpoints/goals.py`:
-    - **`GET /` (response_model=List[schemas.GoalRead]):**
-        - **Purpose:** Retrieves all goals for the currently authenticated user.
-        - **Mechanism:**
-            - Requires authentication via `get_current_user_from_cookie` dependency.
-            - Queries the database for `models.Goal` records where `user_id` matches the authenticated user's ID.
-            - Uses `selectinload(models.Goal.tasks)` to eagerly load all associated tasks for each goal.
-            - Orders results by `created_at` in descending order.
-            - Applies a rate limit of 20 requests per minute.
-        - **Dependencies:** `get_current_user_from_cookie`, `get_db`, `schemas.GoalRead`, `models.Goal`, `selectinload`, `limiter`.
 
-### Services
-- (No dedicated `goal_service.py` found in the current implementation. Goal retrieval logic is directly within the endpoint.)
+*   `GET /api/v1/goals/`: Retrieves all goals for the authenticated user.
+*   `POST /api/v1/goals/onboarding`: Creates the initial goal and task during the onboarding process.
 
-### Schemas
-- `backend/app/schemas/goal.py`:
-    - **Purpose:** Defines Pydantic schemas for `Task` and `Goal` objects, used for API request/response validation and data modeling.
-    - **`TaskBase`, `TaskCreate`, `TaskUpdate`, `TaskRead`:** Schemas defining the structure and validation rules for tasks at different stages (base, creation, update, read).
-    - **`GoalBase`, `GoalCreate`, `GoalUpdate`, `GoalRead`:** Schemas defining the structure and validation rules for goals at different stages, including nested `Task` schemas.
-
-### Database Interactions
-- Retrieval of `Goal` records and their associated `Task` records from the database, filtered by `user_id`.
-
-## Dependencies/Integrations
-- **Authentication & Authorization Feature:** Relies on the authentication system to identify the current user for fetching their goals.
-- **`@tanstack/react-query`:** Used on the frontend for efficient data fetching and caching of goals.
-- **FastAPI:** The web framework hosting the backend goals API endpoint.
-- **SQLAlchemy:** ORM for asynchronous database interactions with the `Goal` and `Task` models.
-- **Pydantic:** For data validation and serialization/deserialization of API requests and responses on the backend.
-- **Zod:** For client-side data validation and type inference of goal and task data.
-- **`fastapi-limiter`:** For rate limiting on the goals API endpoint.

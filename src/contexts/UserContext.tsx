@@ -31,7 +31,8 @@ export interface UserDetails {
     partnership_id: string | null;
     partnership_status: PartnershipStatus;
     partner_full_name: string | null;
-    // Invitation fields
+    partner_nickname: string | null;
+    nickname: string | null;
     sent_invitation: any | null;
     received_invitation: any | null;
     // Badge fields
@@ -338,9 +339,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
 
         try {
-            await apiClient.sendInvitation(email, name, customMessage);
+            const response = await apiClient.sendInvitation(email, name, customMessage);
             toast.success("Invitation sent successfully!");
             await refetchUserDetails();
+            return response; // Return the full response
         } catch (error: any) {
             toast.error(error.message || "Failed to send invitation.");
             throw error;

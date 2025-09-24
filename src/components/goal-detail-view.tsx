@@ -5,36 +5,15 @@ import { ArrowLeft, Camera, Clock, CheckCircle, Upload, X } from "lucide-react"
 import { useState } from "react"
 import MouseGlowEffect from "./mouse-glow-effect"
 
-interface Task {
-  id: string
-  name: string
-  completed: boolean
-  date: string
-  canComplete: boolean
-  timeWindow?: string
-}
+import { GoalRead } from "@/schemas/goal";
+import { useRouter } from "next/navigation";
 
 interface GoalDetailViewProps {
-  goalName?: string
-  category?: string
-  accountabilityType?: "visual" | "time-bound"
-  progress?: number
-  total?: number
-  tasks?: Task[]
+  goal: GoalRead;
 }
 
-export default function GoalDetailView({
-  goalName = "Daily Meditation",
-  category = "Wellness",
-  accountabilityType = "visual",
-  progress = 5,
-  total = 10,
-  tasks = [
-    { id: "1", name: "Morning meditation session", completed: true, date: "Today", canComplete: false },
-    { id: "2", name: "Evening reflection", completed: false, date: "Today", canComplete: true },
-    { id: "3", name: "Mindfulness practice", completed: false, date: "Tomorrow", canComplete: false },
-  ],
-}: GoalDetailViewProps) {
+export default function GoalDetailView({ goal }: GoalDetailViewProps) {
+  const router = useRouter();
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
   const [selectedTask, setSelectedTask] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
@@ -60,19 +39,19 @@ export default function GoalDetailView({
     setTimeout(() => setShowCelebration(false), 2000)
   }
 
-  const progressPercentage = (progress / total) * 100
+  const progressPercentage = goal.total > 0 ? (goal.progress / goal.total) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-pearl-gray dark:bg-gray-900 pt-16 pb-20">
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center mb-6">
-          <button className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors mr-4">
+          <button onClick={() => router.back()} className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors mr-4">
             <ArrowLeft className="w-6 h-6 text-charcoal dark:text-gray-100" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-charcoal dark:text-gray-100">{goalName}</h1>
-            <p className="text-stone-gray dark:text-gray-400">{category}</p>
+            <h1 className="text-2xl font-bold text-charcoal dark:text-gray-100">{goal.name}</h1>
+            <p className="text-stone-gray dark:text-gray-400">{goal.category}</p>
           </div>
         </motion.div>
 
@@ -85,7 +64,7 @@ export default function GoalDetailView({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-charcoal dark:text-gray-100">Overall Progress</h2>
             <span className="text-sm font-medium text-stone-gray dark:text-gray-400">
-              {progress}/{total} completed
+              {goal.progress}/{goal.total} completed
             </span>
           </div>
 
@@ -106,7 +85,7 @@ export default function GoalDetailView({
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-stone-gray dark:text-gray-400">
-              {accountabilityType === "visual" ? "Photo verification" : "Time-bound completion"}
+              {goal.is_habit ? "Habit Building" : "Project Goal"}
             </span>
             <span className="text-primary-blue font-medium">{Math.round(progressPercentage)}% complete</span>
           </div>
@@ -119,72 +98,59 @@ export default function GoalDetailView({
           transition={{ delay: 0.1 }}
           className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700"
         >
-          <h2 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-4">Daily Tasks</h2>
+          <h2 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-4">Tasks</h2>
 
           <div className="space-y-3">
-            {tasks.map((task, index) => (
-              <MouseGlowEffect key={task.id} glowColor={task.completed ? "#10B981" : "#19A1E5"} intensity="low">
+            {goal.tasks.map((task, index) => (
+              <MouseGlowEffect key={task.id} glowColor={task.status === 'completed' ? "#10B981" : "#19A1E5"} intensity="low">
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                   className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
-                    task.completed
+                    task.status === 'completed'
                       ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
-                      : task.canComplete
-                        ? "border-primary-blue/20 bg-accent-light-blue dark:bg-primary-blue/10 hover:border-primary-blue"
-                        : "border-cool-gray dark:border-gray-600 opacity-60"
+                      : "border-primary-blue/20 bg-accent-light-blue dark:bg-primary-blue/10 hover:border-primary-blue"
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        task.completed
+                        task.status === 'completed'
                           ? "border-green-500 bg-green-500"
-                          : task.canComplete
-                            ? "border-primary-blue hover:bg-primary-blue/10"
-                            : "border-cool-gray dark:border-gray-600"
+                          : "border-primary-blue hover:bg-primary-blue/10"
                       }`}
                     >
-                      {task.completed && <CheckCircle className="w-4 h-4 text-white" />}
+                      {task.status === 'completed' && <CheckCircle className="w-4 h-4 text-white" />}
                     </div>
 
                     <div>
                       <p
                         className={`font-medium ${
-                          task.completed
+                          task.status === 'completed'
                             ? "text-green-700 dark:text-green-300 line-through"
                             : "text-charcoal dark:text-gray-100"
                         }`}
                       >
                         {task.name}
                       </p>
-                      <p className="text-sm text-stone-gray dark:text-gray-400">{task.date}</p>
+                      <p className="text-sm text-stone-gray dark:text-gray-400">{new Date(task.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
 
-                  {task.canComplete && !task.completed && (
+                  {task.status !== 'completed' && (
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleMarkComplete(task.id)}
                       className="flex items-center space-x-2 bg-primary-blue hover:bg-primary-blue-hover text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
                     >
-                      {accountabilityType === "visual" ? (
-                        <>
-                          <Camera className="w-4 h-4" />
-                          <span>Add Photo</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-4 h-4" />
-                          <span>Mark Done</span>
-                        </>
-                      )}
+                      <Clock className="w-4 h-4" />
+                      <span>Mark Done</span>
                     </motion.button>
                   )}
 
-                  {task.completed && (
+                  {task.status === 'completed' && (
                     <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
                       <CheckCircle className="w-4 h-4" />
                       <span className="text-sm font-medium">Completed</span>
@@ -249,11 +215,6 @@ export default function GoalDetailView({
           )}
         </AnimatePresence>
 
-        import Mascot from '@/components/mascot/Mascot';
-
-// ... (imports)
-
-// ... (inside component)
         {/* Celebration Animation */}
         <AnimatePresence>
           {showCelebration && (
@@ -299,7 +260,6 @@ export default function GoalDetailView({
             </motion.div>
           )}
         </AnimatePresence>
-// ... (rest of component)
       </div>
     </div>
   )

@@ -62,15 +62,17 @@ This document outlines the relational database schema for the DuoTrak applicatio
 
 **Purpose:** Records active partnerships between two users.
 
-| Column Name  | Type        | Constraints                                   | Description                                     |
-| :----------- | :---------- | :-------------------------------------------- | :---------------------------------------------- |
-| `id`         | `UUID`      | Primary Key, Default: `uuid.uuid4()`          | Unique identifier for the partnership.          |
-| `user1_id`   | `UUID`      | Foreign Key (`users.id`), Not Null, `ON DELETE CASCADE` | ID of the first user in the partnership.        |
-| `user2_id`   | `UUID`      | Foreign Key (`users.id`), Not Null, `ON DELETE CASCADE` | ID of the second user in the partnership.       |
-| `start_date` | `TIMESTAMP` | Not Null                                      | Date and time when the partnership began.       |
-| `status`     | `Enum`      | Not Null                                      | Current status of the partnership.              |
-| `created_at` | `TIMESTAMP` | Not Null, Default: `func.now()`               | Timestamp of creation.                          |
-| `updated_at` | `TIMESTAMP` | Not Null, Default: `func.now()`, `ON UPDATE func.now()` | Timestamp of last update.                       |
+| Column Name       | Type        | Constraints                                   | Description                                     |
+| :---------------- | :---------- | :-------------------------------------------- | :---------------------------------------------- |
+| `id`              | `UUID`      | Primary Key, Default: `uuid.uuid4()`          | Unique identifier for the partnership.          |
+| `user1_id`        | `UUID`      | Foreign Key (`users.id`), Not Null, `ON DELETE CASCADE` | ID of the first user in the partnership.        |
+| `user2_id`        | `UUID`      | Foreign Key (`users.id`), Not Null, `ON DELETE CASCADE` | ID of the second user in the partnership.       |
+| `user1_nickname`  | `String(255)` | Nullable                                      | Nickname of user1 within the partnership.       |
+| `user2_nickname`  | `String(255)` | Nullable                                      | Nickname of user2 within the partnership.       |
+| `start_date`      | `TIMESTAMP` | Not Null                                      | Date and time when the partnership began.       |
+| `status`          | `Enum`      | Not Null                                      | Current status of the partnership.              |
+| `created_at`      | `TIMESTAMP` | Not Null, Default: `func.now()`               | Timestamp of creation.                          |
+| `updated_at`      | `TIMESTAMP` | Not Null, Default: `func.now()`, `ON UPDATE func.now()` | Timestamp of last update.                       |
 
 **Constraints:**
 - `UniqueConstraint('user1_id', 'user2_id')`: Ensures a unique partnership between a pair of users.

@@ -22,6 +22,7 @@ const steps = [
 export default function InviterOnboardingFlow() {
   const { userDetails, isLoading: isUserLoading, refetchUserDetails } = useUser();
   const router = useRouter();
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
@@ -32,6 +33,15 @@ export default function InviterOnboardingFlow() {
 
   useEffect(() => {
     if (userDetails) {
+      // Initialize step from localStorage
+      const savedStep = localStorage.getItem('inviterOnboardingStep');
+      if (userDetails.account_status === 'AWAITING_PARTNERSHIP' && savedStep) {
+        const step = parseInt(savedStep, 10);
+        setCurrentStep(step);
+        // Mark previous steps as complete
+        setCompletedSteps(Array.from({ length: step }, (_, i) => i));
+      }
+
       setOnboardingData(prev => ({
         ...prev,
         profile: {
@@ -39,7 +49,6 @@ export default function InviterOnboardingFlow() {
           bio: userDetails.bio || '',
           timezone: userDetails.timezone || 'UTC',
         },
-        // Potentially load existing preferences here if they are part of userDetails
       }));
     }
   }, [userDetails]);
@@ -50,8 +59,10 @@ export default function InviterOnboardingFlow() {
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
+      const nextStep = currentStep + 1;
+      localStorage.setItem('inviterOnboardingStep', nextStep.toString());
       setCompletedSteps((prev) => [...prev, currentStep]);
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(nextStep);
       setIsCurrentStepValid(false); // Reset validity for the next step
     }
   };

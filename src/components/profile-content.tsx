@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion"
 import { useState, useEffect } from "react"
-import { Settings, Palette, Bell, Shield, HelpCircle, LogOut, Edit3, Camera, ChevronRight, Mail } from "lucide-react"
+import { UserRead } from "@/schemas/user";
+import { Settings, Palette, Bell, Shield, HelpCircle, LogOut, Edit3, Camera, ChevronRight, Mail, User } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -44,14 +45,13 @@ export default function ProfileContent() {
   }
 
   const {
-    username,
+    full_name,
     email,
-    profile_picture,
+    profile_picture_url,
     current_streak,
     longest_streak,
     total_tasks_completed,
     goals_conquered,
-    partner,
     notifications_enabled,
     timezone,
   } = userDetails
@@ -70,7 +70,7 @@ export default function ProfileContent() {
   const handleNicknameSave = async () => {
     try {
       await apiFetch("/api/v1/users/me", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ nickname: nickname }),
       })
       refetchUserDetails()
@@ -97,7 +97,7 @@ export default function ProfileContent() {
       await reauthenticateWithCredential(user, credential)
       await updateEmail(user, newEmail)
       await apiFetch("/api/v1/users/me", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ email: newEmail }),
       })
       setIsEmailDialogOpen(false)
@@ -155,7 +155,7 @@ export default function ProfileContent() {
   const handleNotificationsToggle = async (enabled: boolean) => {
     try {
       await apiFetch("/api/v1/users/me", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ notifications_enabled: enabled }),
       })
       refetchUserDetails()
@@ -169,7 +169,7 @@ export default function ProfileContent() {
   const handleTimezoneChange = async (value: string) => {
     try {
       await apiFetch("/api/v1/users/me", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ timezone: value }),
       })
       refetchUserDetails()
@@ -194,11 +194,11 @@ export default function ProfileContent() {
             {/* Avatar */}
             <div className="relative">
               <Avatar className="w-24 h-24 border-4 border-[var(--theme-primary)]">
-                <AvatarImage src={profile_picture || "/placeholder.svg"} />
+                <AvatarImage src={profile_picture_url || "/placeholder.svg"} />
                 <AvatarFallback className="text-2xl font-bold bg-[var(--theme-accent)] text-[var(--theme-foreground)]">
-                  {username
+                  {full_name
                     ?.split(" ")
-                    .map((n) => n[0])
+                    .map((n: string) => n[0])
                     .join("")}
                 </AvatarFallback>
               </Avatar>
@@ -213,7 +213,7 @@ export default function ProfileContent() {
             {/* Profile Info */}
             <div className="flex-1 text-center sm:text-left">
               <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
-                <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">{username}</h1>
+                <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">{full_name}</h1>
                 <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="ghost" size="sm">
@@ -265,7 +265,7 @@ export default function ProfileContent() {
                 <Badge variant="secondary" className="bg-[var(--theme-accent)] text-[var(--theme-foreground)]">
                   🎯 {goals_conquered} Goals Completed
                 </Badge>
-                {partner && (
+                {userDetails.partner_id && (
                   <Badge variant="secondary" className="bg-[var(--theme-accent)] text-[var(--theme-foreground)]">
                     👥 Partnered
                   </Badge>
@@ -345,7 +345,7 @@ export default function ProfileContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={notifications_enabled} onCheckedChange={handleNotificationsToggle} />
+              <Switch checked={notifications_enabled ?? undefined} onCheckedChange={handleNotificationsToggle} />
             </div>
           </div>
 
@@ -461,7 +461,7 @@ export default function ProfileContent() {
                 <p className="text-sm text-[var(--theme-secondary)]">Set your current timezone</p>
               </div>
             </div>
-            <Select value={timezone} onValueChange={handleTimezoneChange}>
+            <Select value={timezone ?? undefined} onValueChange={handleTimezoneChange}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -477,7 +477,7 @@ export default function ProfileContent() {
         </CardContent>
       </Card>
 
-      {partner && (
+      {userDetails.partner_id && (
         <Card className="bg-[var(--theme-card)] border-[var(--theme-border)]">
           <CardHeader>
             <CardTitle className="text-[var(--theme-foreground)]">Partner Connection</CardTitle>
@@ -485,16 +485,19 @@ export default function ProfileContent() {
           <CardContent>
             <div className="flex items-center gap-4">
               <Avatar className="w-12 h-12">
-                <AvatarImage src={partner.profile_picture || "/placeholder.svg"} />
+                <AvatarImage src={"/placeholder.svg"} />
                 <AvatarFallback className="bg-[var(--theme-accent)] text-[var(--theme-foreground)]">
-                  {partner.username
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                  {userDetails.partner_nickname // Prefer nickname if available
+                    ? userDetails.partner_nickname.split(" ").map((n: string) => n[0]).join("")
+                    : userDetails.partner_full_name // Fallback to full name initials
+                    ? userDetails.partner_full_name.split(" ").map((n: string) => n[0]).join("")
+                    : "P"} {/* Default fallback */}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h3 className="font-medium text-[var(--theme-foreground)]">{partner.username}</h3>
+                <h3 className="font-medium text-[var(--theme-foreground)]">
+                  {userDetails.partner_nickname || userDetails.partner_full_name || "Your Partner"}
+                </h3>
                 <p className="text-sm text-[var(--theme-secondary)]">Connected partner</p>
               </div>
               <Button variant="outline" size="sm">

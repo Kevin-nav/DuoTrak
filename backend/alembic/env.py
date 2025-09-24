@@ -24,6 +24,7 @@ from app.db.base import Base
 from app.db.models.user import User
 from app.db.models.partnership import Partnership
 from app.db.models.partner_invitation import PartnerInvitation
+from app.db.models.user_behavioral_metrics import UserBehavioralMetrics
 from app.db.models import user, partner_invitation, partnership
 from app.core.config import settings
 

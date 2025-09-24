@@ -1,12 +1,15 @@
 # backend/app/services/user_service.py
 
+import uuid
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
 
 from app.db.models.user import User
 from app.db.models.partner_invitation import PartnerInvitation
-from app.schemas.user import UserCreate, UserUpdate
+from app.db.models.partnership import Partnership
+from app.schemas.user import UserCreate, UserUpdate, UserRead
 
 from sqlalchemy.orm import selectinload, load_only
 
@@ -167,7 +170,7 @@ class UserService:
             "partner_full_name": partner_full_name,
             "partner_nickname": partner_nickname,
             "partnership_id": partnership_id,
-            "sent_invitation": await self._get_pending_invitation(db, user.id),
+            "sent_invitation": await self._get_pending_sent_invitation(db, user.id),
             "received_invitation": await self._get_received_invitation(db, user.email),
             "badges": [{"badge": ub.badge, "earned_at": ub.earned_at} for ub in user.user_badges]
         }
@@ -177,6 +180,28 @@ class UserService:
         stmt = select(Partnership).where(
             (Partnership.user1_id == user_id) | (Partnership.user2_id == user_id)
         )
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    async def _get_pending_sent_invitation(self, db: AsyncSession, user_id: uuid.UUID) -> Optional[PartnerInvitation]:
+        """
+        Gets the most recent pending invitation sent by the user.
+        """
+        stmt = select(PartnerInvitation).where(
+            PartnerInvitation.sender_id == user_id,
+            PartnerInvitation.status == 'pending'
+        ).order_by(PartnerInvitation.created_at.desc())
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    async def _get_received_invitation(self, db: AsyncSession, email: str) -> Optional[PartnerInvitation]:
+        """
+        Checks for a pending invitation received by the user.
+        """
+        stmt = select(PartnerInvitation).where(
+            PartnerInvitation.receiver_email.ilike(email),
+            PartnerInvitation.status == 'pending'
+        ).order_by(PartnerInvitation.created_at.desc())
         result = await db.execute(stmt)
         return result.scalars().first()
 

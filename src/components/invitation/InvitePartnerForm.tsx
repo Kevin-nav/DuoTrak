@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Eye, Heart } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
+import { useInvitation } from '@/contexts/invitation-context';
 import { useRouter } from 'next/navigation';
 import { persistentLog } from '@/lib/logger';
 import CelebrationAnimation from '@/components/celebration-animation';
@@ -27,6 +28,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function InvitePartnerForm() {
   const { sendInvitation } = useUser();
+  const { setInvitationToken } = useInvitation();
   const router = useRouter();
   const [showPreview, setShowPreview] = useState(false);
   const [invitationSent, setInvitationSent] = useState(false);
@@ -49,8 +51,15 @@ export default function InvitePartnerForm() {
     setError('root', { message: '' }); // Clear previous root errors
 
     try {
-      await sendInvitation(data.partnerEmail, data.partnerName, data.customMessage);
-      persistentLog('Invitation successfully created.');
+      const response = await sendInvitation(data.partnerEmail, data.partnerName, data.customMessage);
+      if (response && response.invitation && response.invitation.invitation_token) {
+        setInvitationToken(response.invitation.invitation_token);
+        persistentLog('Invitation successfully created and token stored.');
+      } else {
+        persistentLog('Invitation response did not contain a token.', { response });
+        throw new Error('Could not retrieve invitation details. Please try again.');
+      }
+      
       setInvitationSent(true);
       // Redirect after 3 seconds to allow the celebration animation to play.
       setTimeout(() => router.push('/onboarding/inviter'), 3000);

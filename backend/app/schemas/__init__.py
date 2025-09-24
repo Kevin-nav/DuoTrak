@@ -1,51 +1,27 @@
 """Pydantic schemas for the application."""
 
-# Import all schemas from their respective files first.
-from .msg import Msg
-from .goal import GoalCreate, GoalRead, TaskCreate, TaskRead
-from .user import AccountStatus, PartnershipStatus, UserBase, UserCreate, UserInDB, UserRead, UserUpdate
-from .partner_invitation import (
-    InvitationAction,
-    InvitationActionWithToken,
-    InvitationStatus,
-    PartnerInvitation,
-    PartnerInvitationBase,
-    PartnerInvitationCreate,
-    PartnerInvitationInDBBase,
-    PartnerInvitationResponse,
-    PartnerInvitationUpdate,
-    PublicInvitationDetails,
+# Import all schemas from their respective files.
+from .user import (
+    UserCreate, UserUpdate, UserRead, AccountStatus, PartnershipStatus, 
+    UserBase, UserInDB, UserProfileSync, SessionLoginRequest, UserSyncResponse, 
+    BadgeRead, UserBadgeRead
 )
+from .goal import (
+    GoalRead, GoalCreate, GoalUpdate, GoalSuggestionRequest, GoalSuggestionResponse, 
+    GoalBase, GoalType, AccountabilityType, SuggestedTask, OnboardingGoalPlanRequest as GoalOnboardingRequest
+)
+from .task import TaskCreate, TaskUpdate, TaskRead, TaskBase
+from .partner_invitation import (
+    PartnerInvitation, PartnerInvitationCreate, PartnerInvitationUpdate, 
+    PublicInvitationDetails, InvitationStatus, PartnerInvitationBase, 
+    PartnerInvitationInDBBase, InvitationAction, InvitationActionWithToken, 
+    PartnerInvitationResponse
+)
+from .agent import GoalCreationContext, OnboardingGoalPlanRequest
+from .msg import Msg
+from .onboarding import OnboardingGoalCreate
 
-# Define the public API for the schemas package.
-__all__ = [
-    "AccountStatus",
-    "InvitationAction",
-    "InvitationActionWithToken",
-    "InvitationStatus",
-    "Msg",
-    "PartnerInvitation",
-    "PartnerInvitationBase",
-    "PartnerInvitationCreate",
-    "PartnerInvitationInDBBase",
-    "PartnerInvitationResponse",
-    "PartnerInvitationUpdate",
-    "PublicInvitationDetails",
-    "GoalCreate",
-    "GoalRead",
-    "TaskCreate",
-    "TaskRead",
-    "UserBase",
-    "UserCreate",
-    "UserInDB",
-    "UserRead",
-    "UserUpdate",
-    "PartnershipStatus",
-]
-
-# After all schemas are loaded into this module's scope,
-# we can safely rebuild the models that have forward references.
-# This resolves the circular dependency issue.
+# After all schemas are loaded, rebuild models with forward references.
 UserRead.model_rebuild()
 PartnerInvitation.model_rebuild()
 

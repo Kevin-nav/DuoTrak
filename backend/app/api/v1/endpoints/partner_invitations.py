@@ -236,17 +236,12 @@ async def get_public_invitation_details(
     This endpoint is not authenticated and only returns non-sensitive information.
     """
     service = PartnerInvitationService(db)
-    details = await service.get_public_invitation_details(token)
-    if not details:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invitation not found or has expired.",
-        )
-    return details
+    return await service.get_public_invitation_details(token)
 
 
 @router.patch(
     "/{token}/viewed",
+    response_model=schemas.PartnerInvitationResponse,
     status_code=status.HTTP_200_OK,
 )
 @limiter.limit("15/minute")

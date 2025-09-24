@@ -1,0 +1,322 @@
+Table of Contents (please ignore the page numbers and rather focus on the orderas this is the order of information inside the document  Agentic_Design_Patterns.txt)
+Dedication	i
+Acknowledgment	ii
+Foreword	iv
+A Thought Leader's Perspective: Power and Responsibility	v
+Preface	vii
+What makes an AI system an Agent?	1
+Level 1: The Connected Problem-Solver	3
+Level 2: The Strategic Problem-Solver	3
+Level 3: The Rise of Collaborative Multi-Agent Systems	4
+The Future of Agents: Top 5 Hypotheses	5
+Hypothesis 1: The Emergence of the Generalist Agent	5
+Hypothesis 2: Deep Personalization and Proactive Goal Discovery	5
+Hypothesis 3: Embodiment and Physical World Interaction	6
+Hypothesis 4: The Agent-Driven Economy	6
+Hypothesis 5:  The Goal-Driven, Metamorphic Multi-Agent System	7
+Conclusion	7
+References	8
+Chapter 1: Prompt Chaining	9
+Prompt Chaining Pattern Overview	9
+Context Engineering and Prompt Engineering	16
+Context Engineering	16
+At a Glance	18
+Conclusion	19
+References	20
+Chapter 2: Routing	21
+Routing Pattern Overview	21
+At a Glance	31
+References	32
+Chapter 3: Parallelization	33
+Parallelization Pattern Overview	33
+At a Glance	43
+Key Takeaways	44
+Conclusion	45
+References	45
+Chapter 4: Reflection	46
+Reflection Pattern Overview	46
+At Glance	53
+Key Takeaways	55
+Conclusion	56
+References	56
+Chapter 5: Tool Use (Function Calling)	57
+Tool Use Pattern Overview	57
+Practical Applications & Use Cases	58
+Hands-On Code Example (LangChain)	60
+Hands-On Code Example (CrewAI)	63
+Hands-on code (Google ADK)	66
+At a Glance	73
+Key Takeaways	75
+Conclusion	76
+References	76
+Chapter 6: Planning	77
+Planning Pattern Overview	77
+Practical Applications & Use Cases	77
+Hands-on code (Crew AI)	78
+Google DeepResearch	80
+OpenAI Deep Research API	84
+At a Glance	87
+Key Takeaways	88
+Conclusion	88
+References	89
+Chapter 7: Multi-Agent Collaboration	90
+Multi-Agent Collaboration Pattern Overview	90
+Practical Applications & Use Cases	92
+Multi-Agent Collaboration: Exploring Interrelationships and Communication Structures	93
+Hands-On code (Crew AI)	95
+Hands-on Code (Google ADK)	97
+At a Glance	104
+Key Takeaways	105
+Conclusion	105
+References	106
+Chapter 8: Memory Management	107
+Practical Applications & Use Cases	108
+Hands-On Code: Memory Management in Google Agent Developer Kit (ADK)	108
+Session: Keeping Track of Each Chat	109
+State: The Session's Scratchpad	111
+Memory: Long-Term Knowledge with MemoryService	116
+Hands-on code: Memory Management in LangChain and LangGraph	117
+Vertex Memory Bank	122
+At a Glance	123
+Key Takeaways	125
+Conclusion	126
+References	126
+Chapter 9: Learning and Adaptation	128
+The big picture	128
+Practical Applications & Use Cases	130
+Case Study: The Self-Improving Coding Agent (SICA)	131
+AlphaEvolve and OpenEvolve	134
+At a Glance	136
+Key Takeaways	137
+Conclusion	138
+References	138
+Chapter 10: Model Context Protocol	140
+MCP Pattern Overview	140
+MCP vs. Tool Function Calling	141
+Additional considerations for MCP	143
+Practical Applications & Use Cases	145
+Hands-On Code Example with ADK	146
+Agent Setup with MCPToolset	146
+Connecting the MCP Server with ADK Web	148
+Creating an MCP Server with FastMCP	149
+Server setup with FastMCP	149
+Consuming the FastMCP Server with an ADK Agent	150
+At a Glance	152
+Key Takeaways	153
+Conclusion	154
+References	154
+Chapter 11: Goal Setting and Monitoring	166
+Goal Setting and Monitoring Pattern Overview	166
+Practical Applications & Use Cases	166
+Hands-On Code Example	167
+At a Glance	175
+Key takeaways	176
+Conclusion	176
+References	177
+Chapter 12: Exception Handling and Recovery	178
+Exception Handling and Recovery Pattern Overview	178
+Practical Applications & Use Cases	180
+Hands-On Code Example (ADK)	181
+At a Glance	182
+Key Takeaways	183
+Conclusion	184
+References	184
+Chapter 13: Human-in-the-Loop	185
+Human-in-the-Loop Pattern Overview	185
+Practical Applications & Use Cases	187
+Hands-On Code Example	188
+At Glance	190
+Key Takeaways	191
+Conclusion	192
+References	192
+Chapter 14: Knowledge Retrieval (RAG)	193
+Knowledge Retrieval (RAG) Pattern Overview	193
+Practical Applications & Use Cases	199
+Hands-On Code Example (ADK)	200
+Hands-On Code Example (LangChain)	201
+At Glance	205
+Key Takeaways	207
+Conclusion	208
+References	208
+Chapter 15: Inter-Agent Communication (A2A)	210
+Inter-Agent Communication Pattern Overview	210
+Core Concepts of A2A	210
+A2A vs. MCP	215
+Practical Applications & Use Cases	216
+Hands-On Code Example	217
+At a Glance	220
+Key Takeaways	221
+Conclusions	222
+References	223
+Chapter 16: Resource-Aware Optimization	224
+Practical Applications & Use Cases	224
+Hands-On Code Example	225
+Hands-On Code with OpenAI	228
+Hands-On Code Example (OpenRouter)	232
+Beyond Dynamic Model Switching: A Spectrum of Agent Resource Optimizations	234
+At a Glance	235
+Key Takeaways	237
+Conclusions	237
+References	237
+Chapter 17: Reasoning Techniques	238
+Practical Applications & Use Cases	238
+Reasoning techniques	239
+Hands-On Code Example	254
+So, what do agents think?	256
+At a Glance	257
+Key Takeaways	258
+Conclusions	259
+References	260
+Chapter 18: Guardrails/Safety Patterns	261
+Practical Applications & Use Cases	261
+Hands-On Code CrewAI Example	262
+Hands-On Code Vertex AI Example	271
+Engineering Reliable Agents	275
+At a Glance	277
+Key Takeaways	278
+Conclusion	279
+References	279
+Chapter 19: Evaluation and Monitoring	280
+Practical Applications & Use Cases	280
+Hands-On Code Example	281
+Agents trajectories	289
+From Agents to Advanced Contractors	291
+Google's ADK	293
+At a Glance	294
+Key Takeaways	295
+Conclusions	296
+References	297
+Chapter 20: Prioritization	298
+Prioritization Pattern Overview	298
+Practical Applications & Use Cases	299
+Hands-On Code Example	299
+At a Glance	305
+Key Takeaways	306
+Conclusions	307
+References	307
+Chapter 21: Exploration and Discovery	308
+Practical Applications & Use Cases	308
+Hands-On Code Example	312
+At a Glance	318
+Key Takeaways	319
+Conclusion	320
+References	320
+Appendix A: Advanced Prompting Techniques	321
+Introduction to Prompting	321
+Core Prompting Principles	321
+Basic Prompting Techniques	322
+Zero-Shot Prompting	323
+One-Shot Prompting	323
+Few-Shot Prompting	323
+Structuring Prompts	325
+System Prompting	325
+Role Prompting	325
+Using Delimiters	326
+Contextual Enginnering	326
+Structured Output	328
+Reasoning and Thought Process Techniques	330
+Chain of Thought (CoT)	331
+Self-Consistency	332
+Step-Back Prompting	333
+Tree of Thoughts (ToT)	333
+Action and Interaction Techniques	334
+Tool Use / Function Calling	334
+ReAct (Reason & Act)	335
+Advanced Techniques	336
+Automatic Prompt Engineering (APE)	336
+Iterative Prompting / Refinement	338
+Providing Negative Examples	338
+Using Analogies	338
+Factored Cognition / Decomposition	339
+Retrieval Augmented Generation (RAG)	339
+Persona Pattern (User Persona):	339
+Using Google Gems	340
+Using LLMs to Refine Prompts (The Meta Approach)	341
+Prompting for Specific Tasks	343
+Code Prompting	343
+Multimodal Prompting	343
+Best Practices and Experimentation	344
+Conclusion	345
+References	346
+Appendix B - AI Agentic Interactions: From GUI to Real World environment	347
+Interaction: Agents with Computers	347
+Interaction: Agents with the Environment	349
+Vibe Coding: Intuitive Development with AI	351
+Key takeaways	352
+Conclusion	352
+References	352
+Appendix C - Quick overview of Agentic Frameworks	354
+LangChain	354
+LangGraph	354
+Which One Should You Use?	355
+Google's ADK	357
+References	361
+Appendix D - Building an Agent with AgentSpace	362
+Overview	362
+How to build an Agent with AgentSpace UI	362
+Conclusion	367
+References	367
+Appendix E - AI Agents on the CLI	368
+Introduction	368
+Claude CLI (Claude Code)	368
+Gemini CLI	369
+Aider	370
+GitHub Copilot CLI	371
+Terminal-Bench: A Benchmark for AI Agents in Command-Line Interfaces	371
+Conclusion	372
+References	372
+Appendix F - Under the Hood: An Inside Look at the Agents‘Reasoning Engines	373
+Gemini	373
+1. Deconstructing the Prompt 📝	374
+2. Information Retrieval and Synthesis 🧠	374
+3. Generating the Response✍️	375
+ChatGPT	375
+🧠 Step-by-Step Explanation: How I Reason	376
+Step 1: Read and Understand Your Input	376
+Step 2: Activate Relevant Knowledge	376
+Step 3: Choose a Reasoning Method	376
+Step 4: Simulate Thinking (Chain of Thought)	377
+Step 5: Formulate an Answer	377
+Step 6: Adjust for Clarity and Tone	377
+✅ Final Summary	378
+Grok	378
+Step-by-Step Explanation of How I Reason	378
+Step 1: Understanding the Query	378
+Step 2: Contextual Analysis and Knowledge Retrieval	379
+Step 3: Formulating a Mental Model	379
+Step-by-Step Explanation of How I Reason (Continued)	379
+Step 3: Formulating a Mental Model	379
+Step 4: Evaluating Options and Hypotheses	380
+Step 5: Constructing the Response	380
+Step 6: Review and Refinement	381
+Key Characteristics of My Reasoning	381
+Limitations and Considerations	381
+Kimi	382
+Claude	384
+DeepSeek	384
+Conclusion	387
+Appendix G - Coding Agents	388
+Vibe Coding: A Starting Point	388
+Agents as Team Members	388
+Core Components	389
+Practical Implementation	391
+Setup Checklist	391
+Principles for Leading the Augmented Team	392
+Conclusion	393
+References	393
+Conclusion	394
+Review of key agentic principles	394
+Combining Patterns for Complex Systems	395
+Looking to the Future	397
+Final Thoughts	398
+Glossary I	399
+Fundamental Concepts	399
+Core AI Model Architectures	399
+The LLM Development Lifecycle	400
+Enhancing AI Agent Capabilities	401
+Glossary II	402
+Fundamental Concepts	402
+Index of Terms	405
+Prompt	413
+Gemini 2.5: Reasoning Steps	413
+Frequently Asked Questions: Agentic Design Patterns	417

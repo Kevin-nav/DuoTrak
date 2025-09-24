@@ -20,9 +20,11 @@ class Goal(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
-    category = Column(String(100), nullable=True)
+    category = Column(String(500), nullable=True)
     icon = Column(String(50), nullable=True)
     color = Column(String(20), nullable=True)
+    is_habit = Column(sa.Boolean, server_default="false", nullable=False)
+    is_archived = Column(sa.Boolean, server_default="false", nullable=False)
     
     # Foreign key to the user who owns the goal
     user_id = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)

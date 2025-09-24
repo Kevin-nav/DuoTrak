@@ -1,19 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInvitation } from '@/contexts/invitation-context';
+import { useUser } from '@/contexts/UserContext';
 import WelcomeStep from './WelcomeStep';
 import GoalDiscoveryStep from './GoalDiscoveryStep';
-import GoalCreationStep from './GoalCreationStep';
-import FirstTaskStep from './FirstTaskStep';
-import DraftReviewStep from './DraftReviewStep'; // Import the new component
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import IntelligentGoalCreationStep from './IntelligentGoalCreationStep';
+import PlanReviewStep from './PlanReviewStep';
 
 const baseSteps = [
   {
@@ -29,7 +27,12 @@ const baseSteps = [
   {
     id: 'creation',
     title: 'Define Goal',
-    component: GoalCreationStep,
+    component: IntelligentGoalCreationStep,
+  },
+  {
+    id: 'reviewPlan',
+    title: 'Review Plan',
+    component: PlanReviewStep,
   },
   {
     id: 'task',
@@ -64,8 +67,10 @@ export default function InviteeOnboardingFlow() {
       scheduledTime: '',
       requiresVerification: false,
     },
+    generatedPlan: null,
   });
   const [isStepValid, setIsStepValid] = useState(false);
+
 
   const { mutate: completeOnboarding, isPending: isCompleting } = useMutation({
     mutationFn: () => apiClient.completePartneredOnboarding(),
@@ -88,9 +93,9 @@ export default function InviteeOnboardingFlow() {
     },
   });
 
-  const updateData = (updates: any) => {
+  const updateData = useCallback((updates: any) => {
     setOnboardingData((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -124,10 +129,30 @@ export default function InviteeOnboardingFlow() {
     handleNext();
   };
 
+  const handlePlanGenerated = (plan: any) => {
+    updateData({ generatedPlan: plan });
+    handleNext();
+  };
+
   const handleFinish = () => {
-    const { goalTitle, goalDescription, firstTask } = onboardingData;
-    const goalData = { title: goalTitle, description: goalDescription, status: 'in_progress' };
-    createGoal({ goal: goalData, task: firstTask });
+    const { generatedPlan } = onboardingData;
+    if (!generatedPlan) {
+      toast.error("No plan generated. Please go back and create a plan.");
+      return;
+    }
+
+    const goalData: GoalCreate = {
+      name: generatedPlan.goal.title,
+      category: generatedPlan.goal.category, // Assuming category is part of the goal object
+      isHabit: generatedPlan.goalType === 'Habit',
+      tasks: generatedPlan.tasks.map((task: any) => ({
+        name: task.taskName,
+        description: task.description,
+        repeatFrequency: task.repeatFrequency,
+      })),
+    };
+
+    createGoal({ goal: goalData });
   };
 
   const handleSkip = () => {
@@ -138,7 +163,7 @@ export default function InviteeOnboardingFlow() {
   const CurrentStepComponent = steps[currentStep].component;
   const isPending = isCompleting || isCreating;
 
-  const currentStepProps = {
+  const currentStepProps: any = {
     data: onboardingData,
     updateData,
     onValidationChange: setIsStepValid,
@@ -151,7 +176,12 @@ export default function InviteeOnboardingFlow() {
         onSelectDraft: handleDraftSelected, 
         onCreateNew: handleCreateNew 
     });
+  } else if (steps[currentStep].id === 'creation') {
+    currentStepProps.onPlanGenerated = handlePlanGenerated;
+  } else if (steps[currentStep].id === 'reviewPlan') {
+    currentStepProps.plan = onboardingData.generatedPlan;
   }
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">

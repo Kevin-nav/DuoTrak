@@ -1,0 +1,636 @@
+2025-08-12 11:56:09,080 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 11:56:11,956 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 500 Internal Server Error" (_client.py:1740)
+2025-08-12 11:56:12,896 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 11:56:12,904 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:13,219 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:13,491 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:13,693 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 11:56:13,695 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 11:56:13,696 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 11:56:14,120 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:14,343 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:14,619 - WARNING - slowapi - ratelimit 2 per 1 minute (user:test_user_1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 11:56:14,621 - WARNING - app.main - Rate limit exceeded for identifier: user:test_user_1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 11:56:14,622 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 11:56:15,064 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:15,314 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:15,642 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_a) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 11:56:15,644 - WARNING - app.main - Rate limit exceeded for identifier: user:user_a. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 11:56:15,645 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 11:56:15,962 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:16,267 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 11:56:16,567 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_b) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 11:56:16,568 - WARNING - app.main - Rate limit exceeded for identifier: user:user_b. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 11:56:16,568 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 11:56:16,783 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 11:56:17,075 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 11:56:17,361 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 11:56:17,594 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /api/v1/auth/session-login (extension.py:510)
+2025-08-12 11:56:17,595 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /api/v1/auth/session-login. Detail: 5 per 1 minute (main.py:56)
+2025-08-12 11:56:17,596 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:00:00,354 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:00:02,467 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:02,841 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:00:02,851 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:02,862 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:00:03,312 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:00:03,691 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:03,998 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:04,300 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:00:04,301 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:00:04,302 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:00:04,711 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:04,914 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:05,220 - WARNING - slowapi - ratelimit 2 per 1 minute (user:test_user_1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:00:05,224 - WARNING - app.main - Rate limit exceeded for identifier: user:test_user_1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:00:05,225 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:00:05,632 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:05,842 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:06,144 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_a) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:00:06,145 - WARNING - app.main - Rate limit exceeded for identifier: user:user_a. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:00:06,146 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:00:06,547 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:06,859 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:00:07,066 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_b) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:00:07,067 - WARNING - app.main - Rate limit exceeded for identifier: user:user_b. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:00:07,068 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:00:07,478 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:00:07,781 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:00:07,985 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:00:08,355 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /api/v1/auth/session-login (extension.py:510)
+2025-08-12 12:00:08,356 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /api/v1/auth/session-login. Detail: 5 per 1 minute (main.py:56)
+2025-08-12 12:00:08,356 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:04:48,822 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:04:51,127 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:51,632 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:04:51,639 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:53,478 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:53,782 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:54,089 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:04:54,091 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:04:54,091 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:04:54,390 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:54,866 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:55,113 - WARNING - slowapi - ratelimit 2 per 1 minute (user:test_user_1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:04:55,115 - WARNING - app.main - Rate limit exceeded for identifier: user:test_user_1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:04:55,116 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:04:56,702 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:56,957 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:57,264 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_a) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:04:57,265 - WARNING - app.main - Rate limit exceeded for identifier: user:user_a. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:04:57,266 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:04:57,497 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:57,689 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:04:57,881 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_b) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:04:57,882 - WARNING - app.main - Rate limit exceeded for identifier: user:user_b. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:04:57,882 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:04:58,089 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:04:58,598 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:04:59,112 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:04:59,414 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /api/v1/auth/session-login (extension.py:510)
+2025-08-12 12:04:59,415 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /api/v1/auth/session-login. Detail: 5 per 1 minute (main.py:56)
+2025-08-12 12:04:59,417 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:06:52,070 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:06:54,932 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:55,149 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:06:55,162 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:55,427 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 404 Not Found" (_client.py:1740)
+2025-08-12 12:06:55,918 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 404 Not Found" (_client.py:1740)
+2025-08-12 12:06:56,354 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:56,662 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:56,973 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:06:56,975 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:06:56,977 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:06:57,213 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:57,688 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:58,196 - WARNING - slowapi - ratelimit 2 per 1 minute (user:test_user_1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:06:58,198 - WARNING - app.main - Rate limit exceeded for identifier: user:test_user_1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:06:58,199 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:06:58,507 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:58,812 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:59,026 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_a) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:06:59,029 - WARNING - app.main - Rate limit exceeded for identifier: user:user_a. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:06:59,030 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:06:59,228 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:59,532 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:06:59,735 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_b) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:06:59,737 - WARNING - app.main - Rate limit exceeded for identifier: user:user_b. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:06:59,738 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:07:00,964 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:07:01,364 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:07:01,891 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:07:02,092 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /api/v1/auth/session-login (extension.py:510)
+2025-08-12 12:07:02,092 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /api/v1/auth/session-login. Detail: 5 per 1 minute (main.py:56)
+2025-08-12 12:07:02,093 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:08:11,529 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:08:13,565 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:13,972 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:08:13,978 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:14,113 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:14,431 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (6c92bc70-aaeb-4de6-b14f-3858137b5b2d) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:08:14,431 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:08:14,432 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:75)
+2025-08-12 12:08:14,432 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:84)
+2025-08-12 12:08:14,438 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:104)
+2025-08-12 12:08:14,439 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:121)
+2025-08-12 12:08:14,439 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:125)
+2025-08-12 12:08:14,442 - CRITICAL - app.services.partner_invitation_service - CRITICAL: Database transaction failed while creating invitation for 'invitee@test.com'. ROLLING BACK. (partner_invitation_service.py:132)
+Traceback (most recent call last):
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 149, in execute
+    self._adapt_connection._handle_exception(error)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 300, in _handle_exception
+    raise error
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 131, in execute
+    self.await_(_cursor.execute(operation, parameters))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 105, in run
+    result = function()
+sqlite3.OperationalError: unknown function: now()
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\MORO\Project\windsurf_code\DuoTrak_v1.1\backend\app\services\partner_invitation_service.py", line 127, in create_invitation
+    await self.db.commit()
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\ext\asyncio\session.py", line 1014, in commit
+    await greenlet_spawn(self.sync_session.commit)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2032, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 4480, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 149, in execute
+    self._adapt_connection._handle_exception(error)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 300, in _handle_exception
+    raise error
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 131, in execute
+    self.await_(_cursor.execute(operation, parameters))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 105, in run
+    result = function()
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unknown function: now()
+[SQL: INSERT INTO partner_invitations (sender_id, receiver_id, receiver_name, receiver_email, status, expires_at, accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id, invitation_token, created_at, updated_at]
+[parameters: ('6c92bc70aaeb4de6b14f3858137b5b2d', None, 'Invitee User', 'invitee@test.com', 'pending', '2025-08-19 12:08:14.439091', None)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-08-12 12:08:14,467 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 500 Internal Server Error" (_client.py:1740)
+2025-08-12 12:08:15,099 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:15,407 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:15,818 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:08:15,820 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:08:15,820 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:08:16,330 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:16,637 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:16,917 - WARNING - slowapi - ratelimit 2 per 1 minute (user:test_user_1) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:08:16,919 - WARNING - app.main - Rate limit exceeded for identifier: user:test_user_1. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:08:16,920 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:08:17,120 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:17,353 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:18,377 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_a) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:08:18,379 - WARNING - app.main - Rate limit exceeded for identifier: user:user_a. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:08:18,381 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:08:18,581 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:18,793 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:08:19,092 - WARNING - slowapi - ratelimit 2 per 1 minute (user:user_b) exceeded at endpoint: /test-rate-limit (extension.py:510)
+2025-08-12 12:08:19,093 - WARNING - app.main - Rate limit exceeded for identifier: user:user_b. Path: /test-rate-limit. Detail: 2 per 1 minute (main.py:56)
+2025-08-12 12:08:19,094 - INFO - httpx - HTTP Request: GET http://test/test-rate-limit "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:08:19,513 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:08:19,729 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:08:20,011 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:08:20,321 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /api/v1/auth/session-login (extension.py:510)
+2025-08-12 12:08:20,321 - WARNING - app.main - Rate limit exceeded for identifier: 127.0.0.1. Path: /api/v1/auth/session-login. Detail: 5 per 1 minute (main.py:56)
+2025-08-12 12:08:20,322 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 429 Too Many Requests" (_client.py:1740)
+2025-08-12 12:12:43,364 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:12:45,026 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:12:45,398 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:12:45,403 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:12:45,463 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:12:45,741 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (c4bea6fc-8987-425c-a535-b0d3aeaacff6) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:12:45,741 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:12:45,742 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:75)
+2025-08-12 12:12:45,742 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:84)
+2025-08-12 12:12:45,751 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:104)
+2025-08-12 12:12:45,751 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:121)
+2025-08-12 12:12:45,751 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:125)
+2025-08-12 12:12:45,755 - CRITICAL - app.services.partner_invitation_service - CRITICAL: Database transaction failed while creating invitation for 'invitee@test.com'. ROLLING BACK. (partner_invitation_service.py:132)
+Traceback (most recent call last):
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 149, in execute
+    self._adapt_connection._handle_exception(error)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 300, in _handle_exception
+    raise error
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 131, in execute
+    self.await_(_cursor.execute(operation, parameters))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 105, in run
+    result = function()
+sqlite3.OperationalError: unknown function: gen_random_uuid()
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\MORO\Project\windsurf_code\DuoTrak_v1.1\backend\app\services\partner_invitation_service.py", line 127, in create_invitation
+    await self.db.commit()
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\ext\asyncio\session.py", line 1014, in commit
+    await greenlet_spawn(self.sync_session.commit)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 2032, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 4480, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 149, in execute
+    self._adapt_connection._handle_exception(error)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 300, in _handle_exception
+    raise error
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py", line 131, in execute
+    self.await_(_cursor.execute(operation, parameters))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 40, in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\cursor.py", line 32, in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\MORO\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\aiosqlite\core.py", line 105, in run
+    result = function()
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) unknown function: gen_random_uuid()
+[SQL: INSERT INTO partner_invitations (sender_id, receiver_id, receiver_name, receiver_email, status, expires_at, accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id, invitation_token, created_at, updated_at]
+[parameters: ('c4bea6fc8987425ca535b0d3aeaacff6', None, 'Invitee User', 'invitee@test.com', 'pending', '2025-08-19 12:12:45.751823', None)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-08-12 12:12:45,770 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 500 Internal Server Error" (_client.py:1740)
+2025-08-12 12:13:48,878 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:13:51,406 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:13:51,688 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:13:51,697 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:13:51,755 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:13:52,095 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (d4bc6f01-01c5-44d6-ae00-d7d585904d96) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:13:52,096 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:13:52,096 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:75)
+2025-08-12 12:13:52,096 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:84)
+2025-08-12 12:13:52,106 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:104)
+2025-08-12 12:13:52,106 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:121)
+2025-08-12 12:13:52,106 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:125)
+2025-08-12 12:13:52,112 - INFO - app.services.partner_invitation_service - Successfully committed invitation 97c08764-b18e-4532-868a-b24d35339855 to the database. (partner_invitation_service.py:129)
+2025-08-12 12:13:52,112 - INFO - app.services.partner_invitation_service - Invitation email sent to invitee@test.com (partner_invitation_service.py:152)
+2025-08-12 12:13:52,113 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 201 Created" (_client.py:1740)
+2025-08-12 12:14:47,452 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:14:49,352 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:14:49,646 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:14:49,651 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:14:49,705 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:14:50,091 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (3a4bb0ee-2de5-48f1-8e92-4587e2592382) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:14:50,091 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:14:50,091 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:75)
+2025-08-12 12:14:50,092 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:84)
+2025-08-12 12:14:50,096 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:104)
+2025-08-12 12:14:50,096 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:121)
+2025-08-12 12:14:50,096 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:125)
+2025-08-12 12:14:50,104 - INFO - app.services.partner_invitation_service - Successfully committed invitation 42a23c48-4eee-44c8-a68e-1eeacc0bd0d4 to the database. (partner_invitation_service.py:129)
+2025-08-12 12:14:50,104 - INFO - app.services.partner_invitation_service - Invitation email sent to invitee@test.com (partner_invitation_service.py:152)
+2025-08-12 12:14:50,105 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 201 Created" (_client.py:1740)
+2025-08-12 12:16:28,036 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:16:30,102 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:16:30,330 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:16:30,337 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:16:30,384 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:16:31,635 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (ff869ccb-027b-40d6-af19-fb14b8b59bd6) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:16:31,636 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:16:31,636 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:75)
+2025-08-12 12:16:31,636 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:84)
+2025-08-12 12:16:31,644 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:104)
+2025-08-12 12:16:31,644 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:121)
+2025-08-12 12:16:31,645 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:125)
+2025-08-12 12:16:31,651 - INFO - app.services.partner_invitation_service - Successfully committed invitation e796edbf-b4db-4955-bc71-cbd02f31262a to the database. (partner_invitation_service.py:129)
+2025-08-12 12:16:31,651 - INFO - app.services.partner_invitation_service - Invitation email sent to invitee@test.com (partner_invitation_service.py:152)
+2025-08-12 12:16:31,652 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 201 Created" (_client.py:1740)
+2025-08-12 12:16:32,018 - INFO - httpx - HTTP Request: GET http://test/test-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:16:32,019 - INFO - httpx - HTTP Request: GET http://test/test-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:16:32,019 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-limit (extension.py:510)
+2025-08-12 12:16:32,401 - INFO - slowapi - Storage has been reset and all limits cleared (extension.py:360)
+2025-08-12 12:16:32,406 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:16:32,406 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:16:32,407 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:16:32,407 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:16:32,408 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:16:32,408 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /test-login-limit (extension.py:510)
+2025-08-12 12:16:32,669 - INFO - slowapi - Storage has been reset and all limits cleared (extension.py:360)
+2025-08-12 12:20:57,088 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:20:59,311 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:20:59,556 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:20:59,562 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:20:59,612 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:20:59,921 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (2bb66660-a82e-4b4e-8d38-5a7b9e2968b5) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:20:59,922 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:20:59,922 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:75)
+2025-08-12 12:20:59,922 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:84)
+2025-08-12 12:20:59,926 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:104)
+2025-08-12 12:20:59,926 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:121)
+2025-08-12 12:20:59,926 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:125)
+2025-08-12 12:20:59,932 - INFO - app.services.partner_invitation_service - Successfully committed invitation 032cb826-0eb4-4958-9718-592bbb4d7594 to the database. (partner_invitation_service.py:129)
+2025-08-12 12:20:59,932 - INFO - app.services.partner_invitation_service - Invitation email sent to invitee@test.com (partner_invitation_service.py:152)
+2025-08-12 12:20:59,933 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 201 Created" (_client.py:1740)
+2025-08-12 12:21:00,269 - INFO - httpx - HTTP Request: GET http://test/test-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:00,270 - INFO - httpx - HTTP Request: GET http://test/test-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:00,271 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-limit (extension.py:510)
+2025-08-12 12:21:00,535 - INFO - slowapi - Storage has been reset and all limits cleared (extension.py:360)
+2025-08-12 12:21:00,539 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:00,541 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:00,541 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:00,542 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:00,543 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:00,543 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /test-login-limit (extension.py:510)
+2025-08-12 12:21:00,777 - INFO - slowapi - Storage has been reset and all limits cleared (extension.py:360)
+2025-08-12 12:21:55,052 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2025-08-12 12:21:57,098 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:57,472 - INFO - httpx - HTTP Request: POST http://test/api/v1/auth/session-login "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:57,479 - INFO - httpx - HTTP Request: GET http://test/ "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:57,527 - INFO - httpx - HTTP Request: GET http://test/api/v1/users/me/status "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:57,982 - INFO - app.api.v1.endpoints.partner_invitations - User 'inviter@test.com' (de80248e-337f-4876-b9e1-eb4f7a73344f) is attempting to invite a partner. (partner_invitations.py:79)
+2025-08-12 12:21:57,982 - INFO - app.api.v1.endpoints.partner_invitations - Invitation details: {'receiver_email': 'invitee@test.com', 'receiver_name': 'Invitee User', 'expires_in_days': 7} (partner_invitations.py:82)
+2025-08-12 12:21:57,982 - INFO - app.services.partner_invitation_service - Rule 1: Checking if sender 'inviter@test.com' is inviting themselves. (partner_invitation_service.py:77)
+2025-08-12 12:21:57,983 - INFO - app.services.partner_invitation_service - Rule 2: Checking if sender 'inviter@test.com' already has a partner. (partner_invitation_service.py:86)
+2025-08-12 12:21:57,986 - INFO - app.services.partner_invitation_service - Rule 3: Checking for existing pending invitations from 'inviter@test.com' to 'invitee@test.com'. (partner_invitation_service.py:106)
+2025-08-12 12:21:57,986 - INFO - app.services.partner_invitation_service - All validation passed. Creating invitation object for 'invitee@test.com'. (partner_invitation_service.py:123)
+2025-08-12 12:21:57,986 - INFO - app.services.partner_invitation_service - Adding invitation to the database session. (partner_invitation_service.py:127)
+2025-08-12 12:21:57,997 - INFO - app.services.partner_invitation_service - Successfully committed invitation b36c26ee-967a-40a2-a8da-33b00854874e to the database. (partner_invitation_service.py:137)
+2025-08-12 12:21:57,997 - INFO - app.services.partner_invitation_service - Invitation email sent to invitee@test.com (partner_invitation_service.py:160)
+2025-08-12 12:21:57,999 - INFO - httpx - HTTP Request: POST http://test/api/v1/partner-invitations/invite "HTTP/1.1 201 Created" (_client.py:1740)
+2025-08-12 12:21:58,346 - INFO - httpx - HTTP Request: GET http://test/test-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:58,347 - INFO - httpx - HTTP Request: GET http://test/test-limit "HTTP/1.1 200 OK" (_client.py:1740)
+2025-08-12 12:21:58,348 - WARNING - slowapi - ratelimit 2 per 1 minute (127.0.0.1) exceeded at endpoint: /test-limit (extension.py:510)
+2025-08-12 12:21:58,717 - INFO - slowapi - Storage has been reset and all limits cleared (extension.py:360)
+2025-08-12 12:21:58,723 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:58,724 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:58,724 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:58,725 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:58,725 - INFO - httpx - HTTP Request: POST http://test/test-login-limit "HTTP/1.1 401 Unauthorized" (_client.py:1740)
+2025-08-12 12:21:58,726 - WARNING - slowapi - ratelimit 5 per 1 minute (127.0.0.1) exceeded at endpoint: /test-login-limit (extension.py:510)
+2025-08-12 12:21:59,058 - INFO - slowapi - Storage has been reset and all limits cleared (extension.py:360)

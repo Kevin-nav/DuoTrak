@@ -198,19 +198,50 @@ class PartnerInvitationService:
     async def get_public_invitation_details(
         self, 
         token: str
-    ) -> Optional[schemas.PublicInvitationDetails]:
-        '''
+    ) -> schemas.PublicInvitationDetails:
+        """
         Get public details of an invitation by its token.
-        Does not require authentication.
-        '''
-        invitation = await self._get_invitation_by_token(token)
+        This version provides specific error messages for different states.
+        """
+        # Get invitation, including expired ones, to give a specific message
+        invitation = await self._get_invitation_by_token(token, include_expired=True)
+
         if not invitation:
-            return None
-        
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This invitation link is invalid. Please check the link and try again."
+            )
+
+        if invitation.status == schemas.InvitationStatus.ACCEPTED:
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="This invitation has already been accepted."
+            )
+
+        if invitation.status == schemas.InvitationStatus.REJECTED:
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="This invitation has been declined."
+            )
+
+        if invitation.status == schemas.InvitationStatus.REVOKED:
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="This invitation has been revoked by the sender."
+            )
+
+        if invitation.is_expired:
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="This invitation has expired."
+            )
+
         sender = await self.db.get(User, invitation.sender_id)
         if not sender:
-            # This case is unlikely but handled for robustness
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="The sender of this invitation no longer exists."
+            )
 
         return schemas.PublicInvitationDetails(
             sender_name=sender.full_name or "A DuoTrak User",

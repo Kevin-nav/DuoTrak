@@ -130,16 +130,16 @@ export class ApiClient {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      
       try {
+        // Try to parse the error response body
         const errorData = await response.json();
-        errorMessage = errorData.detail || errorData.message || errorMessage;
-      } catch {
-        // If response is not JSON, use the status text
+        // Use a detailed message from the backend if available
+        const message = errorData.detail || (Array.isArray(errorData.detail) && errorData.detail.map(e => e.msg).join(', ')) || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(message);
+      } catch (e) {
+        // If parsing fails or it's not a JSON response, fall back to status text
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
-      throw new Error(errorMessage);
     }
 
     // Handle empty responses
