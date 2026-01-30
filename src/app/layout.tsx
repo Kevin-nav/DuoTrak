@@ -7,6 +7,7 @@ import { Providers } from "@/components/providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { MockAuthIndicator } from "@/components/dev/MockAuthIndicator"
 import ConvexClientProvider from "./ConvexClientProvider"
+import { UserSync } from "@/components/UserSync"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] })
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body className={plusJakartaSans.className}>
         <ErrorBoundary>
           <ConvexClientProvider>
+            <UserSync />
             <Providers>
               <UserProvider>
                 {children}
