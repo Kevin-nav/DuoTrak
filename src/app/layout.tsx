@@ -6,6 +6,7 @@ import { UserProvider } from "@/contexts/UserContext"
 import { Providers } from "@/components/providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { MockAuthIndicator } from "@/components/dev/MockAuthIndicator"
+import ConvexClientProvider from "./ConvexClientProvider"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] })
 
@@ -28,14 +29,17 @@ export default function RootLayout({
       </head>
       <body className={plusJakartaSans.className}>
         <ErrorBoundary>
-          <Providers>
-            <UserProvider>
-              {children}
-              {process.env.NODE_ENV === 'development' && <MockAuthIndicator />}
-            </UserProvider>
-          </Providers>
+          <ConvexClientProvider>
+            <Providers>
+              <UserProvider>
+                {children}
+                {process.env.NODE_ENV === 'development' && <MockAuthIndicator />}
+              </UserProvider>
+            </Providers>
+          </ConvexClientProvider>
         </ErrorBoundary>
       </body>
     </html>
   )
 }
+
