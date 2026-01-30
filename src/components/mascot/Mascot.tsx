@@ -30,7 +30,7 @@ const Mascot = ({ variant, size = 128, className }: MascotProps) => {
         src={src}
         alt={`${variant} mascot`}
         fill
-        className="object-contain"
+        className="object-contain filter sepia-[0.2] brightness-[1.05] contrast-[0.95]"
       />
     </div>
   );

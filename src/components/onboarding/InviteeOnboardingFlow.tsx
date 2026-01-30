@@ -202,31 +202,31 @@ export default function InviteeOnboardingFlow() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-[var(--theme-background)] flex flex-col font-sans">
+      <div className="bg-[var(--theme-card)] shadow-sm border-b border-[var(--theme-border)]">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Set Up Your First Goal</h1>
-            <span className="text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">Set Up Your First Goal</h1>
+            <span className="text-sm text-[var(--theme-muted-foreground)]">
               Step {currentStep + 1} of {steps.length}
             </span>
           </div>
           <div className="space-y-2">
-            <Progress value={progress} className="h-2" />
+            <Progress value={progress} className="h-2 bg-[var(--theme-muted)]" />
             <div className="flex justify-between">
               {steps.map((step, index) => (
                 <div key={step.id} className="flex flex-col items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${completedSteps.includes(index)
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)]'
                       : index === currentStep
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-500'
+                        ? 'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] ring-2 ring-[var(--theme-primary)] ring-offset-2'
+                        : 'bg-[var(--theme-muted)] text-[var(--theme-muted-foreground)]'
                       }`}
                   >
                     {completedSteps.includes(index) ? <Check className="w-4 h-4" /> : index + 1}
                   </div>
-                  <span className="text-xs text-gray-500 mt-1 hidden sm:block">{step.title}</span>
+                  <span className="text-xs text-[var(--theme-muted-foreground)] mt-1 hidden sm:block">{step.title}</span>
                 </div>
               ))}
             </div>
@@ -250,23 +250,23 @@ export default function InviteeOnboardingFlow() {
         </div>
       </div>
 
-      <div className="bg-white border-t p-4">
+      <div className="bg-[var(--theme-background)] border-t border-[var(--theme-border)] p-4">
         <div className="max-w-4xl mx-auto flex justify-between">
-          <Button variant="ghost" onClick={handleSkip} disabled={isPending}>
+          <Button variant="ghost" onClick={handleSkip} disabled={isPending} className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-foreground)]">
             Skip for now
           </Button>
           <div className="flex gap-4">
-            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0 || isPending}>
+            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0 || isPending} className="border-[var(--theme-border)]">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Previous
             </Button>
             {currentStep < steps.length - 1 ? (
-              <Button onClick={handleNext} disabled={!isStepValid || isPending}>
+              <Button onClick={handleNext} disabled={!isStepValid || isPending} className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-primary)]/90">
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleFinish} disabled={!isStepValid || isPending}>
+              <Button onClick={handleFinish} disabled={!isStepValid || isPending} className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-primary)]/90">
                 {isPending ? 'Finishing...' : 'Finish & Create Goal'}
               </Button>
             )}

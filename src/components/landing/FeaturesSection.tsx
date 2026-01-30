@@ -54,11 +54,11 @@ const cardVariants: Variants = {
 
 export default function FeaturesSection() {
   return (
-    <section id="features" className="py-24 bg-off-white">
+    <section id="features" className="py-24 bg-[var(--theme-muted)]">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-charcoal">Features Designed for Real Commitment</h2>
-          <p className="text-lg text-slate-600 mt-4 max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold text-[var(--theme-foreground)]">Features Designed for Real Commitment</h2>
+          <p className="text-lg text-[var(--theme-muted-foreground)] mt-4 max-w-3xl mx-auto">
             Every feature within DuoTrak is meticulously crafted to foster genuine accountability and turn your goals into achievements.
           </p>
         </div>
@@ -66,15 +66,15 @@ export default function FeaturesSection() {
           {features.map((feature, index) => (
             <motion.div
               key={index}
-              className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col items-center text-center"
+              className="bg-[var(--theme-background)] p-8 rounded-xl shadow-sm border border-[var(--theme-border)] hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col items-center text-center card-hover"
               initial="offscreen"
               whileInView="onscreen"
               viewport={{ once: true, amount: 0.5 }}
               variants={cardVariants}
             >
-              <div className="mb-6">{feature.icon}</div>
-              <h3 className="text-2xl font-bold text-charcoal mb-4">{feature.title}</h3>
-              <p className="text-slate-600">{feature.description}</p>
+              <div className="mb-6 text-[var(--theme-primary)] [&>svg]:w-10 [&>svg]:h-10">{feature.icon}</div>
+              <h3 className="text-2xl font-bold text-[var(--theme-foreground)] mb-4">{feature.title}</h3>
+              <p className="text-[var(--theme-muted-foreground)]">{feature.description}</p>
             </motion.div>
           ))}
         </div>

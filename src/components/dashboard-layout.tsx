@@ -63,27 +63,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--theme-muted)] flex flex-col">
+    <div className="min-h-screen bg-[var(--theme-muted)] flex flex-col font-sans text-[var(--theme-foreground)]">
       {/* Top Navigation Bar */}
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="fixed top-0 left-0 right-0 z-50 bg-[var(--theme-background)] border-b border-[var(--theme-border)] px-4 py-3"
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed top-0 left-0 right-0 z-50 bg-[var(--theme-background)]/80 backdrop-blur-md border-b border-[var(--theme-border)] px-4 py-3"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           {/* Logo and Brand */}
           <motion.div
-            className="flex items-center space-x-3"
-            whileHover={{ scale: 1.02 }}
+            className="flex items-center space-x-3 cursor-pointer"
+            whileHover={{ opacity: 0.8 }}
             transition={{ duration: 0.2 }}
+            onClick={() => router.push("/")}
           >
-            <Image src="/navbar-logo.png" alt="DuoTrak Logo" width={32} height={32} />
-            <h1 className="text-xl font-bold text-[var(--theme-foreground)]">DuoTrak</h1>
+            {/* Logo placeholder - ensure it looks good on beige */}
+            <div className="w-8 h-8 rounded-lg bg-[var(--theme-primary)] flex items-center justify-center text-white font-bold text-sm">
+              DT
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-[var(--theme-foreground)]">DuoTrak</h1>
           </motion.div>
 
           {/* Right Side Icons */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <NotificationSystem
               onMarkAsRead={handleMarkAsRead}
               onMarkAllAsRead={handleMarkAllAsRead}
@@ -94,13 +98,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             />
 
             <motion.button
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.2 }}
               onClick={() => router.push("/profile")}
-              className="p-2 rounded-full bg-[var(--theme-primary)] hover:opacity-90 transition-opacity"
+              className="p-1 rounded-full border border-[var(--theme-border)] bg-[var(--theme-background)] hover:bg-[var(--theme-muted)] transition-colors"
             >
-              <User className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-full bg-[var(--theme-primary)] flex items-center justify-center text-[var(--theme-primary-foreground)]">
+                <User className="w-4 h-4" />
+              </div>
             </motion.button>
           </div>
         </div>
@@ -108,10 +114,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content Area */}
       <motion.main
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
-        className="flex-1 pt-16 pb-20 px-4 bg-[var(--theme-muted)] overflow-y-auto"
+        transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        className="flex-1 pt-20 pb-24 px-4 bg-[var(--theme-muted)] overflow-y-auto"
       >
         <div className="max-w-4xl mx-auto py-6">{children}</div>
       </motion.main>
@@ -120,8 +126,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <motion.nav
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--theme-background)] border-t border-[var(--theme-border)] px-4 py-2 shadow-lg"
+        transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--theme-background)]/90 backdrop-blur-lg border-t border-[var(--theme-border)] px-4 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]"
       >
         <div className="flex items-center justify-around max-w-md mx-auto">
           {navItems.map((item) => {
@@ -132,82 +138,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <motion.button
                 key={item.id}
                 onClick={() => handleNavigation(item)}
-                whileHover={{
-                  scale: 1.05,
-                  y: -2,
-                }}
-                whileTap={{
-                  scale: 0.95,
-                  y: 0,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 17,
-                }}
-                className={`relative flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-300 ${
-                  isActive
+                className={`relative flex flex-col items-center justify-center space-y-1 w-16 h-14 rounded-xl transition-all duration-300 ${isActive
                     ? "text-[var(--theme-primary)]"
-                    : "text-[var(--theme-secondary)] hover:text-[var(--theme-foreground)]"
-                }`}
+                    : "text-[var(--theme-muted-foreground)] hover:text-[var(--theme-foreground)] hover:bg-[var(--theme-secondary)]"
+                  }`}
               >
-                {/* Active Background */}
+                {/* Active Indicator - Subtle Dot */}
                 {isActive && (
                   <motion.div
-                    layoutId="activeBackground"
-                    className="absolute inset-0 bg-[var(--theme-accent)] rounded-lg"
+                    layoutId="activeTabIndicator"
+                    className="absolute inset-0 bg-[var(--theme-accent)] rounded-xl -z-10"
                     initial={false}
                     transition={{
                       type: "spring",
-                      stiffness: 500,
+                      stiffness: 300,
                       damping: 30,
                     }}
                   />
                 )}
 
-                {/* Icon with bounce animation */}
-                <motion.div
-                  animate={
-                    isActive
-                      ? {
-                          scale: [1, 1.2, 1],
-                          rotate: [0, 5, -5, 0],
-                        }
-                      : {}
-                  }
-                  transition={{
-                    duration: 0.6,
-                    ease: "easeInOut",
-                  }}
-                  className="relative z-10"
-                >
-                  <Icon className={`w-6 h-6 ${isActive ? "text-[var(--theme-primary)]" : ""}`} />
-                </motion.div>
+                <div className="relative">
+                  <Icon
+                    className={`w-5 h-5 transition-colors duration-300 ${isActive ? "text-[var(--theme-primary)]" : "text-[var(--theme-muted-foreground)]"}`}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
 
-                {/* Label with slide up animation */}
-                <motion.span
-                  className={`text-xs font-medium relative z-10 ${isActive ? "text-[var(--theme-primary)]" : ""}`}
-                  animate={isActive ? { y: [0, -2, 0] } : {}}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                >
+                  {/* Active Dot */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeDot"
+                      className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[var(--theme-primary)] rounded-full"
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                </div>
+
+                <span className={`text-[10px] font-medium tracking-wide ${isActive ? "text-[var(--theme-primary)]" : ""}`}>
                   {item.label}
-                </motion.span>
-
-                {/* Active dot indicator */}
-                {isActive && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    className="absolute -bottom-1 w-1 h-1 bg-[var(--theme-primary)] rounded-full"
-                    transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 30,
-                      delay: 0.2,
-                    }}
-                  />
-                )}
+                </span>
               </motion.button>
             )
           })}

@@ -63,7 +63,7 @@ export default function WelcomeStep({ onValidationChange }: WelcomeStepProps) {
             }}
             className="inline-block mb-4"
           >
-            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto">
+            <div className="w-20 h-20 bg-gradient-to-r from-[var(--theme-primary)] to-[#D4BCA9] rounded-full flex items-center justify-center mx-auto shadow-lg">
               <Heart className="w-10 h-10 text-white" />
             </div>
           </motion.div>
@@ -72,7 +72,7 @@ export default function WelcomeStep({ onValidationChange }: WelcomeStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
+            className="text-4xl md:text-5xl font-bold text-[var(--theme-foreground)] mb-4"
           >
             Welcome to DuoTrak, {userDetails?.full_name || 'partner'}!
           </motion.h1>
@@ -81,7 +81,7 @@ export default function WelcomeStep({ onValidationChange }: WelcomeStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="text-xl text-gray-600 mb-8 leading-relaxed"
+            className="text-xl text-[var(--theme-muted-foreground)] mb-8 leading-relaxed"
           >
             You have successfully joined {userDetails?.partner_full_name || 'your partner'}.<br />
             Let's get your first goal set up!
@@ -96,13 +96,13 @@ export default function WelcomeStep({ onValidationChange }: WelcomeStepProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 + index * 0.1, duration: 0.5 }}
               whileHover={{ scale: 1.05, y: -5 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+              className="bg-[var(--theme-card)] rounded-xl p-6 shadow-sm border border-[var(--theme-border)] hover:shadow-md transition-all duration-200 card-hover"
             >
-              <div className={`w-12 h-12 ${feature.bgColor} rounded-lg flex items-center justify-center mb-4 mx-auto`}>
-                <feature.icon className={`w-6 h-6 ${feature.color}`} />
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 mx-auto bg-[var(--theme-muted)]`}>
+                <feature.icon className={`w-6 h-6 text-[var(--theme-primary)]`} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg font-semibold text-[var(--theme-foreground)] mb-2">{feature.title}</h3>
+              <p className="text-[var(--theme-muted-foreground)] text-sm leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>

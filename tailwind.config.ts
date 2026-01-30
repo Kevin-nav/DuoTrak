@@ -43,21 +43,26 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        "primary-blue": "#19A1E5",
-        "primary-blue-hover": "#1590D3",
-        "accent-light-blue": "#E6F4FD",
-        charcoal: "#111518",
-        "stone-gray": "#637C88",
-        "pearl-gray": "#F0F3F4",
-        "cool-gray": "#DCE2E5",
-        "off-white": "#FAFBFB",
-        "error-red": "#EF4444",
-        // Mascot Colors
-        "poko-green": "#36C95F",
-        "lumo-teal": "#3AB8C2",
-        "energy-yellow": "#FFD54F",
-        "celebration-purple": "#9B6EF3",
-        "accent-blue": "#4A90E2",
+        // Custom Beige Theme Colors
+        "warm-white": "#F8F7F4",
+        "warm-grey": "#45413C",
+        "taupe": "#8F7A6E",
+        "taupe-light": "#BEA692",
+        "stone": "#DCD6CF",
+        "sand": "#EBE9E4",
+        "espresso": "#22201D",
+        "soft-white": "#FAFAFA",
+        // Semantic overrides
+        "primary-blue": "hsl(var(--primary))", // Fallback for backwards compat
+        "primary-blue-hover": "hsl(32, 25%, 40%)",
+        "accent-light-blue": "hsl(36, 20%, 94%)", // Re-mapped to warm accent
+
+        // Mascot Colors - Updated to Earthy Tones
+        "poko-green": "#74A868",    // Earthy Sage Green
+        "lumo-teal": "#6B9EA6",     // Muted Teal
+        "energy-yellow": "#DFC46D", // Muted Gold
+        "celebration-purple": "#A894C2", // Muted Lavender
+        "accent-blue": "#7DA0BC",   // Muted Blue
       },
       borderRadius: {
         lg: "var(--radius)",
