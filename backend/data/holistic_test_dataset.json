@@ -1,0 +1,135 @@
+[
+  {
+    "test_case_id": "TC-001_Sprinter",
+    "description": "A user who starts strong but fades (Sprinter archetype) wants to start a new fitness goal.",
+    "wizard_input": {
+      "user_id": "user-sprinter-123",
+      "wizard_data": {
+        "goal_description": "I want to run a 5k in 3 months, but I always lose motivation after the first two weeks.",
+        "motivation": "To feel healthier and have more energy for my family.",
+        "availability": ["mornings", "weekends"],
+        "time_commitment": "3-4 hours a week",
+        "accountability_type": "visual_proof",
+        "partner_name": "Alex",
+        "partner_relationship": "Spouse"
+      }
+    },
+    "expected_question_themes": ["past_success_failures", "partner_involvement_style", "obstacle_planning"],
+    "simulated_answers": {
+      "past_success_factor": "When my partner Alex checked in daily.",
+      "partner_accountability_style": "Celebrating small wins together.",
+      "biggest_obstacle": "Energy after a long day of work."
+    },
+    "golden_goal_plan": {
+      "title": "Your 5k Journey: Building Consistency with Alex",
+      "risk_mitigation": [{"risk": "Losing motivation after two weeks", "solution": "A 'Two-Week Milestone' celebration with Alex is designed to create a new motivation peak."}]
+    }
+  },
+  {
+    "test_case_id": "TC-002_Newcomer",
+    "description": "A new user with a vague goal and no partner mentioned.",
+    "wizard_input": {
+      "user_id": "user-newcomer-456",
+      "wizard_data": {
+        "goal_description": "I want to be more productive.",
+        "motivation": "I feel like I'm wasting time.",
+        "availability": ["evenings"],
+        "time_commitment": "An hour a day",
+        "accountability_type": "self_reporting",
+        "partner_name": null,
+        "partner_relationship": null
+      }
+    },
+    "expected_question_themes": ["goal_clarification", "obstacle_planning", "support_system"],
+    "simulated_answers": {
+      "specific_productivity_goal": "I want to spend one hour every evening learning a new skill instead of watching TV.",
+      "biggest_obstacle": "Feeling too tired to focus after dinner.",
+      "accountability_preference": "A simple checklist I can tick off myself would be great."
+    },
+    "golden_goal_plan": {
+      "title": "Productivity Power Hour: Master a New Skill",
+      "partner_integration": {"check_in_schedule": ["Weekly self-review on Sunday evening."]},
+      "risk_mitigation": [{"risk": "Feeling too tired after dinner", "solution": "Start with a short 5-minute mindfulness exercise to clear your head before beginning."}]
+    }
+  },
+  {
+    "test_case_id": "TC-003_Achiever",
+    "description": "A successful user tackling a complex, multi-faceted business goal with their partner.",
+    "wizard_input": {
+      "user_id": "user-achiever-789",
+      "wizard_data": {
+        "goal_description": "My partner and I want to launch our side business selling handmade crafts online in the next 6 months.",
+        "motivation": "To build something of our own and create a new income stream.",
+        "availability": ["weekends", "tuesday_evenings", "thursday_evenings"],
+        "time_commitment": "10-15 hours a week",
+        "accountability_type": "milestone_tracking",
+        "partner_name": "Jamie",
+        "partner_relationship": "Business Partner"
+      }
+    },
+    "expected_question_themes": ["task_delegation", "milestone_definition", "budget_planning"],
+    "simulated_answers": {
+      "role_division": "I'll handle the product creation and photography, Jamie will handle the marketing and website.",
+      "first_milestone": "Finalize the first 5 products and set up the online store.",
+      "budget_question": "We have a starting budget of $500 for materials and website fees."
+    },
+    "golden_goal_plan": {
+      "title": "Side Business Launch: From Craft to Commerce",
+      "weekly_tasks": [{"week": 1, "focus": "Market Research & Branding", "tasks": ["Define target audience", "Finalize business name and logo"]}],
+      "partner_integration": {"accountability_actions": ["Weekly business meeting to review progress against milestones and sync on tasks."]}
+    }
+  },
+  {
+    "test_case_id": "TC-004_ConflictingInfo",
+    "description": "A user providing conflicting information about their availability.",
+    "wizard_input": {
+      "user_id": "user-conflicting-101",
+      "wizard_data": {
+        "goal_description": "I want to learn Spanish. I have lots of free time to dedicate to this.",
+        "motivation": "Upcoming trip to Spain.",
+        "availability": ["saturday_morning"],
+        "time_commitment": "Whatever it takes",
+        "accountability_type": "time_bound_action",
+        "partner_name": "Casey",
+        "partner_relationship": "Friend"
+      }
+    },
+    "expected_question_themes": ["time_clarification", "learning_style", "partner_role"],
+    "simulated_answers": {
+      "time_commitment_clarification": "Okay, realistically I can only commit to Saturday mornings for now.",
+      "learning_method": "I prefer using an app like Duolingo.",
+      "partner_help": "Casey can help me practice speaking once a week."
+    },
+    "golden_goal_plan": {
+      "title": "Spanish Sprint for Your Spain Trip",
+      "description": "A focused plan to maximize your learning on Saturday mornings and leverage practice sessions with Casey.",
+      "risk_mitigation": [{"risk": "Limited practice time slows progress", "solution": "The plan focuses on high-intensity learning during the dedicated time and structured practice with Casey."}]
+    }
+  },
+  {
+    "test_case_id": "TC-005_Minimalist",
+    "description": "A user giving extremely brief, low-effort input.",
+    "wizard_input": {
+      "user_id": "user-minimalist-112",
+      "wizard_data": {
+        "goal_description": "Read more.",
+        "motivation": "To be smarter.",
+        "availability": ["sometimes"],
+        "time_commitment": "not sure",
+        "accountability_type": "self_reporting",
+        "partner_name": null,
+        "partner_relationship": null
+      }
+    },
+    "expected_question_themes": ["goal_clarification", "topic_interest", "time_availability"],
+    "simulated_answers": {
+      "read_what": "I want to read one non-fiction book a month.",
+      "book_topics": "I'm interested in history and science.",
+      "when_to_read": "I can probably read for 30 minutes before bed each night."
+    },
+    "golden_goal_plan": {
+      "title": "Monthly Knowledge Quest: Read One Book a Month",
+      "daily_habits": [{"habit": "Read for 30 minutes before bed", "description": "Create a consistent reading habit to easily finish one book a month."}]
+    }
+  }
+]

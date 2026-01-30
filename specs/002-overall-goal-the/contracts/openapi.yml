@@ -1,0 +1,88 @@
+openapi: 3.0.0
+info:
+  title: DuoTrak Chat API
+  version: 1.0.0
+paths:
+  /api/v1/chat/history/{conversation_id}:
+    get:
+      summary: Get chat history for a conversation
+      parameters:
+        - in: path
+          name: conversation_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of chat messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+  /api/v1/chat/attachments:
+    post:
+      summary: Upload a file attachment
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Attachment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+
+components:
+  schemas:
+    Message:
+      type: object
+      properties:
+        message_id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        parent_message_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [sent, delivered, read]
+    Attachment:
+      type: object
+      properties:
+        attachment_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+        file_type:
+          type: string
+        file_size:
+          type: integer
+        storage_url:
+          type: string
+        thumbnail_url:
+          type: string

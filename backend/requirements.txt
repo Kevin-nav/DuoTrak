@@ -7,9 +7,11 @@ email-validator
 fastapi
 fastapi-csrf-protect
 firebase-admin
-google-generativeai
+crewai
+langchain-google-genai
 httpx
-pinecone
+pinecone-client
+langchain-pinecone
 psycopg2-binary
 pydantic-settings
 PyJWT
@@ -25,3 +27,4 @@ sqlalchemy[asyncio]
 supabase
 tenacity
 uvicorn[standard]
+boto3

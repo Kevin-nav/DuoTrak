@@ -7,7 +7,7 @@ import { useUser } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ApiClient } from '@/lib/api/client';
+import { apiClient } from '@/lib/api/client';
 
 interface InvitationDetails {
   sender_name: string;

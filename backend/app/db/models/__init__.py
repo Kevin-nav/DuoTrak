@@ -10,6 +10,7 @@ from .user_badge import UserBadge
 from .goal import Goal
 from .task import Task
 from .user_behavioral_metrics import UserBehavioralMetrics
+from .chat import Message, Reaction, Attachment
 
 # Now that all models are imported and available, configure the relationships.
 # This breaks the circular import dependency between the model files.

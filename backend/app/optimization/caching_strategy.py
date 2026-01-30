@@ -10,7 +10,7 @@ class IntelligentCachingSystem:
     def __init__(self):
         self.redis_client = redis.Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379"))
         self.cache_ttl = {
-            'user_profile': 3600,  # 1 hour
+            'user_profile': 259200,  # 3 days
         }
     
     def get_cached_user_profile(self, user_id: str, goal_context: str) -> Optional[Dict]:

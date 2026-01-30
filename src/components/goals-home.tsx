@@ -34,6 +34,7 @@ export default function GoalsHome() {
   const archiveGoalMutation = useArchiveGoal();
   const duplicateGoalMutation = useDuplicateGoal();
   const [goalToArchive, setGoalToArchive] = React.useState<Goal | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleEditGoal = (e: React.MouseEvent, goal: Goal) => {
     e.stopPropagation();

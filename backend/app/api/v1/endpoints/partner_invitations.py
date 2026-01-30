@@ -70,7 +70,7 @@ async def get_current_user_from_cookie(
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("5/minute")
-async def create_partner_invitation(
+async def invite_partner(
     request: Request,
     invitation_in: schemas.PartnerInvitationCreate,
     db: AsyncSession = Depends(get_db),
@@ -96,7 +96,7 @@ async def create_partner_invitation(
     # Create the invitation
     service = PartnerInvitationService(db)
     try:
-        invitation = await service.create_invitation(current_user, invitation_in)
+        invitation, invitation_token = await service.create_invitation(current_user, invitation_in)
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -115,9 +115,8 @@ async def create_partner_invitation(
     # TODO: Send email notification
     
     return {
-        "success": True,
         "message": "Invitation sent successfully",
-        "data": invitation
+        "invitation": {**invitation.__dict__, "invitation_token": invitation_token}
     }
 
 

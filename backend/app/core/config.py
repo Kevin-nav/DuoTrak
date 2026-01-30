@@ -1,12 +1,18 @@
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 from pathlib import Path
+import os
 
 # Build the absolute path to the .env file, which is in the 'backend' directory.
 # This file is in backend/app/core, so we go up three levels to get to the 'backend' root.
-# This is the most robust way to ensure the .env file is found.
-env_path = Path(__file__).resolve().parent.parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+backend_root = Path(__file__).resolve().parent.parent.parent
+
+# Determine which .env file to load
+env_file = backend_root / '.env'
+if os.getenv("ENVIRONMENT") == "test":
+    env_file = backend_root / '.env.test'
+
+load_dotenv(dotenv_path=env_file)
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
@@ -24,6 +30,28 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str
     SECRET_KEY: str
     CSRF_SECRET_KEY: str
+    R2_ACCOUNT_ID: str
+    R2_ACCESS_KEY_ID: str
+    R2_SECRET_ACCESS_KEY: str
+    R2_BUCKET_NAME: str
+
+    # AI Service Keys
+    GEMINI_API_KEY: str
+    PINECONE_API_KEY: str
+    PINECONE_INDEX_NAME: str = "duotrak-user-model-data"
+
+    # Agent-specific Model Names
+    FLASH_MODEL: str = "gemini-2.5-flash"
+    PRO_MODEL: str = "gemini-2.5-pro"
+
+    # Thinking Budget Configuration
+    DEFAULT_THINKING_BUDGET: int = 8000
+    MAX_THINKING_BUDGET: int = 32000
+
+    # External Evaluation System
+    ENABLE_EXTERNAL_EVALUATION: bool = True
+    TEST_DATASET_PATH: str = "data/holistic_test_dataset.json"
+    HISTORICAL_SNAPSHOT_WEEKS: int = 4
 
     # These are optional settings with default values
     PROJECT_NAME: str = "DuoTrak API"

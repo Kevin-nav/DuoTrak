@@ -1,4 +1,5 @@
-from supabase import create_client, Client
+import boto3
+from botocore.client import Config
 from app.core.config import settings
 import logging
 
@@ -7,22 +8,55 @@ logger = logging.getLogger(__name__)
 class StorageService:
     def __init__(self):
         """
-        Initializes the Supabase client.
+        Initializes the Cloudflare R2 client.
         """
         try:
-            self.supabase: Client = create_client(
-                settings.SUPABASE_URL, 
-                settings.SUPABASE_SERVICE_ROLE_KEY
+            self.r2_client = boto3.client(
+                "s3",
+                endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+                aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+                config=Config(signature_version="s3v4"),
+                region_name="auto",
             )
-            logger.info("Supabase client initialized successfully.")
+            print(f"DEBUG: R2_ACCOUNT_ID: {settings.R2_ACCOUNT_ID}")
+            print(f"DEBUG: R2 Endpoint URL: https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com")
+            logger.info("Cloudflare R2 client initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize Supabase client: {e}")
+            logger.error(f"Failed to initialize Cloudflare R2 client: {e}")
+            raise
+
+    async def upload_file(self, bucket_name: str, file_contents: bytes, path_in_bucket: str, content_type: str) -> str:
+        """
+        Uploads a file to a specified bucket and path in Cloudflare R2 Storage.
+        
+        Args:
+            bucket_name: The name of the storage bucket.
+            file_contents: The byte content of the file to upload.
+            path_in_bucket: The full path within the bucket where the file should be stored.
+            content_type: The MIME type of the file.
+
+        Returns:
+            The public URL of the uploaded file.
+        """
+        try:
+            self.r2_client.put_object(
+                Bucket=bucket_name,
+                Key=path_in_bucket,
+                Body=file_contents,
+                ContentType=content_type,
+            )
+            logger.info(f"Successfully uploaded file to {bucket_name}/{path_in_bucket}")
+            # R2 public URL format
+            public_url = f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{bucket_name}/{path_in_bucket}"
+            return public_url
+        except Exception as e:
+            logger.error(f"Failed to upload file to {bucket_name}/{path_in_bucket}: {e}")
             raise
 
     async def upload_avatar(self, file_contents: bytes, file_name: str, user_id: int) -> str:
         """
-        Uploads a user's avatar to the 'avatars' bucket in Supabase Storage.
-        The file will be stored in a path namespaced by the user's ID.
+        Uploads a user's avatar to the 'avatars' bucket in Cloudflare R2 Storage.
         
         Args:
             file_contents: The byte content of the file to upload.
@@ -33,25 +67,12 @@ class StorageService:
             The public URL of the uploaded file.
         """
         try:
-            bucket_name = "avatars"
-            # Sanitize and create a unique file path
+            bucket_name = settings.R2_BUCKET_NAME # Use the configured R2 bucket for avatars
             file_extension = file_name.split('.')[-1]
             path_in_bucket = f"user_{user_id}/profile.{file_extension}"
+            content_type = f"image/{file_extension}"
 
-            # Supabase's upload is synchronous in the current library, but we call it from an async endpoint
-            # The `upsert=True` option will overwrite the file if it already exists, which is perfect for updates.
-            self.supabase.storage.from_(bucket_name).upload(
-                path=path_in_bucket,
-                file=file_contents,
-                file_options={"content-type": f"image/{file_extension}", "upsert": "true"}
-            )
-            logger.info(f"Successfully uploaded avatar for user {user_id} to {path_in_bucket}")
-
-            # Get the public URL for the uploaded file
-            public_url = self.supabase.storage.from_(bucket_name).get_public_url(path_in_bucket)
-            logger.info(f"Public URL for user {user_id} avatar: {public_url}")
-            
-            return public_url
+            return await self.upload_file(bucket_name, file_contents, path_in_bucket, content_type)
 
         except Exception as e:
             logger.error(f"Failed to upload avatar for user {user_id}: {e}")
@@ -62,22 +83,19 @@ class StorageService:
         Removes all avatars for a user from the 'avatars' bucket.
         """
         try:
-            bucket_name = "avatars"
+            bucket_name = settings.R2_BUCKET_NAME # Use the configured R2 bucket for avatars
             path_prefix = f"user_{user_id}/"
             
             # List all files in the user's folder
-            files_to_delete = self.supabase.storage.from_(bucket_name).list(path=path_prefix)
+            response = self.r2_client.list_objects_v2(Bucket=bucket_name, Prefix=path_prefix)
+            files_to_delete = [obj['Key'] for obj in response.get('Contents', [])]
             
             if files_to_delete:
-                # Prepare a list of file paths to remove
-                paths = [f"{path_prefix}{file['name']}" for file in files_to_delete]
-                self.supabase.storage.from_(bucket_name).remove(paths)
-                logger.info(f"Successfully removed avatars for user {user_id} from paths: {paths}")
+                self.r2_client.delete_objects(Bucket=bucket_name, Delete={'Objects': [{'Key': key} for key in files_to_delete]})
+                logger.info(f"Successfully removed avatars for user {user_id} from paths: {files_to_delete}")
 
         except Exception as e:
             logger.error(f"Failed to remove avatars for user {user_id}: {e}")
-            # We don't re-raise here. Failing to delete an old picture is not a critical error.
-            # The user's DB record will be updated to null, so they won't see the old picture anyway.
             pass
 
 

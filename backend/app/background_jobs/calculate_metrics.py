@@ -1,157 +1,166 @@
 # backend/app/background_jobs/calculate_metrics.py
-
 import asyncio
+import json
+from datetime import datetime, timedelta
 from typing import Dict, Any, List
-from app.db.session import get_db
-from app.services.pinecone_service import pinecone_service
-from app.services.embedding_service import embedding_service
-from app.ai.gemini_model_manager import gemini_manager
-from app.db.models import User, Goal, Task, UserBehavioralMetrics
+from pydantic import BaseModel
 from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timedelta
+from crewai import Agent, Task as CrewTask, Crew
 
-class MetricsCalculator:
-    def __init__(self):
-        self.snapshot_prompt_template = """
-        Based on the following user metrics, generate a concise, natural language "Behavioral Snapshot" document.
-        This document will be used for semantic retrieval to understand the user's patterns when they start a new goal.
-        Focus on summarizing their archetype, strengths, and areas for improvement.
+from app.core.config import settings
+from app.db.session import get_db
+from app.db.models import User, Goal, Task as DBTask
+from app.services.pinecone_service import PineconeService
+from app.services.gemini_config import GeminiModelConfig
+from app.schemas.agent_crew import BehavioralSnapshot
 
-        METRICS:
-        {metrics}
-        """
+class DatabaseService:
+    """Handles all database queries for the metrics calculation job."""
+    def __init__(self, db_session):
+        self.db = db_session
 
-    async def calculate_and_store_metrics_for_all_users(self):
-        print("BACKGROUND JOB: Starting metrics calculation for all users.")
+    async def get_active_users(self) -> List[User]:
+        """Fetches all users to be processed."""
+        result = await self.db.execute(select(User))
+        return result.scalars().all()
+
+    async def get_user_performance_since(self, user_id: str, since_datetime: datetime) -> List[DBTask]:
+        """Fetches all of a user's tasks updated since a certain datetime."""
+        stmt = select(DBTask).join(Goal).where(Goal.user_id == user_id, DBTask.updated_at >= since_datetime)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+class MetricsEngine:
+    """Calculates performance metrics from raw task data."""
+    def calculate_weekly_performance(self, tasks: List[DBTask]) -> Dict[str, Any]:
+        completed_on_time = sum(1 for t in tasks if t.status == 'completed' and t.updated_at <= t.due_date)
+        completed_late = sum(1 for t in tasks if t.status == 'completed' and t.updated_at > t.due_date)
+        total_completed = completed_on_time + completed_late
         
-        async_session = sessionmaker(get_db(), expire_on_commit=False, class_=asyncio.AsyncSession)
-        async with async_session() as db:
-            users = await db.execute(select(User))
-            for user in users.scalars().all():
-                await self._process_user(user, db)
-
-        print("BACKGROUND JOB: Finished metrics calculation for all users.")
-
-    async def _process_user(self, user: User, db):
-        """Processes a single user's metrics."""
-        print(f"Processing user: {user.id}")
-        metrics = await self._calculate_metrics_from_db(user.id, db)
-        await self._store_metrics_in_db(user.id, metrics, db)
+        completion_rate = (total_completed / len(tasks)) * 100 if tasks else 0
         
-        snapshot_doc = await self._generate_behavioral_snapshot(metrics)
-        
-        if snapshot_doc:
-            # Embed the document before upserting
-            vector = await embedding_service.embed_document(snapshot_doc)
-            
-            pinecone_service.upsert_behavioral_snapshot(
-                str(user.id), 
-                vector, 
-                {
-                    "archetype": metrics.get("archetype", "unknown"),
-                    "text": snapshot_doc # Store original text in metadata
-                }
-            )
-
-    async def _calculate_metrics_from_db(self, user_id: str, db) -> Dict[str, Any]:
-        """Calculates user metrics from their raw goal and task history."""
-        
-        # 1. Fetch all relevant tasks for the user
-        task_stmt = select(Task).join(Goal).where(Goal.user_id == user_id)
-        task_result = await db.execute(task_stmt)
-        tasks = task_result.scalars().all()
-
-        # 2. Calculate Time-of-Day Success
-        time_of_day_success = {"morning": 0, "afternoon": 0, "evening": 0}
-        time_of_day_total = {"morning": 0, "afternoon": 0, "evening": 0}
-        for task in tasks:
-            if task.status == 'completed' and task.updated_at:
-                hour = task.updated_at.hour
-                if 6 <= hour < 12:
-                    time_of_day_success["morning"] += 1
-                    time_of_day_total["morning"] += 1
-                elif 12 <= hour < 18:
-                    time_of_day_success["afternoon"] += 1
-                    time_of_day_total["afternoon"] += 1
-                else:
-                    time_of_day_success["evening"] += 1
-                    time_of_day_total["evening"] += 1
-        
-        for period in time_of_day_total:
-            if time_of_day_total[period] > 0:
-                time_of_day_success[period] /= time_of_day_total[period]
-
-        # 3. Calculate Procrastination Index
-        procrastination_deltas = []
-        for task in tasks:
-            if task.status == 'completed' and task.due_date and task.updated_at:
-                delta = (task.updated_at - task.due_date).total_seconds() / 3600
-                procrastination_deltas.append(delta)
-        procrastination_index = sum(procrastination_deltas) / len(procrastination_deltas) if procrastination_deltas else 0
-
-        # 4. Calculate Category Affinity
-        goal_stmt = select(Goal).where(Goal.user_id == user_id)
-        goal_result = await db.execute(goal_stmt)
-        goals = goal_result.scalars().all()
-        
-        category_success = {}
-        category_total = {}
-        for goal in goals:
-            if goal.category:
-                if goal.status == 'Completed':
-                    category_success[goal.category] = category_success.get(goal.category, 0) + 1
-                category_total[goal.category] = category_total.get(goal.category, 0) + 1
-        
-        category_affinity = {cat: category_success.get(cat, 0) / total for cat, total in category_total.items()}
-
-        # 5. Determine Archetype
-        user = await db.get(User, user_id)
-        archetype = "Newcomer"
-        if user and user.longest_streak > 30:
-            archetype = "Marathoner"
-        elif procrastination_index < 2 and len(goals) > 3:
-            archetype = "Sprinter"
-        elif user and user.goals_conquered > 5:
-            archetype = "Visionary"
-
         return {
-            "time_of_day_success": time_of_day_success,
-            "procrastination_index": procrastination_index,
-            "category_affinity": category_affinity,
-            "archetype": archetype,
+            "tasks_completed_on_time": completed_on_time,
+            "tasks_completed_late": completed_late,
+            "tasks_missed": len(tasks) - total_completed,
+            "total_tasks": len(tasks),
+            "completion_rate": round(completion_rate, 2)
         }
 
-    async def _store_metrics_in_db(self, user_id: str, metrics: Dict[str, Any], db):
-        stmt = select(UserBehavioralMetrics).where(UserBehavioralMetrics.user_id == user_id)
-        result = await db.execute(stmt)
-        metric_record = result.scalars().first()
-
-        if not metric_record:
-            metric_record = UserBehavioralMetrics(user_id=user_id)
-        
-        metric_record.time_of_day_success = metrics["time_of_day_success"]
-        metric_record.procrastination_index = metrics["procrastination_index"]
-        metric_record.category_affinity = metrics["category_affinity"]
-        metric_record.archetype = metrics["archetype"]
-        
-        db.add(metric_record)
-        await db.commit()
-
-    async def _generate_behavioral_snapshot(self, metrics: Dict[str, Any]) -> str:
-        prompt = self.snapshot_prompt_template.format(metrics=json.dumps(metrics, indent=2))
-        result = await gemini_manager.execute_with_model(
-            model_type='flash',
-            config_type='fast_classification',
-            prompt=prompt
+class SnapshotGenerator:
+    """Uses a CrewAI agent to generate the AI-powered behavioral snapshot."""
+    def __init__(self, gemini_config: GeminiModelConfig):
+        self.gemini_config = gemini_config
+        self.agent = Agent(
+            role='Expert Behavioral Analyst',
+            goal='Analyze user performance data and historical trends to generate a concise, insightful behavioral snapshot.',
+            backstory='You are an expert behavioral analyst and life coach. You can synthesize quantitative performance data and qualitative historical notes into a rich, actionable analysis of a user\'s character and growth trajectory.',
+            llm=self.gemini_config.get_model_for_agent('critical_analyst'),
+            verbose=True
         )
-        if result['success']:
-            return result['content'].get('snapshot', "No snapshot generated.")
-        return "User is a consistent achiever, excelling in daily habits."
 
-async def run_metrics_calculation():
-    calculator = MetricsCalculator()
-    await calculator.calculate_and_store_metrics_for_all_users()
+    async def generate_growth_snapshot(self, weekly_performance: Dict[str, Any], historical_snapshots: List[Dict[str, Any]]) -> BehavioralSnapshot:
+        prompt = f"""
+        You are an expert behavioral analyst and life coach. A user's performance data for the past week and their historical behavioral snapshots are provided below.
+
+        **This Week's Performance:**
+        {json.dumps(weekly_performance, indent=2)}
+
+        **Historical Snapshots (last 4 weeks):**
+        {json.dumps(historical_snapshots, indent=2)}
+
+        **Your Task:**
+        Generate a new, updated "Behavioral Snapshot" in a structured JSON format. This snapshot must include:
+        1.  `character_trait_analysis`: An analysis of the user's current character traits based on their performance. Are they showing discipline, resilience, inconsistency?
+        2.  `growth_trajectory`: Compare this week's performance to their historical snapshots. Are they growing, stagnating, or declining in their ability to achieve goals? Provide evidence.
+        3.  `emerging_patterns`: Identify any new patterns. For example, "The user is now consistently completing morning tasks, which is a new development."
+        4.  `archetype_suggestion`: Suggest an updated user archetype based on this new data.
+        
+        Ensure your output is only the raw JSON object, without any markdown formatting.
+        """
+        
+        task = CrewTask(
+            description=prompt,
+            expected_output="A valid JSON object conforming to the BehavioralSnapshot schema.",
+            agent=self.agent
+        )
+
+        crew = Crew(agents=[self.agent], tasks=[task], verbose=True)
+        result = await asyncio.to_thread(crew.kickoff)
+        
+        # Extract the raw text from the CrewOutput object and clean it
+        result_text = result.raw if hasattr(result, 'raw') else str(result)
+        clean_json_str = result_text.strip().replace("```json", "").replace("```", "").strip()
+        
+        snapshot_data = json.loads(clean_json_str)
+        return BehavioralSnapshot(**snapshot_data)
+
+class WeeklyMetricsCalculator:
+    """Orchestrates the weekly user performance and growth analysis."""
+    def __init__(self, db_session, pinecone_service: PineconeService, gemini_config: GeminiModelConfig):
+        self.db_service = DatabaseService(db_session)
+        self.metrics_engine = MetricsEngine()
+        self.snapshot_generator = SnapshotGenerator(gemini_config)
+        self.pinecone_service = pinecone_service
+
+    async def run_for_all_users(self):
+        """The main entry point to run the weekly analysis for all users."""
+        print("BACKGROUND JOB: Starting weekly performance and growth analysis for all users.")
+        users = await self.db_service.get_active_users()
+        for user in users:
+            await self._process_user(user)
+        print("BACKGROUND JOB: Finished weekly analysis for all users.")
+
+    async def _process_user(self, user: User):
+        """Processes a single user's weekly performance and generates a new snapshot."""
+        print(f"Processing user: {user.id}")
+        one_week_ago = datetime.utcnow() - timedelta(weeks=1)
+        
+        recent_tasks = await self.db_service.get_user_performance_since(user.id, one_week_ago)
+        if not recent_tasks:
+            print(f"No recent activity for user {user.id}. Skipping.")
+            return
+            
+        weekly_performance = self.metrics_engine.calculate_weekly_performance(recent_tasks)
+        
+        historical_snapshots = await self.pinecone_service.get_historical_snapshots(
+            user_id=str(user.id),
+            weeks=settings.HISTORICAL_SNAPSHOT_WEEKS
+        )
+        
+        new_snapshot = await self.snapshot_generator.generate_growth_snapshot(
+            weekly_performance=weekly_performance,
+            historical_snapshots=historical_snapshots
+        )
+        
+        snapshot_text = json.dumps(new_snapshot.dict())
+        
+        import hashlib
+        import numpy as np
+        vector = np.random.rand(768).tolist()
+
+        await self.pinecone_service.upsert_behavioral_snapshot(
+            user_id=str(user.id),
+            vector=vector,
+            snapshot=new_snapshot
+        )
+        print(f"Successfully generated and stored new snapshot for user {user.id}")
+
+async def run_weekly_metrics_job():
+    """Initializes services and runs the main calculation job."""
+    async_session = sessionmaker(get_db(), expire_on_commit=False, class_=asyncio.AsyncSession)
+    async with async_session() as db:
+        from app.main import pinecone_service, gemini_config
+        
+        calculator = WeeklyMetricsCalculator(
+            db_session=db,
+            pinecone_service=pinecone_service,
+            gemini_config=gemini_config
+        )
+        await calculator.run_for_all_users()
 
 if __name__ == "__main__":
-    asyncio.run(run_metrics_calculation())
+    print("Running weekly metrics calculation job manually...")
+    asyncio.run(run_weekly_metrics_job())
+    print("Manual run complete.")

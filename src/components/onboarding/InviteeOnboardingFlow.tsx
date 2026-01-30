@@ -12,6 +12,10 @@ import WelcomeStep from './WelcomeStep';
 import GoalDiscoveryStep from './GoalDiscoveryStep';
 import IntelligentGoalCreationStep from './IntelligentGoalCreationStep';
 import PlanReviewStep from './PlanReviewStep';
+import FirstTaskStep from './FirstTaskStep';
+import DraftReviewStep from './DraftReviewStep';
+import { GoalCreate } from '@/schemas/goal';
+import { Check } from 'lucide-react';
 
 const baseSteps = [
   {
@@ -135,15 +139,15 @@ export default function InviteeOnboardingFlow() {
   };
 
   const handleFinish = () => {
-    const { generatedPlan } = onboardingData;
+    const { generatedPlan, goalTitle } = onboardingData;
     if (!generatedPlan) {
       toast.error("No plan generated. Please go back and create a plan.");
       return;
     }
 
     const goalData: GoalCreate = {
-      name: generatedPlan.goal.title,
-      category: generatedPlan.goal.category, // Assuming category is part of the goal object
+      name: goalTitle,
+      category: generatedPlan.goalType, // Using goalType as category
       isHabit: generatedPlan.goalType === 'Habit',
       tasks: generatedPlan.tasks.map((task: any) => ({
         name: task.taskName,

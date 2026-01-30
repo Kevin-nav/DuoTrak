@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from fastapi_csrf_protect import CsrfProtect
-from app.api.v1.endpoints import auth, partner_invitations, users, storage, goals
+from app.api.v1.endpoints import auth, partner_invitations, users, storage, goals, chat
 
 api_router = APIRouter()
 
@@ -41,3 +41,6 @@ api_router.include_router(
 
 # Include storage router
 api_router.include_router(storage.router, prefix="/storage", tags=["Storage"])
+
+# Include chat router
+api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])

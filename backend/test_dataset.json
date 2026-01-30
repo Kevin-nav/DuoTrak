@@ -1,0 +1,78 @@
+[
+  {
+    "test_case_id": "TC001_Fitness_Habit",
+    "description": "Standard fitness goal with a clear partner accountability mechanism.",
+    "input": {
+      "goal_title": "Run a 5K in 3 months",
+      "motivation": "I want to feel healthier and have more energy for my family.",
+      "availability": ["Mornings (6-9 AM)", "Weekends"],
+      "time_commitment_description": "About 3-4 hours a week.",
+      "accountability_type": "visual_proof",
+      "is_shared_goal": false
+    },
+    "expected_output": {
+      "title": "Project 5K: 12 Weeks to More Energy",
+      "description": "A 12-week plan to build your running endurance from scratch, focusing on consistency and injury prevention.",
+      "goal_type": "Habit",
+      "difficulty_level": 0.6,
+      "estimated_duration_days": 90,
+      "tasks": [
+        { "task_name": "Tuesday Morning Run", "description": "Follow the C25K app for this week's workout. Focus on consistency.", "repeat_frequency": "Weekly on Tuesday" },
+        { "task_name": "Thursday Morning Run", "description": "Follow the C25K app for this week's second workout. Remember to warm up.", "repeat_frequency": "Weekly on Thursday" },
+        { "task_name": "Saturday Long Run", "description": "Follow the C25K app for the longer weekend run. Remember to stretch.", "repeat_frequency": "Weekly on Saturday" }
+      ],
+      "success_tips": ["Consistency is more important than speed.", "Don't be discouraged if you miss a day; just get back on track."],
+      "partner_involvement_suggestions": ["Share a post-run selfie with your partner after each run for encouragement.", "Ask your partner to help you lay out your running clothes the night before."]
+    }
+  },
+  {
+    "test_case_id": "TC002_Vague_Wellness_Goal",
+    "description": "Tests the system's ability to create a concrete plan from a vague, abstract goal.",
+    "input": {
+      "goal_title": "I want to be a better person",
+      "motivation": "I feel like I'm not living up to my potential and I want to be kinder.",
+      "availability": ["Evenings after 7 PM"],
+      "time_commitment_description": "Start with something small, 15 minutes a day.",
+      "accountability_type": "time_bound_action",
+      "is_shared_goal": false
+    },
+    "expected_output": {
+      "title": "Daily Kindness and Reflection Practice",
+      "description": "A simple daily practice to cultivate mindfulness, gratitude, and kindness in just 15 minutes.",
+      "goal_type": "Habit",
+      "difficulty_level": 0.3,
+      "estimated_duration_days": 30,
+      "tasks": [
+        { "task_name": "Evening Journaling", "description": "Spend 10 minutes writing down one thing you're grateful for and one act of kindness you performed today.", "repeat_frequency": "Daily" },
+        { "task_name": "Mindful Moment", "description": "Spend 5 minutes in quiet meditation or reflection before bed.", "repeat_frequency": "Daily" }
+      ],
+      "success_tips": ["The goal is not perfection, but consistent practice.", "Small, kind actions have a big impact over time."],
+      "partner_involvement_suggestions": ["Share one thing you wrote in your journal with your partner each night.", "Plan a weekly check-in with your partner to discuss your progress and challenges."]
+    }
+  },
+  {
+    "test_case_id": "TC003_Shared_Duotrak_Goal",
+    "description": "Critical test for a shared goal, requiring deep partner integration.",
+    "input": {
+      "goal_title": "We want to learn to cook a new meal together every week",
+      "motivation": "We want a fun activity to do together and to eat healthier.",
+      "availability": ["Sunday afternoons"],
+      "time_commitment_description": "A couple of hours on the weekend.",
+      "accountability_type": "visual_proof",
+      "is_shared_goal": true
+    },
+    "expected_output": {
+      "title": "Couples' Culinary Adventure",
+      "description": "A fun weekly project to explore new recipes, cook together, and enjoy a delicious meal.",
+      "goal_type": "Project",
+      "difficulty_level": 0.4,
+      "estimated_duration_days": 60,
+      "tasks": [
+        { "task_name": "Wednesday: Choose Recipe", "description": "Both partners must agree on a new recipe to try this Sunday. Add the ingredients to a shared shopping list.", "repeat_frequency": "Weekly on Wednesday" },
+        { "task_name": "Sunday: Cook Together", "description": "Block out 2 hours to cook the new meal together. Take turns with different steps of the recipe.", "repeat_frequency": "Weekly on Sunday" }
+      ],
+      "success_tips": ["Focus on having fun, not making the perfect meal.", "Put on some music and enjoy the process together."],
+      "partner_involvement_suggestions": ["This is a shared goal! The tasks are designed for both of you to complete together.", "Create a shared photo album where you post a picture of your meal each week."]
+    }
+  }
+]

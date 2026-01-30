@@ -85,3 +85,82 @@ export const GoalSuggestionResponseSchema = z.object({
 export type GoalSuggestionRequest = z.infer<typeof GoalSuggestionRequestSchema>;
 export type SuggestedTask = z.infer<typeof SuggestedTaskSchema>;
 export type GoalSuggestionResponse = z.infer<typeof GoalSuggestionResponseSchema>;
+
+// --- V3 Agentic Goal Creation Schemas ---
+
+// Phase 1: Request to get questions
+export const GoalWizardRequestSchema = z.object({
+  userId: z.string(),
+  wizardData: z.object({
+    goalDescription: z.string(),
+    motivation: z.string(),
+    availability: z.array(z.string()),
+    timeCommitment: z.string(),
+    accountabilityType: z.string(),
+    partnerName: z.string().optional().nullable(),
+  }),
+});
+
+// Phase 1: Response with questions
+export const StrategicQuestionSchema = z.object({
+  question: z.string(),
+  questionKey: z.string(),
+  context: z.string(),
+  suggestedAnswers: z.array(z.string()),
+});
+
+export const QuestionsResponseSchema = z.object({
+  sessionId: z.string(),
+  userProfileSummary: z.string(),
+  strategicQuestions: z.array(StrategicQuestionSchema),
+  executionMetadata: z.object({
+    questionGenerationTimeMs: z.number(),
+  }),
+});
+
+// Phase 2: Request to submit answers
+export const AnswersSubmissionRequestSchema = z.object({
+  userId: z.string(),
+  answers: z.record(z.string()),
+});
+
+// Phase 2: Response with the final plan
+export const DuotrakTaskSchema = z.object({
+  description: z.string(),
+  successMetric: z.string(),
+});
+
+export const DuotrakMilestoneSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  tasks: z.array(DuotrakTaskSchema),
+});
+
+export const DuotrakGoalPlanSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  milestones: z.array(DuotrakMilestoneSchema),
+  successMetrics: z.array(z.string()),
+  partnerAccountability: z.object({
+    role: z.string(),
+    checkInSchedule: z.string(),
+    sharedCelebrations: z.string(),
+  }),
+});
+
+export const GoalPlanResponseSchema = z.object({
+  sessionId: z.string(),
+  goalPlan: DuotrakGoalPlanSchema,
+  partnerIntegration: z.string(),
+  personalizationScore: z.number(),
+  executionMetadata: z.object({
+    planGenerationTimeMs: z.number(),
+  }),
+});
+
+export type GoalWizardRequest = z.infer<typeof GoalWizardRequestSchema>;
+export type StrategicQuestion = z.infer<typeof StrategicQuestionSchema>;
+export type QuestionsResponse = z.infer<typeof QuestionsResponseSchema>;
+export type AnswersSubmissionRequest = z.infer<typeof AnswersSubmissionRequestSchema>;
+export type DuotrakGoalPlan = z.infer<typeof DuotrakGoalPlanSchema>;
+export type GoalPlanResponse = z.infer<typeof GoalPlanResponseSchema>;

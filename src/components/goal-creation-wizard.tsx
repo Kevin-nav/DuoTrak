@@ -17,10 +17,16 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createGoal, suggestTasks } from "@/lib/api/goals";
+import { createGoal, getStrategicQuestions, createGoalPlan, evaluateGoalPlan } from "@/lib/api/goals";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { GoalSuggestionResponse } from "@/schemas/goal";
+import { useUser } from "@/contexts/UserContext";
+import { 
+  QuestionsResponse,
+  GoalPlanResponse,
+  StrategicQuestion,
+  DuotrakGoalPlan
+} from "@/schemas/goal";
 
 import { useFieldArray } from "react-hook-form";
 
@@ -50,10 +56,17 @@ const formSchema = z.object({
 
 export default function GoalCreationWizard() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isEditingPlan, setIsEditingPlan] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { userDetails } = useUser();
+
+  // V3 State Management
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [strategicQuestions, setStrategicQuestions] = useState<StrategicQuestion[] | null>(null);
+  const [userProfileSummary, setUserProfileSummary] = useState<any | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
+  const [finalGoalPlan, setFinalGoalPlan] = useState<DuotrakGoalPlan | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -93,21 +106,55 @@ export default function GoalCreationWizard() {
     },
   });
 
-  const [suggestions, setSuggestions] = useState<GoalSuggestionResponse | null>(null);
-
-  const suggestTasksMutation = useMutation({
-    mutationFn: suggestTasks,
-    onSuccess: (data) => {
-      setSuggestions(data);
-
+  // V3 Phase 1: Get Questions
+  const getQuestionsMutation = useMutation({
+    mutationFn: getStrategicQuestions,
+    onSuccess: (data: QuestionsResponse) => {
+      setSessionId(data.sessionId);
+      setUserProfileSummary(data.userProfileSummary);
+      setStrategicQuestions(data.strategicQuestions);
+      setCurrentStep(currentStep + 1); // Move to the new questions step
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Could not generate suggestions: ${error.message}`,
+        description: `Could not generate planning questions: ${error.message}`,
         variant: "destructive",
       });
     },
+  });
+
+  // V3 Phase 2: Get Plan
+  const getPlanMutation = useMutation({
+    mutationFn: (variables: { userId: string; sessionId: string; answers: Record<string, string> }) => 
+      createGoalPlan(variables.sessionId, { userId: variables.userId, answers: variables.answers }),
+    onSuccess: (data: GoalPlanResponse) => {
+      setFinalGoalPlan(data.goalPlan);
+      setCurrentStep(currentStep + 1); // Move to the final review step
+
+      // Conditionally trigger evaluation only in development
+      if (process.env.NODE_ENV === 'development') {
+        evaluatePlanMutation.mutate(data.goalPlan);
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Could not create your goal plan: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Dev-only: Fire-and-forget evaluation
+  const evaluatePlanMutation = useMutation({
+    mutationFn: evaluateGoalPlan,
+    onSuccess: () => {
+      console.log("DEV-ONLY: Goal plan sent for evaluation.");
+    },
+    onError: (error) => {
+      console.error("DEV-ONLY: Evaluation request failed.", error);
+    }
   });
 
 
@@ -118,7 +165,8 @@ export default function GoalCreationWizard() {
     { id: "availability", title: "Your Schedule", description: "When can you work on this?" },
     { id: "time", title: "Time Investment", description: "How much time can you dedicate?" },
     { id: "accountability", title: "Accountability", description: "How will you track completion?" },
-    { id: "review", title: "Review", description: "Your personalized plan" },
+    { id: "personalize", title: "Personalize Your Plan", description: "Answer these questions to get a tailored strategy." },
+    { id: "review", title: "Review Your Plan", description: "Your hyper-personalized plan is ready." },
   ]
 
   const availabilityOptions = [
@@ -139,72 +187,75 @@ export default function GoalCreationWizard() {
     ["accountabilityType", "timeWindow"],
   ];
 
-  const generateSuggestion = () => {
-    const values = form.getValues();
-    suggestTasksMutation.mutate({
-      goal_type: "personal", // This can be dynamic in the future
-      goal_name: values.goalName,
-      motivation: values.motivation,
-      availability: values.availability,
-      time_commitment: values.timeCommitment,
-      custom_time: values.customTime,
-      accountability_type: values.accountabilityType,
-      time_window: values.timeWindow,
-    });
-  };
-
-  const handleAcceptAndEdit = () => {
-    if (!suggestions) return;
-
-    // Use form.reset to populate the entire form with new values
-    form.reset({
-      ...form.getValues(), // Keep the initial user input like motivation, etc.
-      goalName: form.getValues("goalName"),
-      tasks: suggestions.tasks.map(task => ({
-        name: task.task_name,
-        description: task.description,
-        repeat_frequency: task.repeat_frequency,
-      })),
-    });
-
-    setIsEditingPlan(true); // Switch to editing mode
-  };
-
   const handleNext = async () => {
+    if (currentStep === 5) { // "Personalize" step
+      if (!userDetails) {
+        toast({ title: "User not found. Please log in again.", variant: "destructive" });
+        return;
+      }
+      if (sessionId && Object.keys(userAnswers).length === strategicQuestions?.length) {
+        getPlanMutation.mutate({ userId: userDetails.id, sessionId, answers: userAnswers });
+      } else {
+        toast({ title: "Please answer all questions.", variant: "destructive" });
+      }
+      return;
+    }
+
     const fieldsToValidate = stepFields[currentStep];
     const isValid = await form.trigger(fieldsToValidate);
 
     if (isValid) {
-      if (currentStep === 4) { // Step before review
-        generateSuggestion();
-      }
-      if (currentStep < steps.length - 1) {
+      if (currentStep === 4) { // Step before "Personalize"
+        if (!userDetails) {
+          toast({ title: "User not found. Please log in again.", variant: "destructive" });
+          return;
+        }
+        const values = form.getValues();
+        getQuestionsMutation.mutate({
+          userId: userDetails.id,
+          wizardData: {
+            goal_description: values.goalName,
+            motivation: values.motivation,
+            availability: values.availability,
+            time_commitment: values.timeCommitment,
+            accountability_type: values.accountabilityType,
+            partnerName: "Alex", // Placeholder for now
+          }
+        });
+      } else if (currentStep < steps.length - 1) {
         setCurrentStep(currentStep + 1);
       }
     }
   };
 
   const handleBack = () => {
-    if (isEditingPlan) {
-      setIsEditingPlan(false);
-    } else if (currentStep > 0) {
+    if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
     }
   }
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-      // Guard clause to prevent premature submission
-      if (!isEditingPlan) {
-        return; // Do nothing if not in the final editing phase
-      }
-  
-      createGoalMutation.mutate({
-        name: values.goalName,
-        category: suggestions?.goal_type || 'General', 
-        is_habit: suggestions?.goal_type === 'Habit',
-        tasks: values.tasks || [], // Use the (potentially edited) tasks from the form
-      });
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!finalGoalPlan) {
+      toast({ title: "No final plan to save.", description: "Please complete the planning process.", variant: "destructive" });
+      return;
     }
+
+    // Transform the finalGoalPlan into the format the backend expects for createGoal
+    const goalToCreate = {
+      name: finalGoalPlan.title,
+      category: 'General', // Or derive from plan
+      isHabit: false, // Or derive from plan
+      color: '#FFFFFF', // Placeholder
+      icon: 'default', // Placeholder
+      tasks: finalGoalPlan.milestones.flatMap(m => m.tasks.map(t => ({
+        name: t.description, // Assuming task description is the name
+        description: t.successMetric,
+        repeatFrequency: "daily", // Placeholder
+      }))),
+    };
+    
+    createGoalMutation.mutate(goalToCreate);
+  }
 
 
 
@@ -448,12 +499,12 @@ export default function GoalCreationWizard() {
                           />
                         </FormControl>
                         <div
-                          className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "visual"
+                          className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "visual_proof"
                               ? "border-primary-blue"
                               : "border-cool-gray dark:border-gray-600"
                             }`}
                         >
-                          {field.value === "visual" && (
+                          {field.value === "visual_proof" && (
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
@@ -489,12 +540,12 @@ export default function GoalCreationWizard() {
                           />
                         </FormControl>
                         <div
-                          className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "time-bound"
+                          className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "time_bound_action"
                               ? "border-primary-blue"
                               : "border-cool-gray dark:border-gray-600"
                             }`}
                         >
-                          {field.value === "time-bound" && (
+                          {field.value === "time_bound_action" && (
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
@@ -510,7 +561,7 @@ export default function GoalCreationWizard() {
                           <p className="text-sm text-stone-gray dark:text-gray-400 mb-3">
                             Mark completed within a specific time window
                           </p>
-                          {field.value === "time-bound" && (
+                          {field.value === "time_bound_action" && (
                             <FormField
                               control={form.control}
                               name="timeWindow"
@@ -539,107 +590,83 @@ export default function GoalCreationWizard() {
             )}
 
             {currentStep === 5 && (
-              <AnimatePresence mode="wait">
-                {isEditingPlan ? (
-                  // EDITING VIEW
-                  <motion.div key="editing-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                    <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100">Review and Finalize Your Plan</h3>
-                    <FormField
-                      control={form.control}
-                      name="goalName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Goal Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+              <div className="space-y-6">
+                {getQuestionsMutation.isPending ? (
+                  <div className="text-center">
+                    <Sparkles className="w-12 h-12 text-primary-blue mx-auto animate-spin" />
+                    <h3 className="text-lg font-semibold mt-4">Analyzing your goal...</h3>
+                    <p className="text-stone-gray">Our AI is preparing some questions to personalize your plan.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-4 bg-accent-light-blue dark:bg-primary-blue/10 rounded-lg border border-primary-blue/20">
+                      <h3 className="font-semibold text-charcoal dark:text-gray-100">AI Analysis: Your Profile</h3>
+                      {userProfileSummary && (
+                        <>
+                          <p className="text-sm text-stone-gray dark:text-gray-300 mt-1">
+                            <strong>Archetype:</strong> {userProfileSummary.archetype}
+                          </p>
+                          <p className="text-sm text-stone-gray dark:text-gray-300">
+                            <strong>Potential Risks:</strong> {userProfileSummary.risk_factors?.join(", ")}
+                          </p>
+                        </>
                       )}
-                    />
-                    
-                    <h4 className="font-semibold text-charcoal dark:text-gray-100">Tasks</h4>
+                    </div>
                     <div className="space-y-4">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="p-4 border rounded-lg space-y-2 bg-pearl-gray dark:bg-gray-700/50">
-                          <FormField
-                            control={form.control}
-                            name={`tasks.${index}.name`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Task {index + 1}</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`tasks.${index}.description`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Description</FormLabel>
-                                <FormControl><Textarea {...field} rows={2} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                           <FormField
-                            control={form.control}
-                            name={`tasks.${index}.repeat_frequency`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Frequency</FormLabel>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                      {strategicQuestions?.map((q) => (
+                        <div key={q.questionKey}>
+                          <FormLabel>{q.question}</FormLabel>
+                          {/* Simple radio group for now */}
+                          <div className="mt-2 space-y-2">
+                            {q.suggestedAnswers.map(answer => (
+                              <label key={answer} className="flex items-center p-3 rounded-lg border border-cool-gray dark:border-gray-600 cursor-pointer hover:border-primary-blue">
+                                <input
+                                  type="radio"
+                                  name={q.questionKey}
+                                  value={answer}
+                                  onChange={(e) => setUserAnswers({...userAnswers, [q.questionKey]: e.target.value})}
+                                  className="mr-3"
+                                />
+                                {answer}
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {currentStep === 6 && (
+               <AnimatePresence mode="wait">
+                {getPlanMutation.isPending || !finalGoalPlan ? (
+                  <motion.div key="loading" className="text-center">
+                    <Sparkles className="w-16 h-16 text-primary-blue mx-auto animate-spin" />
+                    <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-2">Generating your hyper-personalized plan...</h3>
+                    <p className="text-stone-gray dark:text-gray-400">This is where the magic happens. Please wait a moment.</p>
                   </motion.div>
                 ) : (
-                  // REVIEW VIEW
-                  <motion.div key="review-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                    {!suggestions ? (
-                      <div className="text-center">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }} className="w-16 h-16 mx-auto mb-4">
-                          <Sparkles className="w-16 h-16 text-primary-blue" />
-                        </motion.div>
-                        <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-2">Generating your personalized plan...</h3>
-                        <p className="text-stone-gray dark:text-gray-400">Our AI is analyzing your preferences to create the perfect routine</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100">Here's your suggested plan for "{form.getValues("goalName")}":</h3>
-                        <div className="bg-accent-light-blue dark:bg-primary-blue/10 rounded-lg p-4">
-                          <h4 className="font-semibold text-charcoal dark:text-gray-100 mb-2">Suggested Tasks:</h4>
-                          <ul className="space-y-2">
-                            {suggestions.tasks.map((task, index) => (
-                              <li key={index} className="text-sm text-stone-gray dark:text-gray-300">
-                                <p className="font-bold">{task.task_name} <span className="font-normal text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded-full">{task.repeat_frequency}</span></p>
-                                <p>{task.description}</p>
+                  <motion.div key="plan" className="space-y-6">
+                    <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
+                    <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
+                    
+                    <div className="space-y-4">
+                      {finalGoalPlan.milestones.map((milestone, index) => (
+                        <div key={index} className="p-4 border rounded-lg bg-pearl-gray dark:bg-gray-700/50">
+                          <h4 className="font-semibold text-charcoal dark:text-gray-100">{milestone.title}</h4>
+                          <p className="text-sm text-stone-gray dark:text-gray-400 mb-2">{milestone.description}</p>
+                          <ul className="list-disc list-inside space-y-1">
+                            {milestone.tasks.map((task, taskIndex) => (
+                              <li key={taskIndex} className="text-sm text-charcoal dark:text-gray-300">
+                                <strong>{task.description}</strong>: <span className="text-stone-gray dark:text-gray-400">{task.successMetric}</span>
                               </li>
                             ))}
                           </ul>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-pearl-gray dark:bg-gray-700 rounded-lg p-3">
-                            <h5 className="font-semibold text-charcoal dark:text-gray-100 text-sm mb-1">Goal Type</h5>
-                            <p className="text-sm text-stone-gray dark:text-gray-300 font-semibold">{suggestions.goal_type}</p>
-                          </div>
-                          <div className="bg-pearl-gray dark:bg-gray-700 rounded-lg p-3">
-                            <h5 className="font-semibold text-charcoal dark:text-gray-100 text-sm mb-1">Success Tips</h5>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-stone-gray dark:text-gray-300">
-                              {suggestions.success_tips.map((tip, index) => (
-                                <li key={index}>{tip}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -667,32 +694,24 @@ export default function GoalCreationWizard() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={handleNext}
-                            disabled={suggestTasksMutation.isPending}
+                            disabled={getQuestionsMutation.isPending || getPlanMutation.isPending}
                             className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50"
                           >
-                            <span>{suggestTasksMutation.isPending ? "Generating..." : "Next"}</span>
+                            <span>
+                              {getQuestionsMutation.isPending ? "Analyzing..." : 
+                               getPlanMutation.isPending ? "Creating Plan..." : "Next"}
+                            </span>
                             <ArrowRight className="w-4 h-4" />
                           </motion.button>
-                        ) : isEditingPlan ? (
+                        ) : (
                           <motion.button
                             type="submit"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            disabled={createGoalMutation.isPending}
+                            disabled={createGoalMutation.isPending || !finalGoalPlan}
                             className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors disabled:opacity-50"
                           >
                             {createGoalMutation.isPending ? "Saving..." : "Save Goal"}
-                          </motion.button>
-                        ) : (
-                          <motion.button
-                            type="button"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleAcceptAndEdit}
-                            disabled={!suggestions}
-                            className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            Accept & Edit Plan
                           </motion.button>
                         )}
                       </div>

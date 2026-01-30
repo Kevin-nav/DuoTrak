@@ -1,10 +1,10 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, Archive } from "lucide-react";
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoals"
+import { useGoal, useUpdateGoal, useArchiveGoal } from "@/hooks/useGoals"
 import { GoalUpdate } from "@/schemas/goal"
 import DashboardLayout from "@/components/dashboard-layout"
 
@@ -15,7 +15,7 @@ export default function GoalEditPage() {
 
   const { data: goal, isLoading, isError } = useGoal(goalId)
   const updateGoal = useUpdateGoal(goalId)
-  const deleteGoal = useDeleteGoal(goalId)
+  const archiveGoal = useArchiveGoal();
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -43,10 +43,10 @@ export default function GoalEditPage() {
     router.push("/goals")
   }
 
-  const handleDelete = async () => {
-    await deleteGoal.mutateAsync()
-    router.push("/goals")
-  }
+  const handleArchive = async () => {
+    await archiveGoal.mutateAsync(goalId);
+    router.push("/goals");
+  };
 
   if (isLoading) {
     return (
@@ -80,10 +80,11 @@ export default function GoalEditPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleDelete}
+              onClick={handleArchive}
               className="p-2 hover:bg-error-red/10 text-error-red rounded-lg transition-colors"
+              title="Archive Goal"
             >
-              <Trash2 className="w-5 h-5" />
+              <Archive className="w-5 h-5" />
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}

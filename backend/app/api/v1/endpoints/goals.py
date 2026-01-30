@@ -15,12 +15,11 @@ from app.core.limiter import limiter
 from app.schemas.onboarding import OnboardingGoalCreate
 from app.services.ai_suggestion_service import ai_suggestion_service
 from app.api.v1.dependencies import validate_goal_request
-from app.agents.goal_coach_orchestrator import GoalCoachOrchestrator
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-@router.post("/onboarding-questions", response_model=Dict[str, Any])
+@router.post("/onboarding-questions", response_model=Dict[str, Any], deprecated=True)
 @limiter.limit("5/minute")
 async def get_onboarding_questions(
     request: Request,
@@ -30,12 +29,11 @@ async def get_onboarding_questions(
     """
     First step of the onboarding AI flow: Generate clarifying questions.
     """
-    orchestrator = GoalCoachOrchestrator()
-    questions, user_profile = await orchestrator.generate_initial_questions(
-        user_id=str(current_user.id),
-        goal_creation_context=goal_context.dict()
+    # This endpoint is deprecated and its logic is now handled by the V3 goal creation flow.
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="This endpoint is deprecated. Please use the new V3 '/goal-creation/questions' endpoint."
     )
-    return {"questions": questions, "user_profile": user_profile}
 
 @router.get("/", response_model=List[schemas.GoalRead])
 @limiter.limit("20/minute")
@@ -209,7 +207,7 @@ async def suggest_tasks(
             detail="An error occurred while generating suggestions. Please try again."
         )
 
-@router.post("/onboarding-plan", response_model=schemas.GoalSuggestionResponse)
+@router.post("/onboarding-plan", response_model=schemas.GoalSuggestionResponse, deprecated=True)
 @limiter.limit("5/minute")
 async def get_onboarding_plan(
     request: Request,
@@ -219,18 +217,11 @@ async def get_onboarding_plan(
     """
     Second step of the onboarding AI flow: Generate the final plan.
     """
-    orchestrator = GoalCoachOrchestrator()
-    
-    # The frontend will need to send the user_profile back, along with the answers
-    user_profile = plan_request.user_profile 
-    user_answers = plan_request.contextual_answers
-
-    final_plan = await orchestrator.generate_final_plan(
-        user_profile=user_profile,
-        goal_context=plan_request.goal_title,
-        user_answers=user_answers
+    # This endpoint is deprecated and its logic is now handled by the V3 goal creation flow.
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="This endpoint is deprecated. Please use the new V3 '/goal-creation/{session_id}/plan' endpoint."
     )
-    return final_plan
 
 @router.post("/{goal_id}/duplicate", response_model=schemas.GoalRead)
 @limiter.limit("10/minute")

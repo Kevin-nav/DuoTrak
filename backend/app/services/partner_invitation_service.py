@@ -60,7 +60,7 @@ class PartnerInvitationService:
         self, 
         sender: User, 
         invitation_in: schemas.PartnerInvitationCreate
-    ) -> PartnerInvitationModel:
+    ) -> Tuple[PartnerInvitationModel, str]:
         '''Create a new partner invitation.
         
         Args:
@@ -152,14 +152,17 @@ class PartnerInvitationService:
                 detail="A critical error occurred while saving the invitation."
             ) from e
 
-        logger.info(f"Successfully committed invitation {invitation.id} with token {invitation.invitation_token} to the database.")
+        # Send invitation email
+        token_data = {"invitation_id": str(invitation.id), "receiver_email": invitation.receiver_email}
+        invitation_token = security.create_access_token(token_data, expires_delta=timedelta(days=7))
+
         try:
             email_service = EmailService()
             email_service.send_partner_invitation(
                 sender=sender,
                 receiver_email=invitation_in.receiver_email,
                 receiver_name=invitation_in.receiver_name,
-                invitation_token=str(invitation.invitation_token),
+                invitation_token=invitation_token,
                 message=invitation_in.message,
                 expires_in_days=7
             )
@@ -171,7 +174,7 @@ class PartnerInvitationService:
                 exc_info=True
             )
 
-        return invitation
+        return invitation, invitation_token
 
     async def accept_invitation_by_token(
         self,

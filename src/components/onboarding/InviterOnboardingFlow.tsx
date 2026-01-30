@@ -146,31 +146,26 @@ export default function InviterOnboardingFlow() {
       </div>
 
       {/* Navigation */}
-      <div className="bg-white border-t p-4">
-        <div className="max-w-4xl mx-auto flex justify-end">
-          <div className="flex gap-4">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0 || isUserLoading}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-            {currentStep < steps.length - 1 ? (
+      {currentStep < steps.length - 1 && (
+        <div className="bg-white border-t p-4">
+          <div className="max-w-4xl mx-auto flex justify-end">
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0 || isUserLoading}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
               <Button onClick={handleNext} disabled={!isCurrentStepValid || isUserLoading}>
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            ) : (
-              <Button onClick={handleNext} disabled={!isCurrentStepValid || isUserLoading}>
-                Go to Waiting Room
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

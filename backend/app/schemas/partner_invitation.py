@@ -47,7 +47,7 @@ class PartnerInvitationInDBBase(PartnerInvitationBase):
 class PartnerInvitation(PartnerInvitationInDBBase):
     """Schema for returning a partner invitation with sender details."""
     sender: "UserRead"
-    invitation_token: UUID
+    invitation_token: str
 
 class InvitationAction(BaseModel):
     invitation_id: uuid.UUID

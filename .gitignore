@@ -38,23 +38,10 @@ yarn-error.log*
 
 # Local Files
 /cxt/
-/History/
 /errors/
 
-# Generated Reports
-/auth_flow_analysis_report.md
-/authentication_redirection_report.md
-/authentication_redirection_solution_documentation.md
-/backend_implentation.md
-/backend_integration_guide.md
-/backend_overview.md
-/bug_report_auth_redirection.md
-/DuoTrak_Login_Error_Analysis.md
-/logout_alignment_report.md
-/logout_functionality_analysis_report.md
-/logout_issue_summary.md
-/race_condition_analysis_and_solution_proposal.md
-/session_summary.md
+# Archived Documentation
+/project_history/
 
 # Other
 npm-debug.log*

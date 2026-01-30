@@ -1,0 +1,180 @@
+# backend/app/api/v1/endpoints/goal_creation.py
+import asyncio
+import logging
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
+from app.core.config import settings
+from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, AnswersSubmissionRequest, GoalPlanResponse
+from app.services.gemini_config import GeminiModelConfig
+from app.services.pinecone_service import PineconeService
+from app.services.duotrak_crew_orchestrator import DuotrakCrewOrchestrator
+from app.db.models import User
+from app.api.v1.endpoints.users import get_current_user_from_cookie
+from app.services.external_judge_crew import ExternalJudgeCrew
+from app.schemas.agent_crew import DuotrakGoalPlan
+from fastapi import BackgroundTasks
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# ... (existing code)
+
+def run_evaluation_in_background(plan: DuotrakGoalPlan):
+    """The function that will be run in the background."""
+    try:
+        logger.info("--- Starting Background Evaluation of Goal Plan ---")
+        # We need a path for the test dataset, even if it's not used for this specific evaluation method
+        # We can create a dummy file or point to the existing one.
+        # For now, let's assume a path.
+        test_dataset_path = "test_dataset.json" 
+        judge_crew = ExternalJudgeCrew(gemini_config=gemini_config, test_dataset_path=test_dataset_path)
+        
+        # The evaluate_goal_plan_phase expects a 'golden_plan' and 'simulated_answers'.
+        # For this live evaluation, we don't have a golden plan.
+        # We will pass the generated plan as both generated and golden to see the output.
+        # This is for logging and developer review, not for scoring.
+        asyncio.run(judge_crew.evaluate_goal_plan_phase(
+            generated_plan=plan.dict(),
+            golden_plan=plan.dict(), # Using the same plan for comparison
+            simulated_answers={} # No answers available in this context
+        ))
+        logger.info("--- Background Evaluation of Goal Plan Finished ---")
+    except Exception as e:
+        logger.error(f"--- Background Evaluation Failed: {e} ---", exc_info=True)
+
+@router.post("/evaluate-plan", status_code=status.HTTP_202_ACCEPTED)
+async def evaluate_plan_endpoint(
+    plan: DuotrakGoalPlan,
+    background_tasks: BackgroundTasks
+):
+    """
+    Development-only endpoint to trigger a background evaluation of a generated goal plan.
+    This does not block the client and is used for logging and quality assurance.
+    """
+    logger.info("Received request to evaluate plan in background.")
+    background_tasks.add_task(run_evaluation_in_background, plan)
+    return {"message": "Evaluation has been triggered in the background."}
+
+# Initialize services
+gemini_config = GeminiModelConfig()
+
+pinecone_service = PineconeService(
+    api_key=settings.PINECONE_API_KEY,
+    environment="aws",  # This should be configured in settings
+    index_name=settings.PINECONE_INDEX_NAME
+)
+
+duotrak_orchestrator = DuotrakCrewOrchestrator(
+    pinecone_service=pinecone_service,
+    gemini_config=gemini_config
+)
+
+@router.on_event("startup")
+async def startup_event():
+    await pinecone_service.initialize()
+
+@router.post("/questions", response_model=QuestionsResponse)
+async def get_strategic_questions(
+    request: GoalWizardRequest,
+    current_user: User = Depends(get_current_user_from_cookie)
+):
+    """
+    V3 Agentic Workflow - Phase 1: Generate strategic questions.
+    
+    This endpoint processes the user's initial goal input from the onboarding or goal creation wizard.
+    It uses the agentic system to analyze the user's context and generate a set of clarifying,
+    strategic questions designed to gather the necessary information for building a hyper-personalized plan.
+
+    - **Request Body (`GoalWizardRequest`):**
+      - `user_id`: The ID of the current user.
+      - `wizard_data`: A JSON object containing the initial goal details, such as:
+        - `goal_description`: "I want to run a 5k in 3 months."
+        - `motivation`: "To feel healthier."
+        - `availability`: ["mornings", "weekends"]
+        - `time_commitment`: "3-4 hours a week"
+        - `accountability_type`: "visual_proof"
+        - `partner_name`: "Alex" (optional)
+
+    - **Response Body (`QuestionsResponse`):**
+      - `session_id`: A unique ID for this goal creation session.
+      - `user_profile_summary`: A brief, AI-generated analysis of the user's archetype and risks.
+      - `strategic_questions`: A list of 3 question objects, each with:
+        - `question`: The question text.
+        - `question_key`: A unique key for the question.
+        - `context`: Why the question is being asked.
+        - `suggested_answers`: A list of 3-4 practical answers.
+      - `execution_metadata`: Performance metrics for the agentic workflow.
+    """
+    try:
+        session_id = str(uuid.uuid4())
+        user_context = await pinecone_service.get_user_context(str(current_user.id))
+        
+        questions_result = await duotrak_orchestrator.generate_strategic_questions(
+            user_id=str(current_user.id),
+            session_id=session_id,
+            wizard_data=request.wizard_data.dict(),
+            user_context=user_context
+        )
+        
+        return QuestionsResponse(
+            session_id=session_id,
+            user_profile_summary=questions_result["user_profile_summary"],
+            strategic_questions=questions_result["questions"],
+            execution_metadata={"question_generation_time_ms": questions_result["execution_time_ms"]}
+        )
+    except Exception as e:
+        logger.error(f"V3 Question generation failed for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate strategic questions.")
+
+@router.post("/{session_id}/plan", response_model=GoalPlanResponse)
+async def create_goal_plan(
+    session_id: str,
+    request: AnswersSubmissionRequest,
+    current_user: User = Depends(get_current_user_from_cookie)
+):
+    """
+    V3 Agentic Workflow - Phase 2: Process answers and generate the complete goal plan.
+    
+    This endpoint takes the user's answers to the strategic questions and uses the agentic
+    system to create the final, hyper-personalized goal plan with detailed tasks, milestones,
+    and partner accountability integration.
+
+    - **Path Parameter:**
+      - `session_id`: The unique ID returned from the `/questions` endpoint.
+
+    - **Request Body (`AnswersSubmissionRequest`):**
+      - `user_id`: The ID of the current user.
+      - `answers`: A JSON object mapping the `question_key` from Phase 1 to the user's string answer.
+        - E.g., `{"past_success_factor": "When my partner Alex checked in daily."}`
+
+    - **Response Body (`GoalPlanResponse`):**
+      - `session_id`: The same session ID for tracking.
+      - `goal_plan`: The complete, structured goal plan object (`DuotrakGoalPlan`).
+      - `partner_integration`: Specific suggestions for partner involvement.
+      - `personalization_score`: An AI-generated score of how personalized the plan is.
+      - `execution_metadata`: Performance metrics for the agentic workflow.
+    """
+    try:
+        plan_result = await duotrak_orchestrator.create_goal_plan_from_answers(
+            session_id=session_id,
+            user_id=str(current_user.id),
+            answers=request.answers
+        )
+        
+        # Here you would typically save the generated plan to the database
+        # For now, we return it directly.
+        
+        return GoalPlanResponse(
+            session_id=session_id,
+            goal_plan=plan_result["goal_plan"],
+            partner_integration=plan_result["partner_integration"],
+            personalization_score=plan_result["personalization_score"],
+            execution_metadata={"plan_generation_time_ms": plan_result["execution_time_ms"]}
+        )
+    except ValueError as e:
+        logger.warning(f"V3 Plan creation value error for session {session_id}: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"V3 Goal plan creation failed for session {session_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create goal plan.")
