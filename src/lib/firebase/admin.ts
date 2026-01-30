@@ -44,6 +44,7 @@ if (!getApps().length) {
   } catch (error: any) {
     console.error('❌ [Firebase Admin] 8. FATAL: Failed to initialize Firebase Admin SDK. This will break all auth functionality.');
     console.error(error);
+    throw error; // Re-throw to ensure app is considered assigned or process exits
   }
 } else {
   app = getApps()[0];

@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
 
@@ -35,7 +35,7 @@ export default function FirstGoalWizard() {
   const handleSkip = () => {
     completeOnboarding();
   };
-  
+
   const handleCreateGoal = () => {
     // For now, creating a goal will also complete the onboarding.
     // In the future, this would open a goal creation form.

@@ -9,6 +9,7 @@
  */
 
 import type * as goals from "../goals.js";
+import type * as invitations from "../invitations.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -20,6 +21,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   goals: typeof goals;
+  invitations: typeof invitations;
   tasks: typeof tasks;
   users: typeof users;
 }>;

@@ -19,6 +19,8 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
   const [showCelebration, setShowCelebration] = useState(false)
 
   const handleMarkComplete = (taskId: string) => {
+    // Default to visual accountability type for now
+    const accountabilityType = "visual";  // TODO: Get from goal metadata when available
     if (accountabilityType === "visual") {
       setSelectedTask(taskId)
       setShowPhotoUpload(true)
@@ -85,7 +87,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-stone-gray dark:text-gray-400">
-              {goal.is_habit ? "Habit Building" : "Project Goal"}
+              {goal.isHabit ? "Habit Building" : "Project Goal"}
             </span>
             <span className="text-primary-blue font-medium">{Math.round(progressPercentage)}% complete</span>
           </div>
@@ -107,30 +109,27 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
-                    task.status === 'completed'
+                  className={`flex items-center justify-between p-4 rounded-lg border transition-all ${task.status === 'completed'
                       ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
                       : "border-primary-blue/20 bg-accent-light-blue dark:bg-primary-blue/10 hover:border-primary-blue"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        task.status === 'completed'
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${task.status === 'completed'
                           ? "border-green-500 bg-green-500"
                           : "border-primary-blue hover:bg-primary-blue/10"
-                      }`}
+                        }`}
                     >
                       {task.status === 'completed' && <CheckCircle className="w-4 h-4 text-white" />}
                     </div>
 
                     <div>
                       <p
-                        className={`font-medium ${
-                          task.status === 'completed'
+                        className={`font-medium ${task.status === 'completed'
                             ? "text-green-700 dark:text-green-300 line-through"
                             : "text-charcoal dark:text-gray-100"
-                        }`}
+                          }`}
                       >
                         {task.name}
                       </p>

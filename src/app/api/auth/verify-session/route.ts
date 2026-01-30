@@ -10,7 +10,8 @@ export const runtime = 'nodejs'; // Or 'edge'
  * This makes the backend the single source of truth for user data.
  */
 export async function GET() {
-  const sessionCookie = cookies().get('auth_token')?.value;
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('auth_token')?.value;
 
   if (!sessionCookie) {
     return NextResponse.json({ isAuthenticated: false, user: null }, { status: 401 });
@@ -20,7 +21,7 @@ export async function GET() {
     // Use the NEXT_PUBLIC_API_BASE_URL which is available server-side.
     // The proxy/rewrite in next.config.js is for client-side requests.
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-    
+
     const response = await fetch(`${backendUrl}/api/v1/users/me`, {
       headers: {
         'Cookie': `auth_token=${sessionCookie}`
@@ -33,7 +34,7 @@ export async function GET() {
     }
 
     const user = await response.json();
-    
+
     // The session is valid, return the user data from the backend.
     return NextResponse.json({ isAuthenticated: true, user: user }, { status: 200 });
 

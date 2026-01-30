@@ -27,18 +27,71 @@ export const list = query({
       .filter((q) => q.eq(q.field("is_archived"), false))
       .collect();
 
-    // Fetch tasks for each goal
+    // Fetch tasks for each goal and calculate progress
     const goalsWithTasks = await Promise.all(
       goals.map(async (goal) => {
         const tasks = await ctx.db
           .query("tasks")
           .withIndex("by_goal", (q) => q.eq("goal_id", goal._id))
           .collect();
-        return { ...goal, tasks };
+        
+        const total = tasks.length;
+        const progress = tasks.filter(t => t.status === "completed" || t.status === "Completed").length;
+        
+        // Determine goal status
+        let status = "On Track";
+        if (total > 0 && progress === total) status = "Completed";
+
+        return { 
+          ...goal, 
+          tasks, 
+          total, 
+          progress, 
+          status 
+        };
       })
     );
 
     return goalsWithTasks;
+  },
+});
+
+/**
+ * Get a single goal by ID.
+ */
+export const get = query({
+  args: { id: v.id("goals") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const goal = await ctx.db.get(args.id);
+    if (!goal) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+      .unique();
+
+    if (!user || goal.user_id !== user._id) return null;
+
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_goal", (q) => q.eq("goal_id", goal._id))
+      .collect();
+      
+    const total = tasks.length;
+    const progress = tasks.filter(t => t.status === "completed" || t.status === "Completed").length;
+    let status = "On Track";
+    if (total > 0 && progress === total) status = "Completed";
+
+    return { 
+      ...goal, 
+      tasks, 
+      total, 
+      progress, 
+      status 
+    };
   },
 });
 
@@ -48,16 +101,23 @@ export const list = query({
 export const create = mutation({
   args: {
     name: v.string(),
+    description: v.optional(v.string()),
+    motivation: v.optional(v.string()),
     category: v.optional(v.string()),
     icon: v.optional(v.string()),
     color: v.optional(v.string()),
     is_habit: v.boolean(),
+    availability: v.optional(v.array(v.string())),
+    time_commitment: v.optional(v.string()),
+    accountability_type: v.optional(v.string()),
     tasks: v.optional(
       v.array(
         v.object({
           name: v.string(),
           description: v.optional(v.string()),
           repeat_frequency: v.optional(v.string()),
+          time_window: v.optional(v.string()),
+          accountability_type: v.optional(v.string()),
         })
       )
     ),
@@ -79,11 +139,16 @@ export const create = mutation({
 
     const goalId = await ctx.db.insert("goals", {
       name: args.name,
+      description: args.description,
+      motivation: args.motivation,
       category: args.category,
       icon: args.icon,
       color: args.color,
       is_habit: args.is_habit,
       is_archived: false,
+      availability: args.availability,
+      time_commitment: args.time_commitment,
+      accountability_type: args.accountability_type,
       user_id: user._id,
       updated_at: Date.now(),
     });
@@ -96,12 +161,51 @@ export const create = mutation({
           repeat_frequency: task.repeat_frequency,
           status: "pending",
           goal_id: goalId,
+          time_window: task.time_window,
+          accountability_type: task.accountability_type,
           updated_at: Date.now(),
         });
       }
     }
 
     return goalId;
+  },
+});
+
+/**
+ * Update a goal.
+ */
+export const update = mutation({
+  args: {
+    id: v.id("goals"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    motivation: v.optional(v.string()),
+    category: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    color: v.optional(v.string()),
+    availability: v.optional(v.array(v.string())),
+    time_commitment: v.optional(v.string()),
+    accountability_type: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const goal = await ctx.db.get(args.id);
+    if (!goal) throw new Error("Goal not found");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+      .unique();
+
+    if (!user || goal.user_id !== user._id) throw new Error("Unauthorized");
+
+    await ctx.db.patch(args.id, {
+      ...args,
+      updated_at: Date.now(),
+    });
   },
 });
 
@@ -135,5 +239,55 @@ export const archive = mutation({
       is_archived: true,
       updated_at: Date.now()
     });
+  },
+});
+
+/**
+ * Duplicate a goal.
+ */
+export const duplicate = mutation({
+  args: { id: v.id("goals") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const originalGoal = await ctx.db.get(args.id);
+    if (!originalGoal) throw new Error("Goal not found");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+      .unique();
+
+    if (!user || originalGoal.user_id !== user._id) throw new Error("Unauthorized");
+
+    const newGoalId = await ctx.db.insert("goals", {
+      name: `${originalGoal.name} (Copy)`,
+      category: originalGoal.category,
+      icon: originalGoal.icon,
+      color: originalGoal.color,
+      is_habit: originalGoal.is_habit,
+      is_archived: false,
+      user_id: user._id,
+      updated_at: Date.now(),
+    });
+
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_goal", (q) => q.eq("goal_id", originalGoal._id))
+      .collect();
+
+    for (const task of tasks) {
+      await ctx.db.insert("tasks", {
+        name: task.name,
+        description: task.description,
+        repeat_frequency: task.repeat_frequency,
+        status: "pending", // Reset status
+        goal_id: newGoalId,
+        updated_at: Date.now(),
+      });
+    }
+
+    return newGoalId;
   },
 });

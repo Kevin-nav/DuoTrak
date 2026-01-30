@@ -15,7 +15,8 @@ import PlanReviewStep from './PlanReviewStep';
 import FirstTaskStep from './FirstTaskStep';
 import DraftReviewStep from './DraftReviewStep';
 import { GoalCreate } from '@/schemas/goal';
-import { Check } from 'lucide-react';
+import { Check, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const baseSteps = [
   {
@@ -61,7 +62,18 @@ export default function InviteeOnboardingFlow() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [onboardingData, setOnboardingData] = useState({
+  const [onboardingData, setOnboardingData] = useState<{
+    selectedCategories: string[];
+    goalTitle: string;
+    goalDescription: string;
+    firstTask: {
+      title: string;
+      description: string;
+      scheduledTime: string;
+      requiresVerification: boolean;
+    };
+    generatedPlan: { goalType: string; tasks: any[] } | null;
+  }>({
     selectedCategories: [],
     goalTitle: '',
     goalDescription: '',
@@ -122,9 +134,9 @@ export default function InviteeOnboardingFlow() {
     // Find the index of the final task step and jump to it
     const taskStepIndex = steps.findIndex(step => step.id === 'task');
     if (taskStepIndex !== -1) {
-        setCompletedSteps((prev) => [...prev, currentStep]);
-        setCurrentStep(taskStepIndex);
-        setIsStepValid(false);
+      setCompletedSteps((prev) => [...prev, currentStep]);
+      setCurrentStep(taskStepIndex);
+      setIsStepValid(false);
     }
   };
 
@@ -148,6 +160,8 @@ export default function InviteeOnboardingFlow() {
     const goalData: GoalCreate = {
       name: goalTitle,
       category: generatedPlan.goalType, // Using goalType as category
+      icon: null, // Default icon
+      color: null, // Default color
       isHabit: generatedPlan.goalType === 'Habit',
       tasks: generatedPlan.tasks.map((task: any) => ({
         name: task.taskName,
@@ -174,11 +188,11 @@ export default function InviteeOnboardingFlow() {
   };
 
   if (steps[currentStep].id === 'review') {
-    Object.assign(currentStepProps, { 
-        drafts: goalDrafts, 
-        partnerName: userDetails?.partner_full_name || 'Your partner',
-        onSelectDraft: handleDraftSelected, 
-        onCreateNew: handleCreateNew 
+    Object.assign(currentStepProps, {
+      drafts: goalDrafts,
+      partnerName: userDetails?.partner_full_name || 'Your partner',
+      onSelectDraft: handleDraftSelected,
+      onCreateNew: handleCreateNew
     });
   } else if (steps[currentStep].id === 'creation') {
     currentStepProps.onPlanGenerated = handlePlanGenerated;
@@ -203,13 +217,12 @@ export default function InviteeOnboardingFlow() {
               {steps.map((step, index) => (
                 <div key={step.id} className="flex flex-col items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
-                      completedSteps.includes(index)
-                        ? 'bg-green-500 text-white'
-                        : index === currentStep
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${completedSteps.includes(index)
+                      ? 'bg-green-500 text-white'
+                      : index === currentStep
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-200 text-gray-500'
-                    }`}
+                      }`}
                   >
                     {completedSteps.includes(index) ? <Check className="w-4 h-4" /> : index + 1}
                   </div>

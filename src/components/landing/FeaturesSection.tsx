@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { GoalSettingIcon, ProgressTrackingIcon, SharedAccountabilityIcon, ChatIcon, ReflectionIcon, MorningIcon } from '@/components/ui/icons';
 
 const features = [
@@ -36,7 +36,7 @@ const features = [
   },
 ];
 
-const cardVariants = {
+const cardVariants: Variants = {
   offscreen: {
     y: 50,
     opacity: 0,

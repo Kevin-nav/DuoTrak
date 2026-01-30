@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
@@ -19,49 +19,38 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const router = useRouter();
-  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('token');
 
-  const { mutate: acceptInvitation } = useMutation({
-    mutationFn: (token: string) => apiClient.acceptInvitation(token),
-    onSuccess: () => {
-      toast.success("Invitation accepted!", {
-        description: "Your partnership is confirmed. Welcome to DuoTrak!",
-      });
-      window.location.href = '/dashboard';
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.response?.data?.detail || 'Failed to auto-accept invitation.';
-      toast.error('Partnership Error', { description: errorMessage });
-      // Still redirect to dashboard even if invitation fails, user is logged in.
-      window.location.href = '/dashboard';
-    },
-  });
+  // Convex mutation for accepting invitations (if coming from invite link)
+  const acceptInvitationMutation = useMutation(api.invitations.accept);
 
-  const handleAuthSuccess = async (firebaseToken: string) => {
-    try {
-      const response = await apiClient.post('/api/v1/auth/session-login', {
-        firebase_token: firebaseToken
-      });
-
-      if (typeof window !== 'undefined' && response.csrf_token) {
-        localStorage.setItem('csrf_token', response.csrf_token);
+  /**
+   * With Convex, auth state syncs automatically via:
+   * 1. ConvexProviderWithAuth in the layout detects Firebase auth
+   * 2. UserSync component stores/updates user in Convex DB
+   * 3. UserContext uses useQuery(api.users.current) for reactive state
+   * 
+   * We just need to: complete Firebase auth → redirect
+   */
+  const handleAuthSuccess = async () => {
+    // If there's an invite token, accept it via Convex
+    if (inviteToken) {
+      try {
+        await acceptInvitationMutation({ token: inviteToken });
+        toast.success("Invitation accepted!", {
+          description: "Your partnership is confirmed. Welcome to DuoTrak!",
+        });
+      } catch (err: any) {
+        console.error('Failed to accept invitation:', err);
+        toast.error('Partnership Error', {
+          description: err.message || 'Failed to auto-accept invitation.'
+        });
       }
-
-      queryClient.setQueryData(['user', 'me'], response.user);
-      
-      if (inviteToken) {
-        acceptInvitation(inviteToken);
-      } else {
-        window.location.href = '/dashboard';
-      }
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during login.';
-      setError(errorMessage);
-      toast.error(errorMessage);
     }
+
+    // Redirect - the ConvexProviderWithAuth will handle syncing auth state
+    window.location.href = '/dashboard';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,9 +59,8 @@ export default function LoginForm() {
     setError('');
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseToken = await userCredential.user.getIdToken();
-      await handleAuthSuccess(firebaseToken);
+      await signInWithEmailAndPassword(auth, email, password);
+      await handleAuthSuccess();
     } catch (error) {
       setError('Invalid email or password. Please try again.');
       toast.error('Invalid email or password. Please try again.');
@@ -86,9 +74,8 @@ export default function LoginForm() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseToken = await result.user.getIdToken();
-      await handleAuthSuccess(firebaseToken);
+      await signInWithPopup(auth, provider);
+      await handleAuthSuccess();
     } catch (err: any) {
       let friendlyError = 'An unexpected error occurred during Google Sign-In.';
       if (err.code === 'auth/popup-blocked-by-browser') {
@@ -112,7 +99,7 @@ export default function LoginForm() {
 
       <div className="w-full max-w-lg mx-auto">
         {error && <p className="mb-4 text-sm text-red-600 bg-red-100 border border-red-300 rounded-lg py-2 px-4">{error}</p>}
-        
+
         <form className="w-full space-y-4" onSubmit={handleSubmit}>
           <Input type="email" placeholder="Email Address" required disabled={isLoading} value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input type="password" placeholder="Password" required disabled={isLoading} value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -132,7 +119,7 @@ export default function LoginForm() {
           <div className="flex-grow border-t border-cool-gray"></div>
         </div>
 
-        <GoogleSignInButton onClick={handleGoogleSignIn} text="Sign in with Google" disabled={isLoading}/>
+        <GoogleSignInButton onClick={handleGoogleSignIn} text="Sign in with Google" disabled={isLoading} />
       </div>
 
       <p className="text-sm text-stone-gray mt-6">

@@ -7,7 +7,8 @@ interface CurrentUser extends DecodedIdToken {
 
 // This function now calls our internal API route to securely get user data
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const sessionCookie = cookies().get('auth_token')?.value;
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('auth_token')?.value;
 
   if (!sessionCookie) {
     return null;

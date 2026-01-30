@@ -10,8 +10,8 @@ const SESSION_COOKIE_NAME = '__session';
 
 export async function GET(request: NextRequest) {
   console.log('\n--- [GET /api/auth/me] ---');
-  
-  const headersList = headers();
+
+  const headersList = await headers();
   const cookieHeader = headersList.get('cookie');
   console.log(`[ME] 1. Received request. Full cookie header: "${cookieHeader || 'N/A'}"`);
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     console.log('[ME] 2. ERROR: No session cookie found in request. Responding with 401.');
     return NextResponse.json({ error: 'No session cookie found.' }, { status: 401 });
   }
-  
+
   console.log(`[ME] 2. Found session cookie. Value starts with: "${sessionCookie.substring(0, 15)}..."`);
   console.log('[ME] 3. Attempting to verify cookie with Firebase Admin SDK...');
 

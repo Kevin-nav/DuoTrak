@@ -22,10 +22,10 @@ const mapGoal = (goal: any) => ({
 
 export const useGoals = () => {
   const goals = useQuery(api.goals.list);
-  
+
   // Transform data if loaded
   const data = goals ? goals.map(mapGoal) : undefined;
-  
+
   return {
     data,
     isLoading: goals === undefined,
@@ -35,7 +35,7 @@ export const useGoals = () => {
 
 export const useGoal = (goalId: string) => {
   const goal = useQuery(api.goals.get, goalId ? { id: goalId as Id<"goals"> } : "skip");
-  
+
   const data = goal ? mapGoal(goal) : undefined;
 
   return {
@@ -83,6 +83,10 @@ export const useOnboardingPlan = () => {
   // This was using an API endpoint. For now, just return a dummy mutation
   // or implement the AI logic via Convex Action later.
   return {
-    mutate: (data: any) => console.warn("useOnboardingPlan not implemented in Convex yet")
+    mutate: (data: any, options?: { onSuccess?: (data: any) => void; onError?: (err: any) => void }) => {
+      console.warn("useOnboardingPlan not implemented in Convex yet");
+      // For now, return an error to the caller
+      options?.onError?.(new Error("Onboarding plan generation not yet implemented"));
+    }
   };
 };

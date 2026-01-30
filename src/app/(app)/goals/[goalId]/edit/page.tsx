@@ -33,19 +33,21 @@ export default function GoalEditPage() {
   }, [goal])
 
   const handleSave = async () => {
+    // Note: description and total are not currently supported in the Convex schema
+    // They are displayed in the UI but not persisted until the schema is extended
     const updatedGoal: GoalUpdate = {
       name,
-      description,
-      category,
-      total,
+      category: category || undefined,
     }
-    await updateGoal.mutateAsync(updatedGoal)
-    router.push("/goals")
+    updateGoal.mutate(updatedGoal, {
+      onSuccess: () => router.push("/goals"),
+    });
   }
 
-  const handleArchive = async () => {
-    await archiveGoal.mutateAsync(goalId);
-    router.push("/goals");
+  const handleArchive = () => {
+    archiveGoal.mutate(goalId, {
+      onSuccess: () => router.push("/goals"),
+    });
   };
 
   if (isLoading) {
@@ -111,11 +113,10 @@ export default function GoalEditPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-                activeTab === tab.key
-                  ? "bg-primary-blue text-white shadow-md"
-                  : "text-stone-gray dark:text-gray-400 hover:text-charcoal dark:hover:text-gray-200"
-              }`}
+              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${activeTab === tab.key
+                ? "bg-primary-blue text-white shadow-md"
+                : "text-stone-gray dark:text-gray-400 hover:text-charcoal dark:hover:text-gray-200"
+                }`}
             >
               {tab.label}
             </button>

@@ -6,6 +6,7 @@ export default defineSchema({
     firebase_uid: v.string(), // Keeping for Auth integration
     email: v.string(),
     full_name: v.optional(v.string()),
+    nickname: v.optional(v.string()),
     account_status: v.string(), // Union: 'AWAITING_ONBOARDING' | 'AWAITING_PARTNERSHIP' | ...
     partnership_status: v.string(), // Union: 'active' | 'pending' | 'no_partner'
     
@@ -34,11 +35,16 @@ export default defineSchema({
 
   goals: defineTable({
     name: v.string(),
+    description: v.optional(v.string()), // Added description
+    motivation: v.optional(v.string()), // Added motivation
     category: v.optional(v.string()),
     icon: v.optional(v.string()),
     color: v.optional(v.string()),
     is_habit: v.boolean(),
     is_archived: v.boolean(),
+    availability: v.optional(v.array(v.string())), // Added availability
+    time_commitment: v.optional(v.string()), // Added time_commitment
+    accountability_type: v.optional(v.string()), // Added accountability_type
     user_id: v.id("users"),
     
     updated_at: v.number(),
@@ -51,6 +57,8 @@ export default defineSchema({
     status: v.string(), // 'pending', 'completed', etc.
     repeat_frequency: v.optional(v.string()),
     due_date: v.optional(v.number()), // Timestamp
+    time_window: v.optional(v.string()), // Added time_window
+    accountability_type: v.optional(v.string()), // Added accountability_type override
     goal_id: v.id("goals"),
     
     updated_at: v.number(),

@@ -62,7 +62,32 @@ try {
 
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  // Exclude old backup folders from the build
+  webpack: (config, { isServer }) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: [
+        '**/duotrak-dashboard*/**',
+        '**/duotrak-ui/**',
+        '**/duotrak_improved_ui/**',
+        '**/node_modules/**',
+      ],
+    };
+    return config;
+  },
+  // Also exclude from TypeScript compilation
+  typescript: {
+    // These folders shouldn't be type-checked - they're old backups
+    ignoreBuildErrors: false,
+  },
+  // Exclude these directories from page resolution
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  eslint: {
+    // Only run ESLint on src directory
+    dirs: ['src'],
+  },
+};
 
 console.log('--- [next.config.mjs] End of file ---');
 

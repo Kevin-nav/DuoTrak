@@ -501,10 +501,10 @@ export default function PartnerView({
       status: "sending",
       replyTo: replyingTo
         ? {
-            messageId: replyingTo.id,
-            content: replyingTo.content,
-            senderName: replyingTo.senderName,
-          }
+          messageId: replyingTo.id,
+          content: replyingTo.content,
+          senderName: replyingTo.senderName,
+        }
         : undefined,
     }
 
@@ -635,9 +635,8 @@ export default function PartnerView({
                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                 />
                 <div
-                  className={`absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
-                    isOnline ? "bg-green-500" : "bg-gray-400"
-                  }`}
+                  className={`absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${isOnline ? "bg-green-500" : "bg-gray-400"
+                    }`}
                 />
               </div>
               <div className="min-w-0 flex-1">
@@ -680,11 +679,10 @@ export default function PartnerView({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 py-3 sm:py-4 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm transition-colors relative min-w-0 ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                className={`flex items-center gap-2 py-3 sm:py-4 px-2 sm:px-4 border-b-2 font-medium text-xs sm:text-sm transition-colors relative min-w-0 ${activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 <tab.icon className="h-4 w-4 flex-shrink-0" />
                 <span className="hidden sm:inline">{tab.fullLabel}</span>
@@ -739,17 +737,16 @@ export default function PartnerView({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 sm:gap-3 mb-2">
                                 <div
-                                  className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                                    task.status === "completed"
-                                      ? "bg-green-500"
-                                      : task.status === "awaiting-verification"
-                                        ? "bg-yellow-500"
-                                        : task.status === "skipped"
-                                          ? "bg-gray-400"
-                                          : task.timeScheduled && task.timeScheduled < new Date()
-                                            ? "bg-red-500"
-                                            : "bg-blue-500"
-                                  }`}
+                                  className={`w-3 h-3 rounded-full flex-shrink-0 ${task.status === "completed"
+                                    ? "bg-green-500"
+                                    : task.status === "awaiting-verification"
+                                      ? "bg-yellow-500"
+                                      : task.status === "skipped"
+                                        ? "bg-gray-400"
+                                        : task.timeScheduled && task.timeScheduled < new Date()
+                                          ? "bg-red-500"
+                                          : "bg-blue-500"
+                                    }`}
                                 />
                                 <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
                                   {task.description}
@@ -758,17 +755,16 @@ export default function PartnerView({
 
                               <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    task.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : task.status === "awaiting-verification"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : task.status === "skipped"
-                                          ? "bg-gray-100 text-gray-800"
-                                          : task.timeScheduled && task.timeScheduled < new Date()
-                                            ? "bg-red-100 text-red-800"
-                                            : "bg-blue-100 text-blue-800"
-                                  }`}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${task.status === "completed"
+                                    ? "bg-green-100 text-green-800"
+                                    : task.status === "awaiting-verification"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : task.status === "skipped"
+                                        ? "bg-gray-100 text-gray-800"
+                                        : task.timeScheduled && task.timeScheduled < new Date()
+                                          ? "bg-red-100 text-red-800"
+                                          : "bg-blue-100 text-blue-800"
+                                    }`}
                                 >
                                   {task.status === "awaiting-verification"
                                     ? "Needs Verification"
@@ -901,13 +897,12 @@ export default function PartnerView({
                           key={activity.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`bg-white rounded-xl border p-4 sm:p-6 hover:shadow-md transition-shadow ${
-                            activity.type === "achievement"
-                              ? "border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50"
-                              : activity.type === "duo-challenge"
-                                ? "border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50"
-                                : "border-gray-200"
-                          }`}
+                          className={`bg-white rounded-xl border p-4 sm:p-6 hover:shadow-md transition-shadow ${activity.type === "achievement"
+                            ? "border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50"
+                            : activity.type === "duo-challenge"
+                              ? "border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50"
+                              : "border-gray-200"
+                            }`}
                         >
                           <div className="flex items-start gap-3 sm:gap-4">
                             <div className="flex-shrink-0">
@@ -962,7 +957,11 @@ export default function PartnerView({
                                     src={activity.details.photo || "/placeholder.svg"}
                                     alt="Activity attachment"
                                     className="w-24 h-18 sm:w-32 sm:h-24 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                    onClick={() => setExpandedImage(activity.details.photo!)}
+                                    onClick={() => {
+                                      if (activity.details?.photo) {
+                                        setExpandedImage(activity.details.photo);
+                                      }
+                                    }}
                                   />
                                 </div>
                               )}
@@ -984,9 +983,8 @@ export default function PartnerView({
                                     <button
                                       key={emoji}
                                       onClick={() => handleReaction(activity.id, emoji)}
-                                      className={`p-1 rounded hover:bg-gray-100 transition-colors flex-shrink-0 ${
-                                        activity.reactions?.some((r) => r.emoji === emoji) ? "bg-blue-50" : ""
-                                      }`}
+                                      className={`p-1 rounded hover:bg-gray-100 transition-colors flex-shrink-0 ${activity.reactions?.some((r) => r.emoji === emoji) ? "bg-blue-50" : ""
+                                        }`}
                                     >
                                       <span className="text-base sm:text-lg">{emoji}</span>
                                     </button>
@@ -1065,9 +1063,8 @@ export default function PartnerView({
                               onMouseLeave={() => setHoveredMessage(null)}
                             >
                               <div
-                                className={`flex items-end gap-2 max-w-[85%] sm:max-w-[70%] ${
-                                  message.senderId === "current-user" ? "flex-row-reverse" : "flex-row"
-                                }`}
+                                className={`flex items-end gap-2 max-w-[85%] sm:max-w-[70%] ${message.senderId === "current-user" ? "flex-row-reverse" : "flex-row"
+                                  }`}
                               >
                                 {/* Avatar for partner messages */}
                                 {message.senderId !== "current-user" && (
@@ -1082,11 +1079,10 @@ export default function PartnerView({
                                   {/* Reply indicator */}
                                   {message.replyTo && (
                                     <div
-                                      className={`mb-2 p-2 rounded-lg border-l-4 text-xs sm:text-sm ${
-                                        message.senderId === "current-user"
-                                          ? "bg-blue-50 border-blue-500 text-blue-800"
-                                          : "bg-gray-50 border-gray-400 text-gray-600"
-                                      }`}
+                                      className={`mb-2 p-2 rounded-lg border-l-4 text-xs sm:text-sm ${message.senderId === "current-user"
+                                        ? "bg-blue-50 border-blue-500 text-blue-800"
+                                        : "bg-gray-50 border-gray-400 text-gray-600"
+                                        }`}
                                     >
                                       <div className="font-medium text-xs mb-1">{message.replyTo.senderName}</div>
                                       <div className="truncate">{message.replyTo.content}</div>
@@ -1095,11 +1091,10 @@ export default function PartnerView({
 
                                   {/* Message bubble */}
                                   <div
-                                    className={`relative px-3 sm:px-4 py-2 rounded-2xl break-words ${
-                                      message.senderId === "current-user"
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-gray-100 text-gray-900"
-                                    } ${message.isNudge ? "border-2 border-dashed border-yellow-400" : ""}`}
+                                    className={`relative px-3 sm:px-4 py-2 rounded-2xl break-words ${message.senderId === "current-user"
+                                      ? "bg-blue-500 text-white"
+                                      : "bg-gray-100 text-gray-900"
+                                      } ${message.isNudge ? "border-2 border-dashed border-yellow-400" : ""}`}
                                     onContextMenu={(e) => {
                                       e.preventDefault()
                                       const rect = e.currentTarget.getBoundingClientRect()
@@ -1188,9 +1183,8 @@ export default function PartnerView({
                                     {/* Hover actions - Desktop only */}
                                     {hoveredMessage === message.id && window.innerWidth >= 640 && (
                                       <div
-                                        className={`absolute top-0 ${
-                                          message.senderId === "current-user" ? "-left-16" : "-right-16"
-                                        } flex gap-1`}
+                                        className={`absolute top-0 ${message.senderId === "current-user" ? "-left-16" : "-right-16"
+                                          } flex gap-1`}
                                       >
                                         <button
                                           onClick={() =>
@@ -1216,9 +1210,8 @@ export default function PartnerView({
 
                                   {/* Message status and timestamp */}
                                   <div
-                                    className={`flex items-center gap-1 mt-1 text-xs text-gray-500 ${
-                                      message.senderId === "current-user" ? "justify-end" : "justify-start"
-                                    }`}
+                                    className={`flex items-center gap-1 mt-1 text-xs text-gray-500 ${message.senderId === "current-user" ? "justify-end" : "justify-start"
+                                      }`}
                                   >
                                     <span>
                                       {format(message.timestamp, 'p')}
@@ -1494,9 +1487,8 @@ export default function PartnerView({
                         <button
                           onClick={handleSendMessage}
                           disabled={(!newMessage.trim() && !replyingTo) || isSending || uploadingFile}
-                          className={`send-button p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${
-                            isSending ? "scale-95 bg-blue-600" : "scale-100"
-                          }`}
+                          className={`send-button p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${isSending ? "scale-95 bg-blue-600" : "scale-100"
+                            }`}
                           aria-label="Send message"
                         >
                           {isSending ? (
@@ -1733,7 +1725,7 @@ export default function PartnerView({
           )}
         </AnimatePresence>
 
-        <MouseGlowEffect />
+        {/* MouseGlowEffect removed - component requires children */}
       </div>
     </DashboardLayout>
   )

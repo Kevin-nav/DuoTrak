@@ -34,7 +34,7 @@ export const create = mutation({
     if (existing) {
       throw new Error("You have already invited this user.");
     }
-    
+
     // Generate token (simple random string for now, UUID would be better but this is fine)
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
@@ -55,7 +55,7 @@ export const create = mutation({
       partnership_status: "pending",
     });
 
-    return invitationId;
+    return { invitationId, invitation_token: token };
   },
 });
 
@@ -108,3 +108,73 @@ export const nudge = mutation({
     });
   },
 });
+
+/**
+ * Accept an invitation by token.
+ * This creates a partnership between the sender and the receiver.
+ */
+export const accept = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    // Get the current user (receiver)
+    const receiver = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+      .unique();
+
+    if (!receiver) throw new Error("User not found");
+
+    // Check if user already has a partner
+    if (receiver.partnership_status === "active") {
+      throw new Error("You already have a partner.");
+    }
+
+    // Find the invitation by token
+    const invitation = await ctx.db
+      .query("partner_invitations")
+      .withIndex("by_token", (q) => q.eq("invitation_token", args.token))
+      .first();
+
+    if (!invitation) throw new Error("Invitation not found or invalid.");
+    if (invitation.status !== "pending") throw new Error("This invitation is no longer valid.");
+    if (invitation.expires_at && invitation.expires_at < Date.now()) throw new Error("This invitation has expired.");
+
+    // Get the sender
+    const sender = await ctx.db.get(invitation.sender_id);
+    if (!sender) throw new Error("Sender not found.");
+
+    // Create the partnership
+    const partnershipId = await ctx.db.insert("partnerships", {
+      user1_id: sender._id,
+      user2_id: receiver._id,
+      user1_nickname: sender.full_name ?? undefined,
+      user2_nickname: receiver.full_name ?? undefined,
+      status: "active",
+      start_date: Date.now(),
+      updated_at: Date.now(),
+    });
+
+    // Update the invitation status
+    await ctx.db.patch(invitation._id, {
+      status: "accepted",
+      updated_at: Date.now(),
+    });
+
+    // Update both users to be partners
+    await ctx.db.patch(sender._id, {
+      account_status: "ACTIVE",
+      partnership_status: "active",
+    });
+
+    await ctx.db.patch(receiver._id, {
+      account_status: "ACTIVE",
+      partnership_status: "active",
+    });
+
+    return partnershipId;
+  },
+});
+

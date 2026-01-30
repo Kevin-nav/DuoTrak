@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { Flame, Loader2 } from 'lucide-react';
 import QuickActions from './quick-actions';
 import DuoStreakHero from './duo-streak-hero';
@@ -58,7 +58,7 @@ export default function DashboardContent({
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -69,14 +69,14 @@ export default function DashboardContent({
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.5,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
   };
@@ -179,7 +179,7 @@ export default function DashboardContent({
         )}
       </motion.section>
 
-      <QuickActions hasPartner={hasPartner} />
+      <QuickActions />
     </motion.div>
   );
 }

@@ -11,14 +11,15 @@ import { apiClient } from '@/lib/api/client';
 
 interface InvitationDetails {
   sender_name: string;
-  receiver_name: string;
-  expires_at: string;
+  sender_profile_picture_url?: string;
+  receiver_email: string;
+  custom_message?: string;
 }
 
 export default function AcceptInvitationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, isLoading: isUserLoading } = useUser();
+  const { userDetails, isLoading: isUserLoading } = useUser();
   const [details, setDetails] = useState<InvitationDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,6 @@ export default function AcceptInvitationPage() {
 
     const fetchInvitationDetails = async () => {
       try {
-        const apiClient = new ApiClient();
         const response = await apiClient.getPublicInvitationDetails(token);
         setDetails(response);
       } catch (err) {
@@ -49,14 +49,13 @@ export default function AcceptInvitationPage() {
   const handleAccept = async () => {
     if (!token) return;
 
-    if (!user && !isUserLoading) {
+    if (!userDetails && !isUserLoading) {
       // Not logged in, redirect to login
       router.push(`/login?redirect=/pending-acceptance?token=${token}`);
       return;
     }
 
     try {
-      const apiClient = new ApiClient();
       await apiClient.acceptInvitation(token);
       toast.success("Invitation accepted! You are now partners.");
       router.push('/dashboard');

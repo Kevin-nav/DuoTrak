@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 import { Eye, CheckCircle, UserCheck, Calendar, MessageSquare, Award, AlertCircle } from "lucide-react"
 
 interface ActivityItem {
@@ -58,7 +58,7 @@ export default function ActivityFeed({
     },
   ],
 }: ActivityFeedProps) {
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -69,26 +69,26 @@ export default function ActivityFeed({
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.4,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
   }
 
-  const activityItemVariants = {
+  const activityItemVariants: Variants = {
     hidden: { opacity: 0, x: -20 },
     visible: {
       opacity: 1,
       x: 0,
       transition: {
         duration: 0.3,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
   }
@@ -157,8 +157,7 @@ export default function ActivityFeed({
               >
                 <div className="flex-shrink-0 mt-0.5">
                   <Icon
-                    className={`w-4 h-4 ${
-                      activity.type === "completion"
+                    className={`w-4 h-4 ${activity.type === "completion"
                         ? "text-green-500"
                         : activity.type === "invitation"
                           ? "text-primary-blue"
@@ -167,7 +166,7 @@ export default function ActivityFeed({
                             : activity.type === "achievement"
                               ? "text-yellow-500"
                               : "text-stone-gray dark:text-gray-400"
-                    }`}
+                      }`}
                   />
                 </div>
 

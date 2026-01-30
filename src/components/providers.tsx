@@ -15,7 +15,7 @@ const queryClient = new QueryClient({
       // Data is considered fresh for 5 minutes, reducing unnecessary refetches.
       staleTime: 1000 * 60 * 5,
       // Data is kept in the cache for 10 minutes after it becomes inactive.
-      cacheTime: 1000 * 60 * 10,
+      gcTime: 1000 * 60 * 10,
       // Disable refetching when the window regains focus, which is often not needed for auth state.
       refetchOnWindowFocus: false,
       // Retry failed queries up to 2 times, but not for authentication errors.

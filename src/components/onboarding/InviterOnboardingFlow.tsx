@@ -22,7 +22,7 @@ const steps = [
 export default function InviterOnboardingFlow() {
   const { userDetails, isLoading: isUserLoading, refetchUserDetails } = useUser();
   const router = useRouter();
-  
+
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
@@ -42,7 +42,7 @@ export default function InviterOnboardingFlow() {
         setCompletedSteps(Array.from({ length: step }, (_, i) => i));
       }
 
-      setOnboardingData(prev => ({
+      setOnboardingData((prev: typeof onboardingData) => ({
         ...prev,
         profile: {
           fullName: userDetails.full_name || '',
@@ -92,7 +92,7 @@ export default function InviterOnboardingFlow() {
               Step {currentStep + 1} of {steps.length}
             </span>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
@@ -100,13 +100,12 @@ export default function InviterOnboardingFlow() {
               {steps.map((step, index) => (
                 <div key={step.id} className="flex flex-col items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
-                      completedSteps.includes(index)
-                        ? "bg-green-500 text-white"
-                        : index === currentStep
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${completedSteps.includes(index)
+                      ? "bg-green-500 text-white"
+                      : index === currentStep
                         ? "bg-blue-500 text-white"
                         : "bg-gray-200 text-gray-500"
-                    }`}
+                      }`}
                   >
                     {completedSteps.includes(index) ? (
                       <Check className="w-4 h-4" />
@@ -136,9 +135,10 @@ export default function InviterOnboardingFlow() {
               transition={{ duration: 0.3 }}
             >
               <CurrentStepComponent
-                {...(currentStep === steps.length - 1
-                  ? { data: onboardingData, updateData }
-                  : { data: onboardingData, updateData, onValidationChange: setIsCurrentStepValid, onComplete: handleNext })}
+                data={onboardingData}
+                updateData={updateData}
+                onValidationChange={setIsCurrentStepValid}
+                onComplete={handleNext}
               />
             </motion.div>
           </AnimatePresence>

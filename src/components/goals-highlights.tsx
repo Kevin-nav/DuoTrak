@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 import { Target, Users, User, Clock, Camera, AlertCircle, TrendingUp } from "lucide-react"
 import MouseGlowEffect from "./mouse-glow-effect"
 
@@ -110,7 +110,7 @@ export default function GoalsHighlights({
     }
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -121,14 +121,14 @@ export default function GoalsHighlights({
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.4,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
   }
@@ -157,13 +157,12 @@ export default function GoalsHighlights({
                 animate="visible"
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.01, x: 5 }}
-                className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                  goal.pendingVerifications && goal.pendingVerifications > 0
+                className={`p-4 rounded-lg border cursor-pointer transition-all ${goal.pendingVerifications && goal.pendingVerifications > 0
                     ? "border-primary-blue/30 bg-accent-light-blue dark:bg-primary-blue/10"
                     : goal.status === "needs-attention"
                       ? "border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
                       : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
-                }`}
+                  }`}
               >
                 <div className="flex items-start space-x-4">
                   {/* Goal Icon */}
@@ -232,8 +231,7 @@ export default function GoalsHighlights({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <span
-                          className={`text-xs font-medium ${
-                            goal.pendingVerifications && goal.pendingVerifications > 0
+                          className={`text-xs font-medium ${goal.pendingVerifications && goal.pendingVerifications > 0
                               ? "text-primary-blue"
                               : goal.status === "on-track"
                                 ? "text-green-600 dark:text-green-400"
@@ -242,7 +240,7 @@ export default function GoalsHighlights({
                                   : goal.status === "needs-attention"
                                     ? "text-orange-600 dark:text-orange-400"
                                     : "text-stone-gray dark:text-gray-400"
-                          }`}
+                            }`}
                         >
                           {getStatusText(goal)} {getStatusEmoji(goal.status)}
                         </span>

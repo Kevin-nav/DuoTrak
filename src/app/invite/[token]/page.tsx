@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +46,7 @@ export default function AcceptInvitationPage() {
   });
 
   // 2. Mutation to accept the invitation.
-  const { mutate: acceptInvitation, isLoading: isAccepting } = useMutation({
+  const { mutate: acceptInvitation, isPending: isAccepting } = useMutation({
     mutationFn: () => apiClient.post('/partner-invitations/accept', { invitation_token: token }),
     onSuccess: () => {
       toast.success("Partnership created!", {
@@ -94,7 +94,7 @@ export default function AcceptInvitationPage() {
         <Card className="w-full max-w-md text-center bg-destructive/10 border-destructive">
           <CardHeader>
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-destructive text-destructive-foreground">
-                <AlertTriangle className="h-6 w-6" />
+              <AlertTriangle className="h-6 w-6" />
             </div>
             <CardTitle className="mt-4">Invitation Invalid</CardTitle>
           </CardHeader>

@@ -96,7 +96,7 @@ export class ApiClient {
       const response = await fetch(url, requestOptions);
 
       // Handle 401 - try to refresh session once if it looks like an expired token
-      if (response.status === 401 && !options.headers?.get('X-No-Refresh')) {
+      if (response.status === 401 && !new Headers(options.headers).get('X-No-Refresh')) {
         try {
             const errorData = await response.clone().json();
             if (errorData.detail === "Session expired") {
@@ -134,7 +134,7 @@ export class ApiClient {
         // Try to parse the error response body
         const errorData = await response.json();
         // Use a detailed message from the backend if available
-        const message = errorData.detail || (Array.isArray(errorData.detail) && errorData.detail.map(e => e.msg).join(', ')) || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        const message = errorData.detail || (Array.isArray(errorData.detail) && errorData.detail.map((e: any) => e.msg).join(', ')) || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
         throw new Error(message);
       } catch (e) {
         // If parsing fails or it's not a JSON response, fall back to status text

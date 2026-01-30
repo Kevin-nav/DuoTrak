@@ -31,6 +31,7 @@ export const UserBadgeReadSchema = z.object({
 export const UserBaseSchema = z.object({
   email: z.string().email(),
   full_name: z.string().nullable(),
+  nickname: z.string().nullable(),
 });
 
 // UserRead Schema (Frontend equivalent of backend's UserRead)

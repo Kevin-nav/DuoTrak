@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, Variants } from "framer-motion"
 import { Clock, Camera, CheckCircle, AlertCircle, Users, User } from "lucide-react"
 import { useState } from "react"
 import MouseGlowEffect from "./mouse-glow-effect"
@@ -167,7 +167,7 @@ export default function TodaysTasks({
     }
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -178,7 +178,7 @@ export default function TodaysTasks({
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,

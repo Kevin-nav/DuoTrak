@@ -23,7 +23,7 @@ import { getStrategicQuestions, createGoalPlan, evaluateGoalPlan } from "@/lib/a
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
-import { 
+import {
   QuestionsResponse,
   GoalPlanResponse,
   StrategicQuestion,
@@ -139,7 +139,7 @@ export default function GoalCreationWizard() {
 
   // V3 Phase 2: Get Plan
   const getPlanMutation = useMutation({
-    mutationFn: (variables: { userId: string; sessionId: string; answers: Record<string, string> }) => 
+    mutationFn: (variables: { userId: string; sessionId: string; answers: Record<string, string> }) =>
       createGoalPlan(variables.sessionId, { userId: variables.userId, answers: variables.answers }),
     onSuccess: (data: GoalPlanResponse) => {
       setFinalGoalPlan(data.goalPlan);
@@ -227,11 +227,11 @@ export default function GoalCreationWizard() {
         getQuestionsMutation.mutate({
           userId: userDetails.id,
           wizardData: {
-            goal_description: values.goalName,
+            goalDescription: values.goalName,
             motivation: values.motivation,
             availability: values.availability,
-            time_commitment: values.timeCommitment,
-            accountability_type: values.accountabilityType,
+            timeCommitment: values.timeCommitment,
+            accountabilityType: values.accountabilityType,
             partnerName: "Alex", // Placeholder for now
           }
         });
@@ -253,20 +253,30 @@ export default function GoalCreationWizard() {
       return;
     }
 
+    // Get all the rich data collected during the wizard
+    const { motivation, availability, timeCommitment, accountabilityType, timeWindow } = values;
+
     // Transform the finalGoalPlan into the format the backend expects for createGoal
     const goalToCreate = {
       name: finalGoalPlan.title,
+      description: finalGoalPlan.description,
+      motivation: motivation,
       category: 'General', // Or derive from plan
       isHabit: false, // Or derive from plan
       color: '#FFFFFF', // Placeholder
       icon: 'default', // Placeholder
+      availability: availability,
+      timeCommitment: timeCommitment,
+      accountabilityType: accountabilityType,
       tasks: finalGoalPlan.milestones.flatMap(m => m.tasks.map(t => ({
         name: t.description, // Assuming task description is the name
         description: t.successMetric,
         repeatFrequency: "daily", // Placeholder
+        timeWindow: timeWindow, // Add time window if applicable
+        accountabilityType: accountabilityType, // Inherit from goal
       }))),
     };
-    
+
     createGoalMutation.mutate(goalToCreate);
   }
 
@@ -328,409 +338,409 @@ export default function GoalCreationWizard() {
                 transition={{ duration: 0.3 }}
                 className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700 mb-6"
               >
-            <h2 className="text-xl font-bold text-charcoal dark:text-gray-100 mb-2">{steps[currentStep].title}</h2>
-            <p className="text-stone-gray dark:text-gray-300 mb-6">{steps[currentStep].description}</p>
+                <h2 className="text-xl font-bold text-charcoal dark:text-gray-100 mb-2">{steps[currentStep].title}</h2>
+                <p className="text-stone-gray dark:text-gray-300 mb-6">{steps[currentStep].description}</p>
 
-            {/* Step Content */}
-            {currentStep === 0 && (
-              <FormField
-                control={form.control}
-                name="goalName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Run a 5K, Meditate daily for 15 mins, Learn to code in Python"
-                        {...field}
-                        className="w-full p-4 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {currentStep === 1 && (
-              <FormField
-                control={form.control}
-                name="motivation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Textarea
-                        placeholder="e.g., Improve my health, Boost my confidence, Learn a valuable new skill"
-                        rows={4}
-                        {...field}
-                        className="w-full p-4 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none resize-none"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {currentStep === 2 && (
-              <FormField
-                control={form.control}
-                name="availability"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    {availabilityOptions.map((option) => (
-                      <motion.label
-                        key={option}
-                        whileHover={{ scale: 1.01 }}
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${field.value?.includes(option)
-                            ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
-                            : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
-                          }`}
-                      >
+                {/* Step Content */}
+                {currentStep === 0 && (
+                  <FormField
+                    control={form.control}
+                    name="goalName"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value?.includes(option)}
-                            onChange={(e) => {
-                              const newValue = e.target.checked
-                                ? [...(field.value || []), option]
-                                : (field.value || []).filter((value) => value !== option);
-                              field.onChange(newValue);
-                            }}
-                            className="sr-only"
+                          <Input
+                            placeholder="e.g., Run a 5K, Meditate daily for 15 mins, Learn to code in Python"
+                            {...field}
+                            className="w-full p-4 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none"
                           />
                         </FormControl>
-                        <div
-                          className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center ${field.value?.includes(option)
-                              ? "border-primary-blue bg-primary-blue"
-                              : "border-cool-gray dark:border-gray-600"
-                            }`}
-                        >
-                          {field.value?.includes(option) && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="w-2 h-2 bg-white rounded-sm"
-                            />
-                          )}
-                        </div>
-                        <span className="text-charcoal dark:text-gray-100">{option}</span>
-                      </motion.label>
-                    ))}
-                    <FormMessage />
-                  </FormItem>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
-            )}
 
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="timeCommitment"
-                  render={({ field }) => (
-                    <FormItem className="space-y-4">
-                      {timeCommitmentOptions.map((option) => (
-                        <motion.label
-                          key={option}
-                          whileHover={{ scale: 1.01 }}
-                          className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${field.value === option
+                {currentStep === 1 && (
+                  <FormField
+                    control={form.control}
+                    name="motivation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            placeholder="e.g., Improve my health, Boost my confidence, Learn a valuable new skill"
+                            rows={4}
+                            {...field}
+                            className="w-full p-4 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none resize-none"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {currentStep === 2 && (
+                  <FormField
+                    control={form.control}
+                    name="availability"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        {availabilityOptions.map((option) => (
+                          <motion.label
+                            key={option}
+                            whileHover={{ scale: 1.01 }}
+                            className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${field.value?.includes(option)
                               ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
                               : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
-                            }`}
-                        >
-                          <FormControl>
-                            <input
-                              type="radio"
-                              name="timeCommitment"
-                              checked={field.value === option}
-                              onChange={() => field.onChange(option)}
-                              className="sr-only"
-                            />
-                          </FormControl>
-                          <div
-                            className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${field.value === option
-                                ? "border-primary-blue"
-                                : "border-cool-gray dark:border-gray-600"
                               }`}
                           >
-                            {field.value === option && (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="w-2 h-2 bg-primary-blue rounded-full"
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value?.includes(option)}
+                                onChange={(e) => {
+                                  const newValue = e.target.checked
+                                    ? [...(field.value || []), option]
+                                    : (field.value || []).filter((value) => value !== option);
+                                  field.onChange(newValue);
+                                }}
+                                className="sr-only"
                               />
-                            )}
-                          </div>
-                          <span className="text-charcoal dark:text-gray-100">{option}</span>
-                        </motion.label>
-                      ))}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="Custom: e.g., 45 mins 3x per week"
-                          {...field}
-                          className="w-full p-3 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {currentStep === 4 && (
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="accountabilityType"
-                  render={({ field }) => (
-                    <FormItem className="space-y-4">
-                      <motion.label
-                        whileHover={{ scale: 1.01 }}
-                        className={`flex items-start p-4 rounded-lg border cursor-pointer transition-all ${field.value === "visual_proof"
-                            ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
-                            : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
-                          }`}
-                      >
-                        <FormControl>
-                          <input
-                            type="radio"
-                            name="accountability"
-                            checked={field.value === "visual_proof"}
-                            onChange={() => field.onChange("visual_proof")}
-                            className="sr-only"
-                          />
-                        </FormControl>
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "visual_proof"
-                              ? "border-primary-blue"
-                              : "border-cool-gray dark:border-gray-600"
-                            }`}
-                        >
-                          {field.value === "visual_proof" && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="w-2 h-2 bg-primary-blue rounded-full"
-                            />
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Camera className="w-5 h-5 text-primary-blue" />
-                            <span className="font-semibold text-charcoal dark:text-gray-100">Visual Proof (Recommended)</span>
-                          </div>
-                          <p className="text-sm text-stone-gray dark:text-gray-400">
-                            Upload a picture to confirm task completion
-                          </p>
-                        </div>
-                      </motion.label>
-
-                      <motion.label
-                        whileHover={{ scale: 1.01 }}
-                        className={`flex items-start p-4 rounded-lg border cursor-pointer transition-all ${field.value === "time_bound_action"
-                            ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
-                            : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
-                          }`}
-                      >
-                        <FormControl>
-                          <input
-                            type="radio"
-                            name="accountability"
-                            checked={field.value === "time_bound_action"}
-                            onChange={() => field.onChange("time_bound_action")}
-                            className="sr-only"
-                          />
-                        </FormControl>
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "time_bound_action"
-                              ? "border-primary-blue"
-                              : "border-cool-gray dark:border-gray-600"
-                            }`}
-                        >
-                          {field.value === "time_bound_action" && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="w-2 h-2 bg-primary-blue rounded-full"
-                            />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Clock className="w-5 h-5 text-primary-blue" />
-                            <span className="font-semibold text-charcoal dark:text-gray-100">Time-Bound Action</span>
-                          </div>
-                          <p className="text-sm text-stone-gray dark:text-gray-400 mb-3">
-                            Mark completed within a specific time window
-                          </p>
-                          {field.value === "time_bound_action" && (
-                            <FormField
-                              control={form.control}
-                              name="timeWindow"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input
-                                      type="text"
-                                      placeholder="e.g., 7:00 AM ± 10 mins"
-                                      {...field}
-                                      className="w-full p-2 border border-cool-gray dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none text-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
+                            </FormControl>
+                            <div
+                              className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center ${field.value?.includes(option)
+                                ? "border-primary-blue bg-primary-blue"
+                                : "border-cool-gray dark:border-gray-600"
+                                }`}
+                            >
+                              {field.value?.includes(option) && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-2 h-2 bg-white rounded-sm"
+                                />
                               )}
-                            />
-                          )}
-                        </div>
-                      </motion.label>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
+                            </div>
+                            <span className="text-charcoal dark:text-gray-100">{option}</span>
+                          </motion.label>
+                        ))}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
-            {currentStep === 5 && (
-              <div className="space-y-6">
-                {getQuestionsMutation.isPending ? (
-                  <div className="text-center">
-                    <Sparkles className="w-12 h-12 text-primary-blue mx-auto animate-spin" />
-                    <h3 className="text-lg font-semibold mt-4">Analyzing your goal...</h3>
-                    <p className="text-stone-gray">Our AI is preparing some questions to personalize your plan.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="p-4 bg-accent-light-blue dark:bg-primary-blue/10 rounded-lg border border-primary-blue/20">
-                      <h3 className="font-semibold text-charcoal dark:text-gray-100">AI Analysis: Your Profile</h3>
-                      {userProfileSummary && (
-                        <>
-                          <p className="text-sm text-stone-gray dark:text-gray-300 mt-1">
-                            <strong>Archetype:</strong> {userProfileSummary.archetype}
-                          </p>
-                          <p className="text-sm text-stone-gray dark:text-gray-300">
-                            <strong>Potential Risks:</strong> {userProfileSummary.risk_factors?.join(", ")}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      {strategicQuestions?.map((q) => (
-                        <div key={q.questionKey}>
-                          <FormLabel>{q.question}</FormLabel>
-                          {/* Simple radio group for now */}
-                          <div className="mt-2 space-y-2">
-                            {q.suggestedAnswers.map(answer => (
-                              <label key={answer} className="flex items-center p-3 rounded-lg border border-cool-gray dark:border-gray-600 cursor-pointer hover:border-primary-blue">
+                {currentStep === 3 && (
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="timeCommitment"
+                      render={({ field }) => (
+                        <FormItem className="space-y-4">
+                          {timeCommitmentOptions.map((option) => (
+                            <motion.label
+                              key={option}
+                              whileHover={{ scale: 1.01 }}
+                              className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${field.value === option
+                                ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
+                                : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
+                                }`}
+                            >
+                              <FormControl>
                                 <input
                                   type="radio"
-                                  name={q.questionKey}
-                                  value={answer}
-                                  onChange={(e) => setUserAnswers({...userAnswers, [q.questionKey]: e.target.value})}
-                                  className="mr-3"
+                                  name="timeCommitment"
+                                  checked={field.value === option}
+                                  onChange={() => field.onChange(option)}
+                                  className="sr-only"
                                 />
-                                {answer}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
+                              </FormControl>
+                              <div
+                                className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${field.value === option
+                                  ? "border-primary-blue"
+                                  : "border-cool-gray dark:border-gray-600"
+                                  }`}
+                              >
+                                {field.value === option && (
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="w-2 h-2 bg-primary-blue rounded-full"
+                                  />
+                                )}
+                              </div>
+                              <span className="text-charcoal dark:text-gray-100">{option}</span>
+                            </motion.label>
+                          ))}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="Custom: e.g., 45 mins 3x per week"
+                              {...field}
+                              className="w-full p-3 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
-              </div>
-            )}
 
-            {currentStep === 6 && (
-               <AnimatePresence mode="wait">
-                {getPlanMutation.isPending || !finalGoalPlan ? (
-                  <motion.div key="loading" className="text-center">
-                    <Sparkles className="w-16 h-16 text-primary-blue mx-auto animate-spin" />
-                    <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-2">Generating your hyper-personalized plan...</h3>
-                    <p className="text-stone-gray dark:text-gray-400">This is where the magic happens. Please wait a moment.</p>
-                  </motion.div>
-                ) : (
-                  <motion.div key="plan" className="space-y-6">
-                    <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
-                    <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
-                    
-                    <div className="space-y-4">
-                      {finalGoalPlan.milestones.map((milestone, index) => (
-                        <div key={index} className="p-4 border rounded-lg bg-pearl-gray dark:bg-gray-700/50">
-                          <h4 className="font-semibold text-charcoal dark:text-gray-100">{milestone.title}</h4>
-                          <p className="text-sm text-stone-gray dark:text-gray-400 mb-2">{milestone.description}</p>
-                          <ul className="list-disc list-inside space-y-1">
-                            {milestone.tasks.map((task, taskIndex) => (
-                              <li key={taskIndex} className="text-sm text-charcoal dark:text-gray-300">
-                                <strong>{task.description}</strong>: <span className="text-stone-gray dark:text-gray-400">{task.successMetric}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
+                {currentStep === 4 && (
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="accountabilityType"
+                      render={({ field }) => (
+                        <FormItem className="space-y-4">
+                          <motion.label
+                            whileHover={{ scale: 1.01 }}
+                            className={`flex items-start p-4 rounded-lg border cursor-pointer transition-all ${field.value === "visual_proof"
+                              ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
+                              : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
+                              }`}
+                          >
+                            <FormControl>
+                              <input
+                                type="radio"
+                                name="accountability"
+                                checked={field.value === "visual_proof"}
+                                onChange={() => field.onChange("visual_proof")}
+                                className="sr-only"
+                              />
+                            </FormControl>
+                            <div
+                              className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "visual_proof"
+                                ? "border-primary-blue"
+                                : "border-cool-gray dark:border-gray-600"
+                                }`}
+                            >
+                              {field.value === "visual_proof" && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-2 h-2 bg-primary-blue rounded-full"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Camera className="w-5 h-5 text-primary-blue" />
+                                <span className="font-semibold text-charcoal dark:text-gray-100">Visual Proof (Recommended)</span>
+                              </div>
+                              <p className="text-sm text-stone-gray dark:text-gray-400">
+                                Upload a picture to confirm task completion
+                              </p>
+                            </div>
+                          </motion.label>
+
+                          <motion.label
+                            whileHover={{ scale: 1.01 }}
+                            className={`flex items-start p-4 rounded-lg border cursor-pointer transition-all ${field.value === "time_bound_action"
+                              ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
+                              : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
+                              }`}
+                          >
+                            <FormControl>
+                              <input
+                                type="radio"
+                                name="accountability"
+                                checked={field.value === "time_bound_action"}
+                                onChange={() => field.onChange("time_bound_action")}
+                                className="sr-only"
+                              />
+                            </FormControl>
+                            <div
+                              className={`w-5 h-5 rounded-full border-2 mr-3 mt-0.5 flex items-center justify-center ${field.value === "time_bound_action"
+                                ? "border-primary-blue"
+                                : "border-cool-gray dark:border-gray-600"
+                                }`}
+                            >
+                              {field.value === "time_bound_action" && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-2 h-2 bg-primary-blue rounded-full"
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Clock className="w-5 h-5 text-primary-blue" />
+                                <span className="font-semibold text-charcoal dark:text-gray-100">Time-Bound Action</span>
+                              </div>
+                              <p className="text-sm text-stone-gray dark:text-gray-400 mb-3">
+                                Mark completed within a specific time window
+                              </p>
+                              {field.value === "time_bound_action" && (
+                                <FormField
+                                  control={form.control}
+                                  name="timeWindow"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormControl>
+                                        <Input
+                                          type="text"
+                                          placeholder="e.g., 7:00 AM ± 10 mins"
+                                          {...field}
+                                          className="w-full p-2 border border-cool-gray dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none text-sm"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              )}
+                            </div>
+                          </motion.label>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
-              </AnimatePresence>
-            )}
-                        </motion.div>
-                      </AnimatePresence>
-          
-                      {/* Action Buttons */}
-                      <div className="flex justify-between">
-                        <motion.button
-                          type="button"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleBack}
-                          className="px-6 py-3 border border-cool-gray dark:border-gray-600 text-charcoal dark:text-gray-100 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                        >
-                          Back
-                        </motion.button>
-          
-                        <div className="flex-1" />
-          
-                        {currentStep < steps.length - 1 ? (
-                          <motion.button
-                            type="button"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleNext}
-                            disabled={getQuestionsMutation.isPending || getPlanMutation.isPending}
-                            className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50"
-                          >
-                            <span>
-                              {getQuestionsMutation.isPending ? "Analyzing..." : 
-                               getPlanMutation.isPending ? "Creating Plan..." : "Next"}
-                            </span>
-                            <ArrowRight className="w-4 h-4" />
-                          </motion.button>
-                        ) : (
-                          <motion.button
-                            type="submit"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            disabled={createGoalMutation.isPending || !finalGoalPlan}
-                            className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            {createGoalMutation.isPending ? "Saving..." : "Save Goal"}
-                          </motion.button>
-                        )}
+
+                {currentStep === 5 && (
+                  <div className="space-y-6">
+                    {getQuestionsMutation.isPending ? (
+                      <div className="text-center">
+                        <Sparkles className="w-12 h-12 text-primary-blue mx-auto animate-spin" />
+                        <h3 className="text-lg font-semibold mt-4">Analyzing your goal...</h3>
+                        <p className="text-stone-gray">Our AI is preparing some questions to personalize your plan.</p>
                       </div>
-                    </form>
-                  </Form>
-                </div>
-              </div>
-            )
-          }
+                    ) : (
+                      <>
+                        <div className="p-4 bg-accent-light-blue dark:bg-primary-blue/10 rounded-lg border border-primary-blue/20">
+                          <h3 className="font-semibold text-charcoal dark:text-gray-100">AI Analysis: Your Profile</h3>
+                          {userProfileSummary && (
+                            <>
+                              <p className="text-sm text-stone-gray dark:text-gray-300 mt-1">
+                                <strong>Archetype:</strong> {userProfileSummary.archetype}
+                              </p>
+                              <p className="text-sm text-stone-gray dark:text-gray-300">
+                                <strong>Potential Risks:</strong> {userProfileSummary.risk_factors?.join(", ")}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <div className="space-y-4">
+                          {strategicQuestions?.map((q) => (
+                            <div key={q.questionKey}>
+                              <FormLabel>{q.question}</FormLabel>
+                              {/* Simple radio group for now */}
+                              <div className="mt-2 space-y-2">
+                                {q.suggestedAnswers.map(answer => (
+                                  <label key={answer} className="flex items-center p-3 rounded-lg border border-cool-gray dark:border-gray-600 cursor-pointer hover:border-primary-blue">
+                                    <input
+                                      type="radio"
+                                      name={q.questionKey}
+                                      value={answer}
+                                      onChange={(e) => setUserAnswers({ ...userAnswers, [q.questionKey]: e.target.value })}
+                                      className="mr-3"
+                                    />
+                                    {answer}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {currentStep === 6 && (
+                  <AnimatePresence mode="wait">
+                    {getPlanMutation.isPending || !finalGoalPlan ? (
+                      <motion.div key="loading" className="text-center">
+                        <Sparkles className="w-16 h-16 text-primary-blue mx-auto animate-spin" />
+                        <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-2">Generating your hyper-personalized plan...</h3>
+                        <p className="text-stone-gray dark:text-gray-400">This is where the magic happens. Please wait a moment.</p>
+                      </motion.div>
+                    ) : (
+                      <motion.div key="plan" className="space-y-6">
+                        <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
+                        <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
+
+                        <div className="space-y-4">
+                          {finalGoalPlan.milestones.map((milestone, index) => (
+                            <div key={index} className="p-4 border rounded-lg bg-pearl-gray dark:bg-gray-700/50">
+                              <h4 className="font-semibold text-charcoal dark:text-gray-100">{milestone.title}</h4>
+                              <p className="text-sm text-stone-gray dark:text-gray-400 mb-2">{milestone.description}</p>
+                              <ul className="list-disc list-inside space-y-1">
+                                {milestone.tasks.map((task, taskIndex) => (
+                                  <li key={taskIndex} className="text-sm text-charcoal dark:text-gray-300">
+                                    <strong>{task.description}</strong>: <span className="text-stone-gray dark:text-gray-400">{task.successMetric}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Action Buttons */}
+            <div className="flex justify-between">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleBack}
+                className="px-6 py-3 border border-cool-gray dark:border-gray-600 text-charcoal dark:text-gray-100 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              >
+                Back
+              </motion.button>
+
+              <div className="flex-1" />
+
+              {currentStep < steps.length - 1 ? (
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleNext}
+                  disabled={getQuestionsMutation.isPending || getPlanMutation.isPending}
+                  className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50"
+                >
+                  <span>
+                    {getQuestionsMutation.isPending ? "Analyzing..." :
+                      getPlanMutation.isPending ? "Creating Plan..." : "Next"}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              ) : (
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={createGoalMutation.isPending || !finalGoalPlan}
+                  className="px-6 py-3 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {createGoalMutation.isPending ? "Saving..." : "Save Goal"}
+                </motion.button>
+              )}
+            </div>
+          </form>
+        </Form>
+      </div>
+    </div>
+  )
+}

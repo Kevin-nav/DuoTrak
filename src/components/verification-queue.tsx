@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, Variants } from "framer-motion"
 import { Check, X, Eye, Camera, AlertTriangle } from "lucide-react"
 import { useState } from "react"
 import MouseGlowEffect from "./mouse-glow-effect"
@@ -78,7 +78,7 @@ export default function VerificationQueue({
     }
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -89,7 +89,7 @@ export default function VerificationQueue({
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,

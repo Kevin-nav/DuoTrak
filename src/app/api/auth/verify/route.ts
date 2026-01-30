@@ -5,7 +5,8 @@ import { cookies } from 'next/headers';
 const SESSION_COOKIE_NAME = '__session';
 
 export async function GET(request: NextRequest) {
-  const sessionCookie = cookies().get(SESSION_COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionCookie) {
     return NextResponse.json({ error: 'No session cookie found.' }, { status: 401 });

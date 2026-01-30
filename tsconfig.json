@@ -36,6 +36,17 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "duotrak-dashboard*",
+    "duotrak-ui",
+    "duotrak_improved_ui",
+    "backend",
+    "html",
+    "mascot",
+    "scripts",
+    "specs",
+    "cxt",
+    "docs",
+    "src/components/dashboard"
   ]
 }

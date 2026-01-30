@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 type AnimatedTextProps = {
   text: string;
@@ -12,7 +12,7 @@ type AnimatedTextProps = {
 const AnimatedTextCharacter = ({ text, className, stagger = 0.03 }: AnimatedTextProps) => {
   const letters = Array.from(text);
 
-  const container = {
+  const container: Variants = {
     hidden: { opacity: 0 },
     visible: (i = 1) => ({
       opacity: 1,
@@ -20,7 +20,7 @@ const AnimatedTextCharacter = ({ text, className, stagger = 0.03 }: AnimatedText
     }),
   };
 
-  const child = {
+  const child: Variants = {
     visible: {
       opacity: 1,
       y: 0,
