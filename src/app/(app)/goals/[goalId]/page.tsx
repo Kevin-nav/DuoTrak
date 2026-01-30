@@ -1,22 +1,16 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { getGoalById } from '@/lib/api/goals';
 import DashboardLayout from '@/components/dashboard-layout';
 import FullPageSpinner from '@/components/ui/FullPageSpinner';
-import { GoalRead } from '@/schemas/goal';
 import GoalDetailView from '@/components/goal-detail-view';
+import { useGoal } from '@/hooks/useGoals';
 
 const GoalDetailPage = () => {
   const params = useParams();
   const goalId = params.goalId as string;
 
-  const { data: goal, isLoading, isError, error } = useQuery<GoalRead>({
-    queryKey: ['goal', goalId],
-    queryFn: () => getGoalById(goalId),
-    enabled: !!goalId,
-  });
+  const { data: goal, isLoading, isError } = useGoal(goalId);
 
   if (isLoading) {
     return (
@@ -30,7 +24,7 @@ const GoalDetailPage = () => {
     return (
       <DashboardLayout>
         <div className="text-red-500 p-4">
-          Error loading goal: {error.message}
+          Error loading goal.
         </div>
       </DashboardLayout>
     );
@@ -52,3 +46,4 @@ const GoalDetailPage = () => {
 };
 
 export default GoalDetailPage;
+

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
 import { getAuth, signOut as firebaseSignOut } from 'firebase/auth';
+import { Id } from '../../convex/_generated/dataModel';
 
 const SESSION_COOKIE_NAME = '__session';
 const MASTER_ACCESS_COOKIE_NAME = '__master_access';
@@ -13,26 +14,27 @@ export type AccountStatus = 'AWAITING_ONBOARDING' | 'AWAITING_PARTNERSHIP' | 'ON
 export type PartnershipStatus = 'active' | 'pending' | 'no_partner';
 
 export interface UserDetails {
-    id: string;
+    _id: Id<"users">;
+    id: string; // Keeping for compatibility, same as _id
     firebase_uid: string;
     email: string;
     full_name: string | null;
     bio: string | null;
     timezone: string | null;
     profile_picture_url: string | null;
-    account_status: AccountStatus;
+    account_status: string; // Convex returns string, we can cast to AccountStatus if needed
     notifications_enabled: boolean | null;
     current_streak: number | null;
     longest_streak: number | null;
     total_tasks_completed: number | null;
     goals_conquered: number | null;
     // Partnership fields
-    partner_id: string | null;
-    partnership_id: string | null;
-    partnership_status: PartnershipStatus;
+    partner_id: Id<"users"> | null;
+    partnership_id: Id<"partnerships"> | null;
+    partnership_status: string; // Cast to PartnershipStatus
     partner_full_name: string | null;
     partner_nickname: string | null;
-    nickname: string | null;
+    // nickname: string | null; // Not in schema yet?
     sent_invitation: any | null;
     received_invitation: any | null;
     // Badge fields
@@ -45,7 +47,7 @@ interface UserContextType {
     isMockMode: boolean;
     isMasterAccess: boolean;
     signOut: () => Promise<void>;
-    refetchUserDetails: () => Promise<void>;
+    refetchUserDetails: () => Promise<void>; // No-op in Convex, kept for compat
     sendInvitation: (email: string, name: string, customMessage?: string) => Promise<void>;
     withdrawInvitation: (invitationId: string) => Promise<void>;
     nudgePartner: (invitationId: string) => Promise<void>;
@@ -53,82 +55,6 @@ interface UserContextType {
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
-
-/**
- * Generates mock user details based on the specified account status
- */
-function generateMockUserDetails(accountStatus: AccountStatus): UserDetails {
-    const baseUser: UserDetails = {
-        id: 'mock-user-id',
-        firebase_uid: 'mock-firebase-uid',
-        email: 'mock@example.com',
-        full_name: 'Mock User',
-        bio: 'This is a mock user profile for development.',
-        timezone: 'UTC',
-        profile_picture_url: 'https://via.placeholder.com/150',
-        account_status: accountStatus,
-        notifications_enabled: true,
-        current_streak: 5,
-        longest_streak: 10,
-        total_tasks_completed: 20,
-        goals_conquered: 3,
-        partner_id: null,
-        partnership_id: null,
-        partnership_status: 'no_partner',
-        partner_full_name: null,
-        partner_nickname: null,
-        sent_invitation: null,
-        received_invitation: null,
-        badges: [],
-    };
-
-    // Customize based on account status
-    switch (accountStatus) {
-        case 'AWAITING_ONBOARDING':
-            // New user, no partner yet
-            break;
-
-        case 'AWAITING_PARTNERSHIP':
-            // User has sent an invitation
-            baseUser.sent_invitation = {
-                id: 'mock-invitation-id',
-                recipient_email: 'partner@example.com',
-                recipient_name: 'Potential Partner',
-                status: 'pending',
-                sent_at: new Date().toISOString(),
-            };
-            baseUser.partnership_status = 'pending';
-            break;
-
-        case 'ONBOARDING_PARTNERED':
-            // User is partnered but still in onboarding
-            baseUser.partner_id = 'mock-partner-id';
-            baseUser.partnership_id = 'mock-partnership-id';
-            baseUser.partnership_status = 'active';
-            baseUser.partner_full_name = 'Mock Partner';
-            baseUser.partner_nickname = 'Mocky';
-            break;
-
-        case 'ACTIVE':
-            // Fully active user with partner
-            baseUser.partner_id = 'mock-partner-id';
-            baseUser.partnership_id = 'mock-partnership-id';
-            baseUser.partnership_status = 'active';
-            baseUser.partner_full_name = 'Mock Partner';
-            baseUser.partner_nickname = 'Mocky';
-            baseUser.current_streak = 15;
-            baseUser.longest_streak = 30;
-            baseUser.total_tasks_completed = 100;
-            baseUser.goals_conquered = 10;
-            baseUser.badges = [
-                { id: '1', name: 'Early Bird', icon: '🌅' },
-                { id: '2', name: 'Streak Master', icon: '🔥' },
-            ];
-            break;
-    }
-
-    return baseUser;
-}
 
 /**
  * Checks if master access is active
@@ -150,39 +76,6 @@ function checkMasterAccess(): boolean {
 }
 
 /**
- * Generates mock user details for master access
- */
-function generateMasterUserDetails(): UserDetails {
-    return {
-        id: 'master-user-id',
-        firebase_uid: 'master-firebase-uid',
-        email: 'master@system.local',
-        full_name: '🔐 Master Access User',
-        bio: 'Unrestricted system access for development and debugging.',
-        timezone: 'UTC',
-        profile_picture_url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzY2NjciLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZpbGw9IiNmZmYiIGZvbnQtc2l6ZT0iNDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5OBPC90ZXh0Pjwvc3ZnPg==',
-        account_status: 'ACTIVE',
-        notifications_enabled: true,
-        current_streak: 999,
-        longest_streak: 999,
-        total_tasks_completed: 999,
-        goals_conquered: 999,
-        partner_id: 'master-partner-id',
-        partnership_id: 'master-partnership-id',
-        partnership_status: 'active',
-        partner_full_name: 'System Partner',
-        partner_nickname: 'Sys',
-        sent_invitation: null,
-        received_invitation: null,
-        badges: [
-            { id: 'master-1', name: 'Master Access', icon: '🔐' },
-            { id: 'master-2', name: 'System Admin', icon: '👑' },
-            { id: 'master-3', name: 'Debug Mode', icon: '🐛' },
-        ],
-    };
-}
-
-/**
  * Checks if mock mode is active based on environment and headers
  */
 function checkMockMode(): boolean {
@@ -199,33 +92,14 @@ function checkMockMode(): boolean {
     return mockAuthEnabled && mockAuthBypassEnabled && hasMockQuery;
 }
 
-/**
- * Fetches user details from the backend
- */
-const fetchUser = async (): Promise<UserDetails | null> => {
-    console.log('[UserContext] Fetching user details...');
-    
-    try {
-        const data = await apiClient.getCurrentUser();
-        
-        // Defensively trim email whitespace
-        if (data && data.email) {
-            data.email = data.email.trim();
-        }
-        
-        console.log('[UserContext] User details fetched successfully');
-        return data;
-    } catch (error) {
-        console.log('[UserContext] User not authenticated or fetch failed');
-        return null;
-    }
-};
-
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-    const queryClient = useQueryClient();
     const [isMasterAccess, setIsMasterAccess] = useState(false);
     const [isMockMode, setIsMockMode] = useState(false);
-    const [mockAccountStatus, setMockAccountStatus] = useState<AccountStatus>('ACTIVE');
+
+    // Convex Mutations
+    const sendInvitationMutation = useMutation(api.invitations.create);
+    const withdrawInvitationMutation = useMutation(api.invitations.withdraw);
+    const nudgePartnerMutation = useMutation(api.invitations.nudge);
 
     useEffect(() => {
         // Check for master access first (highest priority)
@@ -242,107 +116,60 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setIsMockMode(mockMode);
         
         if (mockMode) {
-            // Get the mock account status from environment or default
-            const status = (process.env.NEXT_PUBLIC_MOCK_ACCOUNT_STATUS || 'ACTIVE') as AccountStatus;
-            setMockAccountStatus(status);
-            console.warn(`[MOCK AUTH] Mock mode active with status: ${status}`);
+             console.warn(`[MOCK AUTH] Mock mode active`);
         }
     }, []);
 
-    // Use conditional query based on access mode
-    const { data: userDetails, isLoading, refetch } = useQuery({
-        queryKey: ['user', 'me', isMasterAccess ? 'master' : (isMockMode ? 'mock' : 'real')],
-        queryFn: () => {
-            if (isMasterAccess) {
-                return Promise.resolve(generateMasterUserDetails());
-            }
-            if (isMockMode) {
-                return Promise.resolve(generateMockUserDetails(mockAccountStatus));
-            }
-            return fetchUser();
-        },
-        enabled: true,
-        retry: false,
-        refetchOnWindowFocus: false,
-    });
+    // Fetch User Data via Convex
+    const convexUser = useQuery(api.users.current);
+    
+    // Transform Convex data to match UserDetails interface if necessary
+    // Currently api.users.current returns almost exactly what we need
+    const userDetails: UserDetails | null | undefined = convexUser ? {
+        ...convexUser,
+        id: convexUser._id, // Map _id to id
+        // Default missing fields
+        notifications_enabled: convexUser.notifications_enabled ?? true,
+        current_streak: convexUser.current_streak ?? 0,
+        longest_streak: convexUser.longest_streak ?? 0,
+        total_tasks_completed: convexUser.total_tasks_completed ?? 0,
+        goals_conquered: convexUser.goals_conquered ?? 0,
+        badges: convexUser.badges || [],
+    } : (convexUser === null ? null : undefined); // null means loaded & not found (or not auth), undefined means loading
+
+    const isLoading = convexUser === undefined;
 
     const signOut = async () => {
         if (isMasterAccess) {
-            console.log('[MASTER ACCESS] Revoking master access...');
-            // Clear master access cookie
-            document.cookie = `${MASTER_ACCESS_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-            // Remove query parameter and redirect
-            const url = new URL(window.location.href);
-            url.searchParams.delete('master_key');
-            url.pathname = '/login';
-            window.location.href = url.toString();
-            return;
-        }
-
-        if (isMockMode) {
-            console.log('[MOCK AUTH] Mock sign out - clearing query param and reloading');
-            const url = new URL(window.location.href);
-            url.searchParams.delete('mock-auth');
-            url.pathname = '/login';
-            window.location.href = url.toString();
-            return;
+             // ... keep master access logic ...
+             document.cookie = `${MASTER_ACCESS_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+             const url = new URL(window.location.href);
+             url.searchParams.delete('master_key');
+             url.pathname = '/login';
+             window.location.href = url.toString();
+             return;
         }
 
         try {
-            // Step 1: Terminate the Backend Session
-            await apiClient.logout();
-            toast.success("Successfully logged out from server.");
-
-            // Step 2: Sign Out of Firebase
-            try {
-                const auth = getAuth();
-                await firebaseSignOut(auth);
-            } catch (error) {
-                console.error("Firebase sign-out failed, but proceeding with client-side cleanup:", error);
-            }
-
-            // Step 3: Clear All Local User Data
-            queryClient.clear();
-
-            // Step 4: Redirect to Login with a full page reload
+            const auth = getAuth();
+            await firebaseSignOut(auth);
+            // Convex will automatically react to the auth state change
             window.location.href = '/login';
-
         } catch (error) {
-            console.error("Backend logout failed. Aborting sign-out.", error);
-            toast.error("Logout failed. Please check your connection and try again.");
-            queryClient.clear();
-            window.location.href = '/login';
+            console.error("Logout failed", error);
+            toast.error("Logout failed. Please try again.");
         }
     };
 
     const refetchUserDetails = async () => {
-        if (isMasterAccess || isMockMode) {
-            console.log('[SPECIAL ACCESS] Refetch - no-op in special access mode');
-            return;
-        }
-        await refetch();
+        // No-op for Convex, it's real-time
+        console.log("refetchUserDetails called, but Convex is real-time.");
     };
 
     const sendInvitation = async (email: string, name: string, customMessage?: string) => {
-        if (isMasterAccess) {
-            console.log('[MASTER ACCESS] sendInvitation:', { email, name, customMessage });
-            toast.success("(Master Access) Operation simulated successfully!");
-            return;
-        }
-
-        if (isMockMode) {
-            console.log('[MOCK AUTH] Mock sendInvitation:', { email, name, customMessage });
-            toast.success("(Mock) Invitation sent successfully!");
-            setMockAccountStatus('AWAITING_PARTNERSHIP');
-            await refetch();
-            return;
-        }
-
         try {
-            const response = await apiClient.sendInvitation(email, name, customMessage);
+            await sendInvitationMutation({ email, name, message: customMessage });
             toast.success("Invitation sent successfully!");
-            await refetchUserDetails();
-            return response; // Return the full response
         } catch (error: any) {
             toast.error(error.message || "Failed to send invitation.");
             throw error;
@@ -350,26 +177,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const withdrawInvitation = async (invitationId: string) => {
-        if (isMasterAccess) {
-            console.log('[MASTER ACCESS] withdrawInvitation:', { invitationId });
-            toast.success("(Master Access) Operation simulated successfully!");
-            return;
-        }
-
-        if (isMockMode) {
-            console.log('[MOCK AUTH] Mock withdrawInvitation:', { invitationId });
-            toast.success("(Mock) Invitation withdrawn successfully!");
-            
-            // Update mock user to remove invitation
-            setMockAccountStatus('AWAITING_ONBOARDING');
-            await refetch();
-            return;
-        }
-
         try {
-            await apiClient.withdrawInvitation(invitationId);
+            await withdrawInvitationMutation({ invitationId: invitationId as Id<"partner_invitations"> });
             toast.success("Invitation withdrawn successfully!");
-            await refetchUserDetails();
         } catch (error: any) {
             toast.error(error.message || "Failed to withdraw invitation.");
             throw error;
@@ -377,22 +187,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const nudgePartner = async (invitationId: string) => {
-        if (isMasterAccess) {
-            console.log('[MASTER ACCESS] nudgePartner:', { invitationId });
-            toast.success("(Master Access) Operation simulated successfully!");
-            return;
-        }
-
-        if (isMockMode) {
-            console.log('[MOCK AUTH] Mock nudgePartner:', { invitationId });
-            toast.success("(Mock) Nudge sent successfully!");
-            return;
-        }
-
         try {
-            await apiClient.nudgePartner(invitationId);
+            await nudgePartnerMutation({ invitationId: invitationId as Id<"partner_invitations"> });
             toast.success("Nudge sent successfully!");
-            await refetchUserDetails();
         } catch (error: any) {
             toast.error(error.message || "Failed to send nudge.");
             throw error;

@@ -17,7 +17,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createGoal, getStrategicQuestions, createGoalPlan, evaluateGoalPlan } from "@/lib/api/goals";
+import { useMutation as useConvexMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { getStrategicQuestions, createGoalPlan, evaluateGoalPlan } from "@/lib/api/goals";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
@@ -31,6 +33,7 @@ import {
 import { useFieldArray } from "react-hook-form";
 
 interface WizardStep {
+
   id: string
   title: string
   description: string
@@ -87,24 +90,34 @@ export default function GoalCreationWizard() {
     name: "tasks",
   });
 
-  const createGoalMutation = useMutation({
-    mutationFn: createGoal,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["goals"] });
-      toast({
-        title: "Goal Created!",
-        description: "Your new goal has been saved successfully.",
-      });
-      router.push("/goals");
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Could not create the goal. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const createGoal = useConvexMutation(api.goals.create);
+  const [isCreatingGoal, setIsCreatingGoal] = useState(false);
+
+  const createGoalMutation = {
+    isPending: isCreatingGoal,
+    mutate: (data: any) => {
+      setIsCreatingGoal(true);
+      createGoal(data)
+        .then(() => {
+          toast({
+            title: "Goal Created!",
+            description: "Your new goal has been saved successfully.",
+          });
+          router.push("/goals");
+        })
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: "Could not create the goal. Please try again.",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setIsCreatingGoal(false);
+        });
+    }
+  };
+
 
   // V3 Phase 1: Get Questions
   const getQuestionsMutation = useMutation({
