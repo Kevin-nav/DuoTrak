@@ -39,6 +39,7 @@ export default function ProfileContent() {
   // Avatar State
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -196,6 +197,18 @@ export default function ProfileContent() {
   }
 
   // --- Avatar Logic ---
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -221,15 +234,26 @@ export default function ProfileContent() {
           headers: { "Content-Type": selectedFile.type },
           body: selectedFile,
         });
-        const { storageId } = await result.json();
+
+        if (!result.ok) {
+           throw new Error(`Upload failed: ${result.statusText}`);
+        }
+
+        const json = await result.json();
+        const { storageId } = json;
+
+        if (!storageId) {
+            throw new Error("Invalid response from upload server");
+        }
+
         await updateUser({ profile_picture_storage_id: storageId as Id<"_storage"> });
         toast.success("Avatar uploaded!");
         setIsAvatarDialogOpen(false);
         setSelectedFile(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to update avatar.");
+      toast.error(error.message || "Failed to update avatar.");
     } finally {
       setIsUploading(false);
     }
@@ -316,11 +340,11 @@ export default function ProfileContent() {
                                 onChange={handleFileSelect}
                             />
                         </div>
-                        {selectedFile && (
+                        {selectedFile && previewUrl && (
                             <div className="mt-4 flex flex-col items-center gap-4">
                                 <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-primary">
                                     <img
-                                        src={URL.createObjectURL(selectedFile)}
+                                        src={previewUrl}
                                         alt="Preview"
                                         className="w-full h-full object-cover"
                                     />
