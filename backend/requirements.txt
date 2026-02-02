@@ -9,6 +9,7 @@ fastapi-csrf-protect
 firebase-admin
 crewai
 langchain-google-genai
+google-generativeai
 httpx
 pinecone-client
 langchain-pinecone

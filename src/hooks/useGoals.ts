@@ -1,6 +1,7 @@
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
+import { useState } from 'react';
 
 // Helper to map Convex Goal to Frontend GoalRead
 const mapGoal = (goal: any) => ({
@@ -78,15 +79,33 @@ export const useDuplicateGoal = () => {
   };
 };
 
-// Deprecated or need to implement in Convex
+// Onboarding Plan Generation - Uses Convex Action to call FastAPI backend
 export const useOnboardingPlan = () => {
-  // This was using an API endpoint. For now, just return a dummy mutation
-  // or implement the AI logic via Convex Action later.
+  const generatePlan = useAction(api.onboarding.generatePlan);
+  const [isPending, setIsPending] = useState(false);
+
   return {
-    mutate: (data: any, options?: { onSuccess?: (data: any) => void; onError?: (err: any) => void }) => {
-      console.warn("useOnboardingPlan not implemented in Convex yet");
-      // For now, return an error to the caller
-      options?.onError?.(new Error("Onboarding plan generation not yet implemented"));
-    }
+    isPending,
+    mutate: async (
+      data: { goalTitle: string; goalDescription: string; contextualAnswers?: Record<string, string> },
+      options?: { onSuccess?: (data: any) => void; onError?: (err: any) => void }
+    ) => {
+      setIsPending(true);
+      try {
+        console.log("[useOnboardingPlan] Generating plan for:", data.goalTitle);
+        const result = await generatePlan({
+          goalTitle: data.goalTitle,
+          goalDescription: data.goalDescription,
+          contextualAnswers: data.contextualAnswers,
+        });
+        console.log("[useOnboardingPlan] Plan generated successfully:", result);
+        options?.onSuccess?.(result);
+      } catch (error: any) {
+        console.error("[useOnboardingPlan] Failed to generate plan:", error);
+        options?.onError?.(error);
+      } finally {
+        setIsPending(false);
+      }
+    },
   };
 };

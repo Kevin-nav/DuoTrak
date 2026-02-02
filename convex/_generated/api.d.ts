@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as chat from "../chat.js";
 import type * as goals from "../goals.js";
 import type * as invitations from "../invitations.js";
+import type * as onboarding from "../onboarding.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -20,8 +22,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  chat: typeof chat;
   goals: typeof goals;
   invitations: typeof invitations;
+  onboarding: typeof onboarding;
   tasks: typeof tasks;
   users: typeof users;
 }>;

@@ -97,3 +97,27 @@ class BehavioralSnapshot(BaseModel):
     growth_trajectory: str = Field(..., description="A comparison of this week's performance to historical snapshots to determine if the user is growing, stagnating, or declining.")
     emerging_patterns: str = Field(..., description="Newly identified behavioral patterns (e.g., 'The user is now consistently completing morning tasks, which is a new development.').")
     archetype_suggestion: str = Field(..., description="A suggested user archetype based on the latest data.")
+
+
+# ============================================================================
+# Onboarding Plan Generation Schemas
+# ============================================================================
+
+class OnboardingPlanRequest(BaseModel):
+    """Request body for generating an onboarding plan from a goal template."""
+    goalTitle: str = Field(..., description="Title of the selected goal template")
+    goalDescription: str = Field(..., description="Description of the goal")
+    contextualAnswers: Dict[str, str] = Field(default_factory=dict, description="Optional contextual answers for personalization")
+
+
+class OnboardingPlanTask(BaseModel):
+    """A single task within the generated onboarding plan."""
+    taskName: str = Field(..., description="Name of the task")
+    description: str = Field(..., description="Detailed description of what to do")
+    repeatFrequency: str = Field(..., description="How often to repeat: 'daily', 'weekly', 'once'")
+
+
+class OnboardingPlanResponse(BaseModel):
+    """Response containing the AI-generated onboarding plan."""
+    goalType: str = Field(..., description="Category of the goal (e.g., 'mindfulness', 'fitness')")
+    tasks: List[OnboardingPlanTask] = Field(..., description="List of tasks for the goal")

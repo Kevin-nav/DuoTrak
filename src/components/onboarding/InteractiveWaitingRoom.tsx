@@ -31,6 +31,8 @@ import { apiClient } from "@/lib/api/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { differenceInHours } from 'date-fns';
+import SocialShareDrawer from "@/components/invitation/SocialShareDrawer"
+import { useUser } from "@/contexts/UserContext"
 
 const successTips = [
   {
@@ -78,6 +80,8 @@ export default function InteractiveWaitingRoom() {
   const [invitationLink] = useState(`https://duotrak.app/invite/${invitationToken}`)
   const [linkCopied, setLinkCopied] = useState(false)
   const [isNudging, setIsNudging] = useState(false);
+  const [showShareDrawer, setShowShareDrawer] = useState(false);
+  const { userDetails } = useUser();
 
   // Goal draft form
   const [goalDraft, setGoalDraft] = useState({
@@ -154,13 +158,13 @@ export default function InteractiveWaitingRoom() {
     if (!invitation?.id || !canNudge) return;
     setIsNudging(true);
     try {
-        await apiClient.nudgePartner(invitation.id);
-        toast.success("Reminder sent!", { description: "Your partner has been gently nudged." });
-        refetchInvitation(); // Refetch to get the new last_nudged_at time
+      await apiClient.nudgePartner(invitation.id);
+      toast.success("Reminder sent!", { description: "Your partner has been gently nudged." });
+      refetchInvitation(); // Refetch to get the new last_nudged_at time
     } catch (error: any) {
-        toast.error("Failed to send nudge", { description: error.message });
+      toast.error("Failed to send nudge", { description: error.message });
     } finally {
-        setIsNudging(false);
+      setIsNudging(false);
     }
   };
 
@@ -251,21 +255,19 @@ export default function InteractiveWaitingRoom() {
               <div className="flex items-center space-x-4">
                 <div className="relative flex items-center justify-center w-10 h-10">
                   <div
-                    className={`w-4 h-4 rounded-full ${ 
-                      partnerStatus === "not-viewed"
-                        ? "bg-gray-400"
-                        : partnerStatus === "viewing"
-                          ? "bg-blue-500 animate-pulse"
-                          : "bg-green-500"
-                    }`}
+                    className={`w-4 h-4 rounded-full ${partnerStatus === "not-viewed"
+                      ? "bg-gray-400"
+                      : partnerStatus === "viewing"
+                        ? "bg-blue-500 animate-pulse"
+                        : "bg-green-500"
+                      }`}
                   />
                   {partnerStatus !== "not-viewed" && (
                     <div
-                      className={`absolute w-4 h-4 rounded-full animate-ping ${ 
-                        partnerStatus === "viewing"
-                          ? "bg-blue-400"
-                          : "bg-green-400"
-                      }`}
+                      className={`absolute w-4 h-4 rounded-full animate-ping ${partnerStatus === "viewing"
+                        ? "bg-blue-400"
+                        : "bg-green-400"
+                        }`}
                     />
                   )}
                 </div>
@@ -282,8 +284,8 @@ export default function InteractiveWaitingRoom() {
 
               <div className="flex-grow flex justify-end">
                 <Button onClick={handleNudge} disabled={isNudging || !canNudge || partnerStatus === 'completed'}>
-                    {isNudging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
-                    {canNudge ? 'Send a Reminder' : 'Reminder Sent'}
+                  {isNudging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
+                  {canNudge ? 'Send a Reminder' : 'Reminder Sent'}
                 </Button>
               </div>
             </div>
@@ -328,9 +330,8 @@ export default function InteractiveWaitingRoom() {
                   {successTips.map((_, index) => (
                     <div
                       key={index}
-                      className={`w-2 h-2 rounded-full transition-colors ${ 
-                        index === currentTip ? "bg-blue-500" : "bg-gray-300"
-                      }`}
+                      className={`w-2 h-2 rounded-full transition-colors ${index === currentTip ? "bg-blue-500" : "bg-gray-300"
+                        }`}
                     />
                   ))}
                 </div>
@@ -391,44 +392,35 @@ export default function InteractiveWaitingRoom() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Share Invitation */}
-            <Card>
+            <Card className="border-2 border-dashed border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Share2 className="w-5 h-5 text-blue-500" />
+                  <Share2 className="w-5 h-5 text-purple-500" />
                   <span>Share Invitation</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Invitation Link</label>
-                  <div className="flex space-x-2">
-                    <Input value={invitationLink} readOnly className="flex-1" />
-                    <Button
-                      variant="outline"
-                      onClick={copyInvitationLink}
-                      className={linkCopied ? "bg-green-50 border-green-200" : ""}
-                    >
-                      {linkCopied ? <CheckCircle className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
+                <p className="text-sm text-gray-600">
+                  Create beautiful shareable cards with QR codes for WhatsApp, Instagram, Snapchat, and more!
+                </p>
 
-                <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={() => setShowShareDrawer(true)}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share with Friends
+                </Button>
+
+                <div className="flex space-x-2">
+                  <Input value={invitationLink} readOnly className="flex-1 text-xs" />
                   <Button
                     variant="outline"
-                    onClick={shareViaEmail}
-                    className="flex items-center justify-center space-x-2 bg-transparent"
+                    size="sm"
+                    onClick={copyInvitationLink}
+                    className={linkCopied ? "bg-green-50 border-green-200" : ""}
                   >
-                    <Mail className="w-4 h-4" />
-                    <span>Email</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={shareViaText}
-                    className="flex items-center justify-center space-x-2 bg-transparent"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Text</span>
+                    {linkCopied ? <CheckCircle className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>
               </CardContent>
@@ -544,6 +536,16 @@ export default function InteractiveWaitingRoom() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Social Share Drawer */}
+        <SocialShareDrawer
+          isOpen={showShareDrawer}
+          onClose={() => setShowShareDrawer(false)}
+          inviterName={userDetails?.full_name || 'Your friend'}
+          inviterAvatar={userDetails?.profile_picture_url ?? undefined}
+          invitationLink={invitationLink}
+          goalDrafts={goalDrafts}
+        />
       </div>
     </div>
   )

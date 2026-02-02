@@ -67,7 +67,7 @@ async function validateMasterKey(providedKey: string, secretKey: string): Promis
       key,
       enc.encode(providedKey)
     );
-    
+
     const secretHmac = await crypto.subtle.sign(
       'HMAC',
       key,
@@ -139,9 +139,9 @@ async function checkMasterAccess(request: NextRequest): Promise<boolean> {
  * Creates a response with master access indicators
  */
 function createMasterAccessResponse(request: NextRequest, response: NextResponse): NextResponse {
-  const masterKey = request.nextUrl.searchParams.get('master_key') || 
-                   request.headers.get(MASTER_ACCESS_HEADER);
-  
+  const masterKey = request.nextUrl.searchParams.get('master_key') ||
+    request.headers.get(MASTER_ACCESS_HEADER);
+
   const isPersistentByDefault = process.env.MASTER_ACCESS_PERSISTENT_BY_DEFAULT !== 'false';
 
   // Set cookie for persistent master access (expires in 24 hours) ONLY if isPersistentByDefault is true
@@ -160,7 +160,7 @@ function createMasterAccessResponse(request: NextRequest, response: NextResponse
   // Set response headers to indicate master access
   response.headers.set('X-Master-Access-Active', 'true');
   response.headers.set('X-Master-Access-Level', 'unrestricted');
-  
+
   return response;
 }
 
@@ -177,13 +177,13 @@ function isMockAuthEnabled(request: NextRequest): boolean {
 
   const mockAuthEnabled = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
   const mockAuthBypassEnabled = process.env.NEXT_PUBLIC_MOCK_AUTH_BYPASS === 'true';
-  
+
   // Option 1: Check for custom header (can be set via browser extension)
   const hasMockHeader = request.headers.get('X-Mock-Auth-Bypass') === 'true';
-  
+
   // Option 2: Check for query parameter (easier for development)
   const hasMockQuery = request.nextUrl.searchParams.get('mock-auth') === 'true';
-  
+
   return mockAuthEnabled && mockAuthBypassEnabled && (hasMockHeader || hasMockQuery);
 }
 
@@ -192,7 +192,7 @@ function isMockAuthEnabled(request: NextRequest): boolean {
  */
 function getMockStatus(): MiddlewareStatusResponse {
   const mockAccountStatus = (process.env.NEXT_PUBLIC_MOCK_ACCOUNT_STATUS || 'ACTIVE') as AccountStatus;
-  
+
   return {
     account_status: mockAccountStatus,
     has_pending_invitation: mockAccountStatus === 'AWAITING_PARTNERSHIP',
@@ -200,33 +200,25 @@ function getMockStatus(): MiddlewareStatusResponse {
 }
 
 /**
- * Fetches the user status from the backend
+ * Since we've moved to Convex, we no longer call the FastAPI backend 
+ * from middleware. Session validation happens client-side via Firebase Auth
+ * and Convex's ConvexProviderWithAuth.
+ * 
+ * This function now just returns a "pass-through" status when a session cookie exists.
+ * Detailed routing based on account_status will be handled client-side.
  */
 async function fetchUserStatus(sessionCookie: string): Promise<MiddlewareStatusResponse | null> {
-  const backendUrl = process.env.FASTAPI_URL;
-  
-  if (!backendUrl) {
-    console.error("FATAL: FASTAPI_URL environment variable is not set.");
-    return null;
+  // If we have a session cookie, assume the user is authenticated.
+  // Detailed validation happens client-side via Firebase Auth + Convex.
+  // Return ACTIVE status to allow access to protected routes.
+  // The frontend will handle proper routing based on actual Convex user data.
+  if (sessionCookie) {
+    return {
+      account_status: 'ACTIVE',
+      has_pending_invitation: false,
+    };
   }
-
-  try {
-    const statusApiUrl = `${backendUrl}/api/v1/users/me/status`;
-    const response = await fetch(statusApiUrl, {
-      headers: {
-        'Cookie': `${SESSION_COOKIE_NAME}=${sessionCookie}`,
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Failed to fetch user status:", error);
-    return null;
-  }
+  return null;
 }
 
 /**
@@ -275,10 +267,10 @@ function getRedirectForStatus(
 
     case 'ACTIVE':
       // If an active user tries to access onboarding or invite pages, redirect to dashboard
-      if (pathname === ONBOARDING_ROUTE || 
-          pathname === INVITER_SETUP_ROUTE || 
-          pathname === INVITE_PARTNER_ROUTE || 
-          pathname === PENDING_INVITE_ROUTE) {
+      if (pathname === ONBOARDING_ROUTE ||
+        pathname === INVITER_SETUP_ROUTE ||
+        pathname === INVITE_PARTNER_ROUTE ||
+        pathname === PENDING_INVITE_ROUTE) {
         return NextResponse.redirect(new URL(DASHBOARD_ROUTE, request.url));
       }
       break;
@@ -302,7 +294,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/_next/') || pathname.includes('.')) {
     return NextResponse.next();
   }
-  
+
   // Allow all API routes to pass through; they have their own auth checks
   if (pathname.startsWith('/api/')) {
     return NextResponse.next();
@@ -311,16 +303,16 @@ export async function middleware(request: NextRequest) {
   // --- Check for Master Access (Highest Priority) ---
   if (await checkMasterAccess(request)) {
     console.warn(`[MASTER ACCESS] Unrestricted access granted for ${pathname}`);
-    
+
     // Create response with master access indicators
     let response = NextResponse.next();
     response = createMasterAccessResponse(request, response);
-    
+
     // Log access for audit purposes
     const timestamp = new Date().toISOString();
     const userAgent = request.headers.get('user-agent') || 'Unknown';
     console.warn(`[MASTER ACCESS AUDIT] ${timestamp} | Path: ${pathname} | UA: ${userAgent}`);
-    
+
     // No restrictions - allow access to any page
     return response;
   }
@@ -328,31 +320,31 @@ export async function middleware(request: NextRequest) {
   // --- Check for Mock Auth (Development Only) ---
   if (isMockAuthEnabled(request)) {
     console.warn(`[MOCK AUTH] Active for ${pathname}`);
-    
+
     const mockStatus = getMockStatus();
-    
+
     // Create a response with mock auth indicator
     const response = NextResponse.next();
-    
+
     // Set a header that client-side code can check to confirm mock mode
     response.headers.set('X-Mock-Auth-Active', 'true');
     response.headers.set('X-Mock-Account-Status', mockStatus.account_status);
-    
+
     // In mock mode, we still apply routing rules based on the mock status
     // but we don't check for actual authentication
     const redirect = getRedirectForStatus(mockStatus, pathname, request);
-    
+
     if (redirect) {
       console.warn(`[MOCK AUTH] Redirecting from ${pathname} to ${redirect.headers.get('Location')}`);
       return redirect;
     }
-    
+
     console.warn(`[MOCK AUTH] Allowing access to ${pathname}`);
     return response;
   }
 
   // --- Production/Normal Authentication Flow ---
-  
+
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
   // Unauthenticated User Logic
@@ -381,7 +373,7 @@ export async function middleware(request: NextRequest) {
 
   // Apply routing rules based on actual status
   const redirect = getRedirectForStatus(status, pathname, request);
-  
+
   if (redirect) {
     return redirect;
   }

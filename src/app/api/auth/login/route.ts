@@ -2,7 +2,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { serverEnv } from '@/lib/server-env';
 import crypto from 'crypto';
 
 export const runtime = 'nodejs';
@@ -31,32 +30,15 @@ export async function POST(request: NextRequest) {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     console.log(`[LOGIN] 5. ID token verified. UID: ${decodedToken.uid}, Email: ${decodedToken.email}`);
 
-    console.log('[LOGIN] 6. Calling FastAPI to sync profile...');
-    const fastApiResponse = await fetch(`${serverEnv.FASTAPI_URL}/api/v1/auth/verify-and-sync-profile`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-API-Key': serverEnv.INTERNAL_API_SECRET,
-      },
-      body: JSON.stringify({
-        firebase_uid: decodedToken.uid,
-        email: decodedToken.email,
-        full_name: decodedToken.name,
-        invitation_token: null, 
-      }),
-    });
+    // User sync to Convex happens client-side via UserSync component
+    console.log('[LOGIN] 6. Skipping FastAPI - user sync handled by Convex UserSync component.');
 
-    if (!fastApiResponse.ok) {
-      const errorData = await fastApiResponse.json();
-      console.error('[LOGIN] 7. ERROR: FastAPI profile sync failed.', { status: fastApiResponse.status, error: errorData });
-      return NextResponse.json(
-        { error: 'Failed to sync user profile.', detail: errorData.detail || 'Unknown error' },
-        { status: fastApiResponse.status }
-      );
-    }
-    console.log('[LOGIN] 7. SUCCESS: FastAPI profile sync successful.');
-
-    const { user: userDetails } = await fastApiResponse.json();
+    // Build minimal user details from the verified token
+    const userDetails = {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      name: decodedToken.name || null,
+    };
 
     const csrfToken = crypto.randomBytes(32).toString('hex');
     const response = NextResponse.json({ user: userDetails });
@@ -88,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('[LOGIN] 9. Login flow complete. Sending response to client.');
-    
+
     // --- DIAGNOSTIC LOG ---
     console.log('[LOGIN] DIAGNOSTIC: Final response headers being sent:', response.headers);
     // --- END DIAGNOSTIC LOG ---
@@ -97,9 +79,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[LOGIN] UNHANDLED ERROR in login flow.', {
-        errorMessage: error.message,
-        errorCode: error.code,
-        stack: error.stack,
+      errorMessage: error.message,
+      errorCode: error.code,
+      stack: error.stack,
     });
     if (error.code?.startsWith('auth/')) {
       return NextResponse.json({ error: 'Invalid Firebase token.', detail: error.message }, { status: 401 });

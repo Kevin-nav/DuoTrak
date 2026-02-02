@@ -22,7 +22,7 @@ console.log('--- [server-env.ts] Creating typesafe serverEnv object ---');
 
 export const serverEnv = {
   FIREBASE_SERVICE_ACCOUNT_JSON_PATH: process.env.FIREBASE_SERVICE_ACCOUNT_JSON_PATH as string,
-  INTERNAL_API_SECRET: process.env.SECRET_KEY as string,
+  INTERNAL_API_SECRET: process.env.INTERNAL_API_SECRET as string,
   FASTAPI_URL: process.env.FASTAPI_URL as string,
 };
 

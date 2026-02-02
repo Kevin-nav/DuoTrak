@@ -117,6 +117,70 @@ async def sync_user_profile(db: AsyncSession, user_data: dict) -> UserRead:
         raise e
 
 
+# Request model for internal profile sync endpoint
+class VerifyAndSyncProfileRequest(BaseModel):
+    firebase_uid: str
+    email: str | None = None
+    full_name: str | None = None
+    invitation_token: str | None = None
+
+
+class VerifyAndSyncProfileResponse(BaseModel):
+    user: dict
+    account_status: str
+    has_pending_invitation: bool
+
+
+@router.post("/verify-and-sync-profile", response_model=VerifyAndSyncProfileResponse)
+async def verify_and_sync_profile(
+    request: Request,
+    body: VerifyAndSyncProfileRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Internal endpoint for Next.js frontend to sync user profile after Firebase authentication.
+    Protected by internal API key - not for direct client use.
+    """
+    # Verify internal API key
+    api_key = request.headers.get("X-Internal-API-Key")
+    if not api_key or api_key != settings.INTERNAL_API_SECRET:
+        logger.warning("Invalid or missing internal API key for verify-and-sync-profile")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing internal API key"
+        )
+    
+    logger.info(f"[verify-and-sync-profile] Processing for firebase_uid: {body.firebase_uid}")
+    
+    try:
+        # Build user data from request
+        user_data = {
+            'uid': body.firebase_uid,
+            'email': body.email,
+            'name': body.full_name,
+        }
+        
+        # Sync user profile in database
+        db_user = await sync_user_profile(db, user_data)
+        
+        # Check for pending invitations
+        has_pending = await user_service.has_pending_invitation(db, db_user)
+        
+        logger.info(f"[verify-and-sync-profile] Successfully synced user. Account status: {db_user.account_status}")
+        
+        return VerifyAndSyncProfileResponse(
+            user=db_user.model_dump(),
+            account_status=db_user.account_status.value if hasattr(db_user.account_status, 'value') else str(db_user.account_status),
+            has_pending_invitation=has_pending
+        )
+        
+    except Exception as e:
+        logger.error(f"[verify-and-sync-profile] Error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to sync user profile: {str(e)}"
+        )
+
 
 @router.post("/session-login", response_model=SessionResponse)
 @limiter.limit("5/minute")

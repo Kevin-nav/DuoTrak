@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.core.config import settings
-from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, AnswersSubmissionRequest, GoalPlanResponse
+from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, AnswersSubmissionRequest, GoalPlanResponse, OnboardingPlanRequest, OnboardingPlanResponse, OnboardingPlanTask
 from app.services.gemini_config import GeminiModelConfig
 from app.services.pinecone_service import PineconeService
 from app.services.duotrak_crew_orchestrator import DuotrakCrewOrchestrator
@@ -14,11 +14,11 @@ from app.api.v1.endpoints.users import get_current_user_from_cookie
 from app.services.external_judge_crew import ExternalJudgeCrew
 from app.schemas.agent_crew import DuotrakGoalPlan
 from fastapi import BackgroundTasks
+import json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-# ... (existing code)
+from app.services.gemini_service import gemini_service
 
 def run_evaluation_in_background(plan: DuotrakGoalPlan):
     """The function that will be run in the background."""
@@ -178,3 +178,106 @@ async def create_goal_plan(
     except Exception as e:
         logger.error(f"V3 Goal plan creation failed for session {session_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create goal plan.")
+
+
+# ============================================================================
+# Onboarding Plan Generation Endpoint (Simplified for Onboarding Flow)
+# ============================================================================
+
+ONBOARDING_PLAN_PROMPT = """You are a goal coach helping someone set up their first goal on DuoTrak, a partner accountability app.
+
+Based on the goal template provided, generate a structured plan with 3-5 specific, actionable tasks.
+
+Goal Title: {goal_title}
+Goal Description: {goal_description}
+{context_section}
+
+Respond with a JSON object containing:
+1. "goalType": A single category word (e.g., "mindfulness", "fitness", "learning", "relationship", "financial")
+2. "tasks": An array of task objects, each with:
+   - "taskName": A clear, actionable task name
+   - "description": A 1-2 sentence description of what to do
+   - "repeatFrequency": One of "daily", "weekly", or "once"
+
+Make the tasks progressive and achievable. The first task should be very simple to build momentum.
+Respond ONLY with the JSON object, no additional text."""
+
+
+@router.post("/onboarding/plan", response_model=OnboardingPlanResponse)
+async def generate_onboarding_plan(
+    request: OnboardingPlanRequest,
+):
+    """
+    Generate a personalized onboarding plan from a goal template.
+    
+    This endpoint is designed for the onboarding flow where users select
+    from pre-defined goal templates and optionally provide contextual answers.
+    It uses Gemini AI to generate specific, actionable tasks.
+    
+    **Note:** This endpoint does not require authentication to allow
+    users to generate plans during the onboarding process before full account setup.
+    """
+    try:
+        logger.info(f"Generating onboarding plan for goal: {request.goalTitle}")
+        
+        # Build context section from answers if provided
+        context_section = ""
+        if request.contextualAnswers:
+            context_lines = [f"- {k}: {v}" for k, v in request.contextualAnswers.items()]
+            context_section = "Additional Context:\n" + "\n".join(context_lines)
+        
+        # Format the prompt
+        prompt = ONBOARDING_PLAN_PROMPT.format(
+            goal_title=request.goalTitle,
+            goal_description=request.goalDescription,
+            context_section=context_section
+        )
+        
+        # Use Gemini Flash for fast response
+        model = gemini_service.get_flash_model(use_zero_thinking_budget=True)
+        
+        # Invoke the model
+        response = await model.ainvoke(prompt)
+        
+        # Parse the JSON response
+        try:
+            # Extract content from AIMessage
+            response_text = response.content if hasattr(response, 'content') else str(response)
+            # Clean up potential markdown code blocks
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0]
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0]
+            
+            plan_data = json.loads(response_text.strip())
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse AI response as JSON: {response_text[:500]}")
+            raise HTTPException(
+                status_code=500,
+                detail="AI generated an invalid response format. Please try again."
+            )
+        
+        # Validate and structure the response
+        tasks = [
+            OnboardingPlanTask(
+                taskName=task.get("taskName", "Unnamed Task"),
+                description=task.get("description", ""),
+                repeatFrequency=task.get("repeatFrequency", "daily")
+            )
+            for task in plan_data.get("tasks", [])
+        ]
+        
+        return OnboardingPlanResponse(
+            goalType=plan_data.get("goalType", "general"),
+            tasks=tasks
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Onboarding plan generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate onboarding plan: {str(e)}"
+        )
+

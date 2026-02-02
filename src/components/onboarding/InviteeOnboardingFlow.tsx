@@ -8,85 +8,65 @@ import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useInvitation } from '@/contexts/invitation-context';
 import { useUser } from '@/contexts/UserContext';
-import WelcomeStep from './WelcomeStep';
-import GoalDiscoveryStep from './GoalDiscoveryStep';
-import IntelligentGoalCreationStep from './IntelligentGoalCreationStep';
-import PlanReviewStep from './PlanReviewStep';
+import QuickWelcomeStep from './QuickWelcomeStep';
+import GoalSelectionStep from './GoalSelectionStep';
 import FirstTaskStep from './FirstTaskStep';
-import DraftReviewStep from './DraftReviewStep';
+import IntelligentGoalCreationStep from './IntelligentGoalCreationStep';
 import { GoalCreate } from '@/schemas/goal';
-import { Check, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Check, ArrowLeft, ArrowRight, Sparkles, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
-const baseSteps = [
-  {
-    id: 'welcome',
-    title: 'Welcome',
-    component: WelcomeStep,
-  },
-  {
-    id: 'discovery',
-    title: 'Discover',
-    component: GoalDiscoveryStep,
-  },
-  {
-    id: 'creation',
-    title: 'Define Goal',
-    component: IntelligentGoalCreationStep,
-  },
-  {
-    id: 'reviewPlan',
-    title: 'Review Plan',
-    component: PlanReviewStep,
-  },
-  {
-    id: 'task',
-    title: 'First Task',
-    component: FirstTaskStep,
-  },
+interface GoalDraft {
+  title: string;
+  description: string;
+  category: string;
+  frequency?: string;
+}
+
+// Streamlined 3-step flow
+const STEPS = [
+  { id: 'welcome', title: 'Welcome' },
+  { id: 'goal', title: 'Choose Goal' },
+  { id: 'task', title: 'First Task' },
 ];
 
 export default function InviteeOnboardingFlow() {
   const queryClient = useQueryClient();
-  const { userDetails } = useUser(); // Get user details to access partner's name
-  const { goalDrafts } = useInvitation(); // Get drafts from context
-
-  // Dynamically construct steps based on whether drafts exist
-  const steps = [
-    baseSteps[0], // Welcome step is always first
-    ...(goalDrafts && goalDrafts.length > 0
-      ? [{ id: 'review', title: 'Review Drafts', component: DraftReviewStep }]
-      : []), // Add review step if drafts exist
-    ...baseSteps.slice(1), // Add the rest of the steps
-  ];
+  const { userDetails } = useUser();
+  const { goalDrafts } = useInvitation();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [isStepValid, setIsStepValid] = useState(false);
+  const [showCustomGoal, setShowCustomGoal] = useState(false);
+  const [xpEarned, setXpEarned] = useState(0);
+
+  // Onboarding data state
   const [onboardingData, setOnboardingData] = useState<{
-    selectedCategories: string[];
+    nickname: string;
     goalTitle: string;
-    goalDescription: string;
+    selectedGoal: GoalDraft | null;
+    customGoal: GoalDraft | null;
+    generatedPlan: { goalType: string; tasks: any[] } | null;
     firstTask: {
       title: string;
       description: string;
       scheduledTime: string;
       requiresVerification: boolean;
     };
-    generatedPlan: { goalType: string; tasks: any[] } | null;
   }>({
-    selectedCategories: [],
+    nickname: '',
     goalTitle: '',
-    goalDescription: '',
+    selectedGoal: null,
+    customGoal: null,
+    generatedPlan: null,
     firstTask: {
       title: '',
       description: '',
       scheduledTime: '',
       requiresVerification: false,
     },
-    generatedPlan: null,
   });
-  const [isStepValid, setIsStepValid] = useState(false);
-
 
   const { mutate: completeOnboarding, isPending: isCompleting } = useMutation({
     mutationFn: () => apiClient.completePartneredOnboarding(),
@@ -101,6 +81,7 @@ export default function InviteeOnboardingFlow() {
   const { mutate: createGoal, isPending: isCreating } = useMutation({
     mutationFn: (data: any) => apiClient.createOnboardingGoal(data.goal, data.task),
     onSuccess: () => {
+      setXpEarned((prev) => prev + 25); // +25 XP for first task
       toast.success('Your first goal has been created!');
       completeOnboarding();
     },
@@ -109,12 +90,16 @@ export default function InviteeOnboardingFlow() {
     },
   });
 
-  const updateData = useCallback((updates: any) => {
+  const updateData = useCallback((updates: Partial<typeof onboardingData>) => {
     setOnboardingData((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
+    if (currentStep < STEPS.length - 1) {
+      // Award XP on step completion
+      if (currentStep === 0) setXpEarned((prev) => prev + 50); // +50 XP for welcome
+      if (currentStep === 1) setXpEarned((prev) => prev + 100); // +100 XP for goal selection
+
       setCompletedSteps((prev) => [...prev, currentStep]);
       setCurrentStep(currentStep + 1);
       setIsStepValid(false);
@@ -125,44 +110,55 @@ export default function InviteeOnboardingFlow() {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
       setIsStepValid(true);
+      setShowCustomGoal(false);
     }
   };
 
-  const handleDraftSelected = (draft: any) => {
-    // Populate data from the selected draft
-    updateData({ goalTitle: draft.title, goalDescription: draft.description });
-    // Find the index of the final task step and jump to it
-    const taskStepIndex = steps.findIndex(step => step.id === 'task');
-    if (taskStepIndex !== -1) {
-      setCompletedSteps((prev) => [...prev, currentStep]);
-      setCurrentStep(taskStepIndex);
-      setIsStepValid(false);
-    }
+  const handleGoalSelected = (goal: GoalDraft) => {
+    updateData({
+      selectedGoal: goal,
+      goalTitle: goal.title,
+      generatedPlan: {
+        goalType: goal.category,
+        tasks: [
+          {
+            taskName: `Start ${goal.title.toLowerCase()}`,
+            description: goal.description,
+            repeatFrequency: goal.frequency || 'daily',
+          },
+        ],
+      },
+    });
+    setIsStepValid(true);
   };
 
-  const handleCreateNew = () => {
-    // Simply move to the next step in the flow, which will be the discovery step
-    handleNext();
+  const handleCreateCustomGoal = () => {
+    setShowCustomGoal(true);
+    setIsStepValid(false);
   };
 
-  const handlePlanGenerated = (plan: any) => {
+  const handleCustomPlanGenerated = (plan: any) => {
     updateData({ generatedPlan: plan });
+    setShowCustomGoal(false);
+    setIsStepValid(true);
     handleNext();
   };
 
   const handleFinish = () => {
-    const { generatedPlan, goalTitle } = onboardingData;
-    if (!generatedPlan) {
-      toast.error("No plan generated. Please go back and create a plan.");
+    const { selectedGoal, generatedPlan } = onboardingData;
+    const goalToUse = selectedGoal;
+
+    if (!goalToUse || !generatedPlan) {
+      toast.error('Please select a goal first.');
       return;
     }
 
     const goalData: GoalCreate = {
-      name: goalTitle,
-      category: generatedPlan.goalType, // Using goalType as category
-      icon: null, // Default icon
-      color: null, // Default color
-      isHabit: generatedPlan.goalType === 'Habit',
+      name: goalToUse.title,
+      category: generatedPlan.goalType,
+      icon: null,
+      color: null,
+      isHabit: goalToUse.frequency === 'daily' || goalToUse.frequency === 'weekly',
       tasks: generatedPlan.tasks.map((task: any) => ({
         name: task.taskName,
         description: task.description,
@@ -177,97 +173,174 @@ export default function InviteeOnboardingFlow() {
     completeOnboarding();
   };
 
-  const progress = ((currentStep + 1) / steps.length) * 100;
-  const CurrentStepComponent = steps[currentStep].component;
+  const progress = ((currentStep + 1) / STEPS.length) * 100;
   const isPending = isCompleting || isCreating;
+  const partnerName = userDetails?.partner_full_name || 'Your partner';
 
-  const currentStepProps: any = {
-    data: onboardingData,
-    updateData,
-    onValidationChange: setIsStepValid,
+  // Render appropriate step content
+  const renderStepContent = () => {
+    // If showing custom goal creation, use the AI step
+    if (showCustomGoal) {
+      return (
+        <IntelligentGoalCreationStep
+          onPlanGenerated={handleCustomPlanGenerated}
+        />
+      );
+    }
+
+    switch (STEPS[currentStep].id) {
+      case 'welcome':
+        return (
+          <QuickWelcomeStep
+            data={{ nickname: onboardingData.nickname }}
+            updateData={(updates) => updateData(updates)}
+            onValidationChange={setIsStepValid}
+          />
+        );
+      case 'goal':
+        return (
+          <GoalSelectionStep
+            drafts={goalDrafts}
+            partnerName={partnerName}
+            onSelectGoal={handleGoalSelected}
+            onCreateNew={handleCreateCustomGoal}
+            onValidationChange={setIsStepValid}
+          />
+        );
+      case 'task':
+        return (
+          <FirstTaskStep
+            data={onboardingData}
+            updateData={updateData}
+            onValidationChange={setIsStepValid}
+          />
+        );
+      default:
+        return null;
+    }
   };
-
-  if (steps[currentStep].id === 'review') {
-    Object.assign(currentStepProps, {
-      drafts: goalDrafts,
-      partnerName: userDetails?.partner_full_name || 'Your partner',
-      onSelectDraft: handleDraftSelected,
-      onCreateNew: handleCreateNew
-    });
-  } else if (steps[currentStep].id === 'creation') {
-    currentStepProps.onPlanGenerated = handlePlanGenerated;
-  } else if (steps[currentStep].id === 'reviewPlan') {
-    currentStepProps.plan = onboardingData.generatedPlan;
-  }
-
 
   return (
     <div className="min-h-screen bg-[var(--theme-background)] flex flex-col font-sans">
+      {/* Header with progress */}
       <div className="bg-[var(--theme-card)] shadow-sm border-b border-[var(--theme-border)]">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">Set Up Your First Goal</h1>
-            <span className="text-sm text-[var(--theme-muted-foreground)]">
-              Step {currentStep + 1} of {steps.length}
-            </span>
-          </div>
-          <div className="space-y-2">
-            <Progress value={progress} className="h-2 bg-[var(--theme-muted)]" />
-            <div className="flex justify-between">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex flex-col items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${completedSteps.includes(index)
-                      ? 'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)]'
-                      : index === currentStep
-                        ? 'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] ring-2 ring-[var(--theme-primary)] ring-offset-2'
-                        : 'bg-[var(--theme-muted)] text-[var(--theme-muted-foreground)]'
-                      }`}
-                  >
-                    {completedSteps.includes(index) ? <Check className="w-4 h-4" /> : index + 1}
-                  </div>
-                  <span className="text-xs text-[var(--theme-muted-foreground)] mt-1 hidden sm:block">{step.title}</span>
-                </div>
-              ))}
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">
+                {showCustomGoal ? 'Create Your Goal' : "Let's Get Started"}
+              </h1>
+              {/* XP Counter */}
+              {xpEarned > 0 && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex items-center gap-1 bg-gradient-to-r from-purple-100 to-pink-100 px-3 py-1 rounded-full border border-purple-200"
+                >
+                  <Zap className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-bold text-purple-700">{xpEarned} XP</span>
+                </motion.div>
+              )}
             </div>
+            {!showCustomGoal && (
+              <span className="text-sm text-[var(--theme-muted-foreground)]">
+                Step {currentStep + 1} of {STEPS.length}
+              </span>
+            )}
           </div>
+
+          {!showCustomGoal && (
+            <div className="space-y-2">
+              <Progress value={progress} className="h-2 bg-[var(--theme-muted)]" />
+              <div className="flex justify-between">
+                {STEPS.map((step, index) => (
+                  <div key={step.id} className="flex flex-col items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${completedSteps.includes(index)
+                        ? 'bg-green-500 text-white'
+                        : index === currentStep
+                          ? 'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] ring-2 ring-[var(--theme-primary)] ring-offset-2'
+                          : 'bg-[var(--theme-muted)] text-[var(--theme-muted-foreground)]'
+                        }`}
+                    >
+                      {completedSteps.includes(index) ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    <span className="text-xs text-[var(--theme-muted-foreground)] mt-1 hidden sm:block">
+                      {step.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Main content */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentStep}
+              key={showCustomGoal ? 'custom' : currentStep}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <CurrentStepComponent {...currentStepProps} />
+              {renderStepContent()}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
+      {/* Footer navigation */}
       <div className="bg-[var(--theme-background)] border-t border-[var(--theme-border)] p-4">
         <div className="max-w-4xl mx-auto flex justify-between">
-          <Button variant="ghost" onClick={handleSkip} disabled={isPending} className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-foreground)]">
+          <Button
+            variant="ghost"
+            onClick={handleSkip}
+            disabled={isPending}
+            className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-foreground)]"
+          >
             Skip for now
           </Button>
           <div className="flex gap-4">
-            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0 || isPending} className="border-[var(--theme-border)]">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 0 || isPending}
+              className="border-[var(--theme-border)]"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Previous
             </Button>
-            {currentStep < steps.length - 1 ? (
-              <Button onClick={handleNext} disabled={!isStepValid || isPending} className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-primary)]/90">
+            {currentStep < STEPS.length - 1 ? (
+              <Button
+                onClick={handleNext}
+                disabled={!isStepValid || isPending || showCustomGoal}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+              >
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleFinish} disabled={!isStepValid || isPending} className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-primary)]/90">
-                {isPending ? 'Finishing...' : 'Finish & Create Goal'}
+              <Button
+                onClick={handleFinish}
+                disabled={!isStepValid || isPending}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+              >
+                {isPending ? (
+                  'Creating...'
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Finish & Start! (+25 XP)
+                  </>
+                )}
               </Button>
             )}
           </div>

@@ -59,11 +59,27 @@ export default function LoginForm() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Create session cookie by calling the login API
+      const idToken = await userCredential.user.getIdToken();
+      const sessionResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!sessionResponse.ok) {
+        const errorData = await sessionResponse.json();
+        throw new Error(errorData.error || 'Failed to create session');
+      }
+
       await handleAuthSuccess();
-    } catch (error) {
-      setError('Invalid email or password. Please try again.');
-      toast.error('Invalid email or password. Please try again.');
+    } catch (error: any) {
+      const friendlyError = error.code?.startsWith('auth/')
+        ? 'Invalid email or password. Please try again.'
+        : error.message || 'Login failed. Please try again.';
+      setError(friendlyError);
+      toast.error(friendlyError);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +90,20 @@ export default function LoginForm() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+
+      // Create session cookie by calling the login API
+      const idToken = await result.user.getIdToken();
+      const sessionResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!sessionResponse.ok) {
+        const errorData = await sessionResponse.json();
+        throw new Error(errorData.error || 'Failed to create session');
+      }
+
       await handleAuthSuccess();
     } catch (err: any) {
       let friendlyError = 'An unexpected error occurred during Google Sign-In.';
@@ -82,6 +111,8 @@ export default function LoginForm() {
         friendlyError = 'Login popup blocked. Please allow popups for this site and try again.';
       } else if (err.code === 'auth/popup-closed-by-user') {
         friendlyError = 'Login cancelled. You can try again whenever you are ready.';
+      } else if (!err.code?.startsWith('auth/')) {
+        friendlyError = err.message || 'Login failed. Please try again.';
       }
       setError(friendlyError);
       toast.error(friendlyError);

@@ -108,6 +108,20 @@ export default function SignupPage() {
       });
       persistentLog('Profile updated with display name.');
 
+      // Create session cookie by calling the login API
+      persistentLog('Creating session cookie...');
+      const idToken = await userCredential.user.getIdToken();
+      const sessionResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!sessionResponse.ok) {
+        const errorData = await sessionResponse.json();
+        throw new Error(errorData.error || 'Failed to create session');
+      }
+      persistentLog('Session cookie created successfully.');
+
       await handleAuthSuccess();
 
     } catch (error: any) {
@@ -127,6 +141,7 @@ export default function SignupPage() {
     }
   };
 
+
   const handleGoogleSignUp = async () => {
     clearPersistentLogs();
     persistentLog('--- Starting Google Sign-Up ---');
@@ -134,8 +149,23 @@ export default function SignupPage() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
       persistentLog('Google Sign-Up Popup Successful');
+
+      // Create session cookie by calling the login API
+      persistentLog('Creating session cookie...');
+      const idToken = await result.user.getIdToken();
+      const sessionResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!sessionResponse.ok) {
+        const errorData = await sessionResponse.json();
+        throw new Error(errorData.error || 'Failed to create session');
+      }
+      persistentLog('Session cookie created successfully.');
+
       await handleAuthSuccess();
 
     } catch (error: any) {
@@ -159,6 +189,7 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+
 
   const shakeVariants = {
     shake: { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.5 } },
