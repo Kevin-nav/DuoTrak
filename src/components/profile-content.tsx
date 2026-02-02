@@ -56,6 +56,19 @@ export default function ProfileContent() {
     }
   }, [userDetails])
 
+  // --- Avatar Logic ---
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
+
   if (isLoading || !userDetails) {
     return <FullPageSpinner />
   }
@@ -195,19 +208,6 @@ export default function ProfileContent() {
       console.error("Failed to update timezone:", error)
     }
   }
-
-  // --- Avatar Logic ---
-  useEffect(() => {
-    if (selectedFile) {
-      const url = URL.createObjectURL(selectedFile);
-      setPreviewUrl(url);
-      return () => {
-        URL.revokeObjectURL(url);
-      }
-    } else {
-      setPreviewUrl(null);
-    }
-  }, [selectedFile]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

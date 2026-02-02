@@ -145,12 +145,15 @@ export const current = query({
   },
 });
 
-export const generateUploadUrl = mutation(async (ctx) => {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Unauthenticated call to generateUploadUrl");
-  }
-  return await ctx.storage.generateUploadUrl();
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthenticated call to generateUploadUrl");
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
 });
 
 /**
