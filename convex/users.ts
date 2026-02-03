@@ -126,13 +126,33 @@ export const current = query({
       .filter((q) => q.eq(q.field("status"), "pending"))
       .first();
 
+    let profilePictureUrl = user.profile_picture_url;
+    if (user.profile_picture_storage_id) {
+      const url = await ctx.storage.getUrl(user.profile_picture_storage_id);
+      if (url) {
+        profilePictureUrl = url;
+      }
+    }
+
     return {
       id: user._id,
       ...user,
       ...partnerDetails,
+      profile_picture_url: profilePictureUrl,
       sent_invitation: sentInvite,
       received_invitation: receivedInvite,
     };
+  },
+});
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthenticated call to generateUploadUrl");
+    }
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
@@ -147,7 +167,8 @@ export const update = mutation({
     timezone: v.optional(v.string()),
     theme: v.optional(v.string()),
     notifications_enabled: v.optional(v.boolean()),
-    // Add other fields as necessary
+    profile_picture_url: v.optional(v.string()),
+    profile_picture_storage_id: v.optional(v.union(v.id("_storage"), v.null())),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

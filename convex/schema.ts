@@ -13,6 +13,7 @@ export default defineSchema({
     // Profile
     bio: v.optional(v.string()),
     profile_picture_url: v.optional(v.string()),
+    profile_picture_storage_id: v.optional(v.union(v.id("_storage"), v.null())),
     timezone: v.string(),
     notifications_enabled: v.boolean(),
     notification_time: v.string(),
