@@ -29,3 +29,9 @@ supabase
 tenacity
 uvicorn[standard]
 boto3
+
+# OpenTelemetry
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-sqlalchemy

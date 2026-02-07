@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery } from "convex/react"
+import { api } from "../../../convex/_generated/api"
 import {
   Clock,
   Users,
   Target,
   Share2,
   Copy,
-  Mail,
-  MessageCircle,
   Lightbulb,
   Heart,
   Trophy,
@@ -72,12 +71,12 @@ const goalCategories = [
 ]
 
 export default function InteractiveWaitingRoom() {
-  const { invitationToken, goalDrafts, addGoalDraft, removeGoalDraft, partnerInfo } = useInvitation()
+  const { invitationToken, goalDrafts, addGoalDraft, removeGoalDraft } = useInvitation()
   const router = useRouter()
 
   const [currentTip, setCurrentTip] = useState(0)
   const [showGoalDraft, setShowGoalDraft] = useState(false)
-  const [invitationLink] = useState(`https://duotrak.app/invite/${invitationToken}`)
+  const [invitationLink, setInvitationLink] = useState("")
   const [linkCopied, setLinkCopied] = useState(false)
   const [isNudging, setIsNudging] = useState(false);
   const [showShareDrawer, setShowShareDrawer] = useState(false);
@@ -91,34 +90,47 @@ export default function InteractiveWaitingRoom() {
     frequency: "daily",
   })
 
-  const { data: invitation, isLoading: isInvitationLoading, refetch: refetchInvitation } = useQuery({
-    queryKey: ['sentInvitationStatus', invitationToken],
-    queryFn: () => apiClient.getSentInvitationStatus(),
-    enabled: !!invitationToken, // Only run if we have an invitation token
-    refetchInterval: 5000, // Poll every 5 seconds
-    refetchIntervalInBackground: true,
-  })
+  // Use Convex query for pending invitation status
+  const invitation = useQuery(api.invitations.getPendingSentInvitation);
+
+  useEffect(() => {
+    if (invitation?.token) {
+      setInvitationLink(`https://duotrak.org/invite/${invitation.token}`)
+    }
+  }, [invitation]);
 
   const [timeRemaining, setTimeRemaining] = useState("");
 
   // Derive partner status from the invitation data
-  const partnerStatus = invitation?.status === 'viewed'
-    ? "viewing"
-    : invitation?.status === 'accepted'
-      ? "completed"
-      : "not-viewed"
+  // Logic: 
+  // - If invitation exists and status is 'pending' -> check if viewed_at is set
+  // - If invitation is gone or status is 'accepted' -> completed
+  const partnerStatus = useMemo(() => {
+    if (!invitation) return "loading";
+
+    if (invitation.status === 'accepted') return "completed";
+
+    // If we have an invitation and it's pending
+    if (invitation.status === 'pending') {
+      if (invitation.viewedAt) return "viewing";
+      return "not-viewed";
+    }
+
+    return "not-viewed";
+  }, [invitation]);
+
 
   const canNudge = useMemo(() => {
-    if (!invitation?.last_nudged_at) return true;
-    const hoursSinceLastNudge = differenceInHours(new Date(), new Date(invitation.last_nudged_at));
+    if (!invitation?.lastNudgedAt) return true;
+    const hoursSinceLastNudge = differenceInHours(new Date(), new Date(invitation.lastNudgedAt));
     return hoursSinceLastNudge >= 24;
-  }, [invitation?.last_nudged_at]);
+  }, [invitation?.lastNudgedAt]);
 
   useEffect(() => {
-    if (invitation?.expires_at) {
+    if (invitation?.expiresAt) {
       const interval = setInterval(() => {
         const now = new Date().getTime();
-        const expiry = new Date(invitation.expires_at).getTime();
+        const expiry = new Date(invitation.expiresAt!).getTime();
         const distance = expiry - now;
 
         if (distance < 0) {
@@ -140,11 +152,11 @@ export default function InteractiveWaitingRoom() {
   }, [invitation]);
 
   useEffect(() => {
-    if (partnerStatus === "completed") {
+    if (userDetails?.partnership_status === 'active' || invitation?.status === 'accepted') {
       toast.success("Your partner has accepted the invitation! Redirecting...")
-      router.push('/dashboard') // Or to a partnership confirmation page
+      router.push('/dashboard')
     }
-  }, [partnerStatus, router])
+  }, [userDetails?.partnership_status, invitation?.status, router])
 
   // Rotate tips every 10 seconds
   useEffect(() => {
@@ -158,9 +170,10 @@ export default function InteractiveWaitingRoom() {
     if (!invitation?.id || !canNudge) return;
     setIsNudging(true);
     try {
-      await apiClient.nudgePartner(invitation.id);
+      // Still using API client for nudge as it triggers emails/notifications
+      // We could move this to a Convex action later
+      await apiClient.nudgePartner(invitation.id as unknown as string);
       toast.success("Reminder sent!", { description: "Your partner has been gently nudged." });
-      refetchInvitation(); // Refetch to get the new last_nudged_at time
     } catch (error: any) {
       toast.error("Failed to send nudge", { description: error.message });
     } finally {
@@ -178,19 +191,6 @@ export default function InteractiveWaitingRoom() {
     }
   }
 
-  const shareViaEmail = () => {
-    const subject = encodeURIComponent("Let's achieve our goals together on DuoTrak!")
-    const body = encodeURIComponent(
-      `Hi! I'd love for us to work on our goals together using DuoTrak. It's a platform that helps partners stay accountable and motivated.\n\nJoin me here: ${invitationLink}\n\nLooking forward to achieving great things together!`,
-    )
-    window.open(`mailto:?subject=${subject}&body=${body}`)
-  }
-
-  const shareViaText = () => {
-    const text = encodeURIComponent(`Let's achieve our goals together! Join me on DuoTrak: ${invitationLink}`)
-    window.open(`sms:?body=${text}`)
-  }
-
   const handleSaveGoalDraft = () => {
     if (goalDraft.title.trim() && goalDraft.description.trim()) {
       addGoalDraft(goalDraft)
@@ -206,7 +206,7 @@ export default function InteractiveWaitingRoom() {
       case "viewing":
         return "🎉 Your partner is viewing the invitation!"
       case "completed":
-        return "🚀 Your partner has joined! Redirecting to partnership confirmation..."
+        return "🚀 Your partner has joined! Redirecting..."
       default:
         return "Waiting for your partner..."
     }
@@ -262,7 +262,7 @@ export default function InteractiveWaitingRoom() {
                         : "bg-green-500"
                       }`}
                   />
-                  {partnerStatus !== "not-viewed" && (
+                  {partnerStatus !== "not-viewed" && partnerStatus !== "loading" && (
                     <div
                       className={`absolute w-4 h-4 rounded-full animate-ping ${partnerStatus === "viewing"
                         ? "bg-blue-400"
@@ -550,4 +550,3 @@ export default function InteractiveWaitingRoom() {
     </div>
   )
 }
-

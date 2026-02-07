@@ -8,6 +8,7 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { MockAuthIndicator } from "@/components/dev/MockAuthIndicator"
 import ConvexClientProvider from "./ConvexClientProvider"
 import { UserSync } from "@/components/UserSync"
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] })
 
@@ -40,6 +41,7 @@ export default function RootLayout({
             </Providers>
           </ConvexClientProvider>
         </ErrorBoundary>
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID!} />
       </body>
     </html>
   )

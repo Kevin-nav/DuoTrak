@@ -87,6 +87,10 @@ const nextConfig = {
     // Only run ESLint on src directory
     dirs: ['src'],
   },
+  output: 'standalone',
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
 console.log('--- [next.config.mjs] End of file ---');

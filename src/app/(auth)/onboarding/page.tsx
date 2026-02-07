@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { Loader2, Rocket, Users, Target } from 'lucide-react';
 import Link from 'next/link';
+import { useMutation } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 const onboardingSteps = [
   {
@@ -38,6 +39,9 @@ function OnboardingContent() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Use Convex mutation for accepting invitation
+  const acceptInvitationMutation = useMutation(api.invitations.accept);
+
   const isLastStep = currentStep === onboardingSteps.length - 1;
 
   const handleNext = () => {
@@ -58,18 +62,33 @@ function OnboardingContent() {
 
     setIsProcessing(true);
     try {
-      // Step 1: Accept the invitation to form the partnership
-      await apiClient.acceptInvitation(token);
+      // Accept the invitation via Convex - this creates the partnership
+      await acceptInvitationMutation({ token });
       toast.success('Partnership created successfully!');
 
-      // Step 2: Mark onboarding as complete
-      // This is implicitly handled by the backend upon partnership creation,
-      // but we could add an explicit call if needed, e.g., apiClient.completeOnboarding();
-      // For now, we assume the backend sets the flag.
+      // Clean up localStorage
+      localStorage.removeItem('duotrak-partner-info');
+      localStorage.removeItem('duotrak-goal-drafts');
+      localStorage.removeItem('duotrak-invitation-token');
+      localStorage.removeItem('inviterOnboardingStep');
 
-      // Step 3: Redirect to the dashboard
+      // Redirect to the dashboard
       router.push('/dashboard');
     } catch (error: any) {
+      // Handle specific error cases
+      if (error.message?.includes('already have a partner')) {
+        toast.error('You are already in a partnership. Redirecting to dashboard...');
+        router.push('/dashboard');
+        return;
+      }
+      if (error.message?.includes('no longer valid')) {
+        toast.error('This invitation has already been accepted or is no longer valid.');
+        return;
+      }
+      if (error.message?.includes('expired')) {
+        toast.error('This invitation has expired. Please ask your partner to send a new one.');
+        return;
+      }
       toast.error(error.message || 'Failed to complete setup. Please try again.');
     } finally {
       setIsProcessing(false);
@@ -130,11 +149,11 @@ function OnboardingContent() {
 }
 
 export default function OnboardingPage() {
-    return (
-        <div className="container mx-auto flex items-center justify-center min-h-screen">
-            <Suspense fallback={<div>Loading...</div>}>
-                <OnboardingContent />
-            </Suspense>
-        </div>
-    )
+  return (
+    <div className="container mx-auto flex items-center justify-center min-h-screen p-4">
+      <Suspense fallback={<div className="flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+        <OnboardingContent />
+      </Suspense>
+    </div>
+  );
 }

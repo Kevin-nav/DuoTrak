@@ -50,7 +50,7 @@ export class ApiClient {
       }
 
       const data = await response.json();
-      
+
       // Update CSRF token
       if (typeof window !== 'undefined' && data.csrf_token) {
         localStorage.setItem('csrf_token', data.csrf_token);
@@ -71,7 +71,7 @@ export class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     // Prepare headers
     const headers = new Headers({
       'Content-Type': 'application/json',
@@ -98,26 +98,26 @@ export class ApiClient {
       // Handle 401 - try to refresh session once if it looks like an expired token
       if (response.status === 401 && !new Headers(options.headers).get('X-No-Refresh')) {
         try {
-            const errorData = await response.clone().json();
-            if (errorData.detail === "Session expired") {
-                await this.refreshSession();
-                
-                // Retry the original request
-                const retryHeaders = new Headers(headers);
-                const newCsrfToken = this.getCsrfToken();
-                if (newCsrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {
-                  retryHeaders.set('X-CSRF-Token', newCsrfToken);
-                }
+          const errorData = await response.clone().json();
+          if (errorData.detail === "Session expired") {
+            await this.refreshSession();
 
-                const retryResponse = await fetch(url, {
-                  ...requestOptions,
-                  headers: retryHeaders,
-                });
-
-                return this.handleResponse<T>(retryResponse);
+            // Retry the original request
+            const retryHeaders = new Headers(headers);
+            const newCsrfToken = this.getCsrfToken();
+            if (newCsrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {
+              retryHeaders.set('X-CSRF-Token', newCsrfToken);
             }
+
+            const retryResponse = await fetch(url, {
+              ...requestOptions,
+              headers: retryHeaders,
+            });
+
+            return this.handleResponse<T>(retryResponse);
+          }
         } catch (e) {
-            // Could not parse JSON body, or other error, proceed to handle as a normal error
+          // Could not parse JSON body, or other error, proceed to handle as a normal error
         }
       }
 
@@ -211,14 +211,23 @@ export class ApiClient {
     return this.delete(`/api/v1/partner-invitations/invitations/${invitationId}`);
   }
 
+  /**
+   * @deprecated Use Convex api.invitations.getByToken instead
+   */
   async getPublicInvitationDetails(token: string): Promise<{ sender_name: string; sender_profile_picture_url?: string; receiver_email: string; custom_message?: string; }> {
     return this.get(`/api/v1/partner-invitations/details/${token}`);
   }
 
+  /**
+   * @deprecated Use Convex api.users.checkStatusByEmail instead
+   */
   async getUserStatusByEmail(email: string): Promise<{ user_exists: boolean; partnership_status: string | null }> {
     return this.get(`/api/v1/users/status-by-email?email=${encodeURIComponent(email)}`);
   }
 
+  /**
+   * @deprecated Use Convex api.invitations.accept instead
+   */
   async acceptInvitation(token: string): Promise<any> {
     return this.post('/api/v1/partner-invitations/accept', { invitation_token: token });
   }
@@ -231,10 +240,16 @@ export class ApiClient {
     return this.patch('/api/v1/users/me/complete-onboarding');
   }
 
+  /**
+   * @deprecated Use Convex api.invitations.getPendingSentInvitation instead
+   */
   async getSentInvitationStatus(): Promise<any> {
     return this.get('/api/v1/partner-invitations/me/sent-status');
   }
 
+  /**
+   * @deprecated Use Convex api.invitations.markAsViewed instead
+   */
   async markInvitationAsViewed(token: string): Promise<any> {
     return this.patch(`/api/v1/partner-invitations/${token}/viewed`);
   }

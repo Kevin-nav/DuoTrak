@@ -1,5 +1,118 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+// ============================================
+// QUERIES - Public (no auth required for some)
+// ============================================
+
+/**
+ * Get invitation details by token (public query for invite-acceptance page).
+ * Returns sender info and invitation details without requiring authentication.
+ */
+export const getByToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db
+      .query("partner_invitations")
+      .withIndex("by_token", (q) => q.eq("invitation_token", args.token))
+      .first();
+
+    if (!invitation) {
+      return { error: "INVITATION_NOT_FOUND", invitation: null };
+    }
+
+    if (invitation.status !== "pending") {
+      return { error: "INVITATION_ALREADY_USED", invitation: null };
+    }
+
+    if (invitation.expires_at && invitation.expires_at < Date.now()) {
+      return { error: "INVITATION_EXPIRED", invitation: null };
+    }
+
+    // Get sender details
+    const sender = await ctx.db.get(invitation.sender_id);
+
+    return {
+      error: null,
+      invitation: {
+        senderName: sender?.full_name ?? "Your future partner",
+        senderProfilePictureUrl: sender?.profile_picture_url,
+        senderEmail: sender?.email,
+        receiverEmail: invitation.receiver_email,
+        receiverName: invitation.receiver_name,
+        customMessage: invitation.message,
+        status: invitation.status,
+        expiresAt: invitation.expires_at,
+        createdAt: invitation.updated_at,
+      },
+    };
+  },
+});
+
+/**
+ * Get the current user's pending sent invitation.
+ * Used by the waiting room to show invitation status.
+ */
+export const getPendingSentInvitation = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+      .unique();
+
+    if (!user) return null;
+
+    // Use the by_sender index for efficient querying
+    const pendingInvitation = await ctx.db
+      .query("partner_invitations")
+      .withIndex("by_sender", (q) =>
+        q.eq("sender_id", user._id).eq("status", "pending")
+      )
+      .first();
+
+    if (!pendingInvitation) return null;
+
+    return {
+      id: pendingInvitation._id,
+      receiverName: pendingInvitation.receiver_name,
+      receiverEmail: pendingInvitation.receiver_email,
+      token: pendingInvitation.invitation_token,
+      status: pendingInvitation.status,
+      expiresAt: pendingInvitation.expires_at,
+      viewedAt: pendingInvitation.viewed_at,
+      lastNudgedAt: pendingInvitation.last_nudged_at,
+      createdAt: pendingInvitation.updated_at,
+    };
+  },
+});
+
+// ============================================
+// MUTATIONS
+// ============================================
+
+/**
+ * Mark an invitation as viewed (when recipient opens the link).
+ */
+export const markAsViewed = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db
+      .query("partner_invitations")
+      .withIndex("by_token", (q) => q.eq("invitation_token", args.token))
+      .first();
+
+    if (invitation && !invitation.viewed_at) {
+      await ctx.db.patch(invitation._id, {
+        viewed_at: Date.now(),
+        updated_at: Date.now(),
+      });
+    }
+  },
+});
 
 export const create = mutation({
   args: {

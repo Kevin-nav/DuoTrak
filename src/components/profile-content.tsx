@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { useState, useEffect, useRef } from "react"
 import { UserRead } from "@/schemas/user";
-import { Settings, Palette, Bell, Shield, HelpCircle, LogOut, Edit3, Camera, ChevronRight, Mail, User, Upload, Check } from "lucide-react"
+import { Settings, Palette, Bell, Shield, HelpCircle, LogOut, Edit3, Camera, ChevronRight, Mail, User, Upload, Check, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -19,11 +19,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import FullPageSpinner from "./ui/FullPageSpinner"
-import { useMutation } from "convex/react"
+import { useAction, useMutation } from "convex/react"
 import { api } from "../../convex/_generated/api"
 import { Id } from "../../convex/_generated/dataModel"
 import { avatarLibrary } from "@/lib/avatars"
 import { cn } from "@/lib/utils"
+import { processImage, validateImage, formatFileSize } from "@/lib/imageUtils"
 
 export default function ProfileContent() {
   const { userDetails, isLoading, refetchUserDetails, signOut } = useUser()
@@ -43,8 +44,8 @@ export default function ProfileContent() {
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Convex Mutations
-  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  // Convex Mutations & Actions
+  const uploadProfilePicture = useAction(api.users.uploadProfilePicture);
   const updateUser = useMutation(api.users.update);
 
   useEffect(() => {
@@ -212,6 +213,12 @@ export default function ProfileContent() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate immediately on selection
+      const validation = validateImage(file);
+      if (!validation.valid) {
+        toast.error(validation.error);
+        return;
+      }
       setSelectedFile(file);
     }
   };
@@ -220,39 +227,40 @@ export default function ProfileContent() {
     setIsUploading(true);
     try {
       if (presetUrl) {
+        // Preset avatars - just update the URL
         await updateUser({
           profile_picture_url: presetUrl,
-          // Cast to any because generated types are not yet updated to reflect schema change (allowing null)
           profile_picture_storage_id: null as any,
         });
         toast.success("Avatar updated!");
         setIsAvatarDialogOpen(false);
       } else if (selectedFile) {
-        const postUrl = await generateUploadUrl();
-        const result = await fetch(postUrl, {
-          method: "POST",
-          headers: { "Content-Type": selectedFile.type },
-          body: selectedFile,
+        // Custom upload - process and upload to R2
+        toast.info("Processing image...");
+
+        // Process the image (resize, convert to WebP, get base64)
+        const processed = await processImage(selectedFile);
+
+        console.log(
+          `Image processed: ${formatFileSize(processed.originalSize)} → ${formatFileSize(processed.processedSize)}`
+        );
+
+        // Upload to R2 via Convex action
+        const result = await uploadProfilePicture({
+          imageBase64: processed.base64,
+          contentType: "image/webp",
         });
 
-        if (!result.ok) {
-           throw new Error(`Upload failed: ${result.statusText}`);
+        if (result.success) {
+          toast.success("Profile picture uploaded!");
+          setIsAvatarDialogOpen(false);
+          setSelectedFile(null);
+        } else {
+          throw new Error("Upload failed");
         }
-
-        const json = await result.json();
-        const { storageId } = json;
-
-        if (!storageId) {
-            throw new Error("Invalid response from upload server");
-        }
-
-        await updateUser({ profile_picture_storage_id: storageId as Id<"_storage"> });
-        toast.success("Avatar uploaded!");
-        setIsAvatarDialogOpen(false);
-        setSelectedFile(null);
       }
     } catch (error: any) {
-      console.error(error);
+      console.error("Avatar upload error:", error);
       toast.error(error.message || "Failed to update avatar.");
     } finally {
       setIsUploading(false);
@@ -298,62 +306,62 @@ export default function ProfileContent() {
                   <div className="space-y-6 py-4">
                     {/* Presets */}
                     <div>
-                        <h4 className="text-sm font-medium mb-3 text-muted-foreground">Choose from library</h4>
-                        <div className="grid grid-cols-4 gap-4">
-                            {avatarLibrary.map((avatarUrl) => (
-                            <button
-                                key={avatarUrl}
-                                onClick={() => handleSaveAvatar(avatarUrl)}
-                                className="rounded-full hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-primary"
-                                disabled={isUploading}
-                            >
-                                <img
-                                src={avatarUrl}
-                                alt="Avatar option"
-                                className="w-16 h-16 rounded-full object-cover border border-border"
-                                />
-                            </button>
-                            ))}
-                        </div>
+                      <h4 className="text-sm font-medium mb-3 text-muted-foreground">Choose from library</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        {avatarLibrary.map((avatarUrl) => (
+                          <button
+                            key={avatarUrl}
+                            onClick={() => handleSaveAvatar(avatarUrl)}
+                            className="rounded-full hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-primary"
+                            disabled={isUploading}
+                          >
+                            <img
+                              src={avatarUrl}
+                              alt="Avatar option"
+                              className="w-16 h-16 rounded-full object-cover border border-border"
+                            />
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <Separator />
 
                     {/* Upload */}
                     <div>
-                        <h4 className="text-sm font-medium mb-3 text-muted-foreground">Or upload your own</h4>
-                        <div className="flex items-center gap-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isUploading}
-                                className="w-full"
-                            >
-                                <Upload className="w-4 h-4 mr-2" />
-                                {selectedFile ? "Change File" : "Select Image"}
-                            </Button>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleFileSelect}
+                      <h4 className="text-sm font-medium mb-3 text-muted-foreground">Or upload your own</h4>
+                      <div className="flex items-center gap-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="w-full"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {selectedFile ? "Change File" : "Select Image"}
+                        </Button>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                        />
+                      </div>
+                      {selectedFile && previewUrl && (
+                        <div className="mt-4 flex flex-col items-center gap-4">
+                          <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-primary">
+                            <img
+                              src={previewUrl}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
                             />
+                          </div>
+                          <Button onClick={() => handleSaveAvatar()} disabled={isUploading}>
+                            {isUploading ? "Uploading..." : "Confirm Upload"}
+                          </Button>
                         </div>
-                        {selectedFile && previewUrl && (
-                            <div className="mt-4 flex flex-col items-center gap-4">
-                                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-primary">
-                                    <img
-                                        src={previewUrl}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <Button onClick={() => handleSaveAvatar()} disabled={isUploading}>
-                                    {isUploading ? "Uploading..." : "Confirm Upload"}
-                                </Button>
-                            </div>
-                        )}
+                      )}
                     </div>
                   </div>
                 </DialogContent>
@@ -640,8 +648,8 @@ export default function ProfileContent() {
                   {userDetails.partner_nickname // Prefer nickname if available
                     ? userDetails.partner_nickname.split(" ").map((n: string) => n[0]).join("")
                     : userDetails.partner_full_name // Fallback to full name initials
-                    ? userDetails.partner_full_name.split(" ").map((n: string) => n[0]).join("")
-                    : "P"} {/* Default fallback */}
+                      ? userDetails.partner_full_name.split(" ").map((n: string) => n[0]).join("")
+                      : "P"} {/* Default fallback */}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">

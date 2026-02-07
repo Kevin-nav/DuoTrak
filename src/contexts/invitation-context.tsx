@@ -26,6 +26,7 @@ interface InvitationContextType {
   removeGoalDraft: (index: number) => void;
   clearGoalDrafts: () => void
   setInvitationToken: (token: string) => void
+  clearAllInvitationData: () => void
 }
 
 const InvitationContext = createContext<InvitationContextType | undefined>(undefined)
@@ -116,6 +117,16 @@ export function InvitationProvider({ children }: InvitationProviderProps) {
     removeGoalDraft,
     clearGoalDrafts,
     setInvitationToken: handleSetInvitationToken,
+    clearAllInvitationData: () => {
+      setPartnerInfo(null)
+      setGoalDrafts([])
+      setInvitationToken(null)
+      setIsFromInvitation(false)
+      localStorage.removeItem("duotrak-partner-info")
+      localStorage.removeItem("duotrak-goal-drafts")
+      localStorage.removeItem("duotrak-invitation-token")
+      localStorage.removeItem("inviterOnboardingStep")
+    }
   }
 
   return <InvitationContext.Provider value={contextValue}>{children}</InvitationContext.Provider>

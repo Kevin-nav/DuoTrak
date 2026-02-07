@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: duotrak-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod" # Uncomment if using cert-manager
+spec:
+  rules:
+    - host: duotrak.com # Update to your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: duotrak-frontend
+                port:
+                  number: 80
+  # tls: # Uncomment for HTTPS
+  #   - hosts:
+  #       - duotrak.com
+  #     secretName: duotrak-tls

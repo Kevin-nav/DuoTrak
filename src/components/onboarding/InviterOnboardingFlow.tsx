@@ -10,8 +10,7 @@ import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import ProfileSetupStep from './ProfileSetupStep';
 import PreferencesStep from './PreferencesStep';
 import InteractiveWaitingRoom from './InteractiveWaitingRoom';
-import { apiClient } from '@/lib/api/client';
-import { toast } from 'sonner';
+import { useOnboardingGuard } from '@/hooks/useOnboardingGuard';
 
 const steps = [
   { id: 'profile', title: 'Your Profile', description: 'Let your partner know who you are.', component: ProfileSetupStep },
@@ -20,7 +19,8 @@ const steps = [
 ];
 
 export default function InviterOnboardingFlow() {
-  const { userDetails, isLoading: isUserLoading, refetchUserDetails } = useUser();
+  const { isLoading: isUserLoading } = useOnboardingGuard();
+  const { userDetails } = useUser();
   const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState(0);

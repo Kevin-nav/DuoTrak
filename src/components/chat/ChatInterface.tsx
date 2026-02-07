@@ -249,12 +249,13 @@ export default function ChatInterface({
                     </div>
                 </div>
                 <MessageInput
-                    onSendMessage={handleSendMessage}
+                    onSend={handleSendMessage}
                     onSendNudge={handleSendNudge}
                     onTyping={handleTyping}
                     replyingTo={replyingTo}
                     onCancelReply={handleCancelReply}
-                    placeholder={`Message ${partnerName}...`}
+                    partnerName={partnerName}
+
                     disabled={true}
                     ref={inputRef}
                 />

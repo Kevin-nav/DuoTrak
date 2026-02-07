@@ -33,7 +33,7 @@ const STEPS = [
 export default function InviteeOnboardingFlow() {
   const queryClient = useQueryClient();
   const { userDetails } = useUser();
-  const { goalDrafts } = useInvitation();
+  const { goalDrafts, clearAllInvitationData } = useInvitation();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -84,6 +84,7 @@ export default function InviteeOnboardingFlow() {
       setXpEarned((prev) => prev + 25); // +25 XP for first task
       toast.success('Your first goal has been created!');
       completeOnboarding();
+      clearAllInvitationData();
     },
     onError: (error) => {
       toast.error('Failed to create goal', { description: error.message });
@@ -171,6 +172,7 @@ export default function InviteeOnboardingFlow() {
 
   const handleSkip = () => {
     completeOnboarding();
+    clearAllInvitationData();
   };
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;

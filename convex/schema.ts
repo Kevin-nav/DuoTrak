@@ -14,6 +14,7 @@ export default defineSchema({
     bio: v.optional(v.string()),
     profile_picture_url: v.optional(v.string()),
     profile_picture_storage_id: v.optional(v.union(v.id("_storage"), v.null())),
+    profile_picture_version: v.optional(v.number()), // Cache busting version
     timezone: v.string(),
     notifications_enabled: v.boolean(),
     notification_time: v.string(),
@@ -92,11 +93,13 @@ export default defineSchema({
     expires_at: v.optional(v.number()),
     accepted_at: v.optional(v.number()),
     last_nudged_at: v.optional(v.number()),
+    viewed_at: v.optional(v.number()), // When the invitation link was first opened
 
     updated_at: v.number(),
   })
     .index("by_token", ["invitation_token"])
-    .index("by_receiver_email", ["receiver_email"]),
+    .index("by_receiver_email", ["receiver_email"])
+    .index("by_sender", ["sender_id", "status"]),
 
   // ============================================
   // CHAT SYSTEM - Real-time messaging
