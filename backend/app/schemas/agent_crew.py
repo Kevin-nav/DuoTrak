@@ -47,32 +47,35 @@ class AnswersSubmissionRequest(BaseModel):
     thinking_budget: Optional[int] = None
     enable_thinking_budget: bool = True
 
-class PartnerIntegration(BaseModel):
-    """Partner involvement suggestions specific to Duotrak."""
-    check_in_schedule: List[str] = Field(..., description="Suggested check-in times")
-    accountability_actions: List[str] = Field(..., description="Specific accountability actions")
-    support_strategies: List[str] = Field(..., description="How partner can provide support")
-    celebration_milestones: List[str] = Field(..., description="When and how to celebrate")
+class DuotrakTask(BaseModel):
+    description: str = Field(..., description="Task description")
+    success_metric: str = Field(..., description="How success is measured")
+
+
+class DuotrakMilestone(BaseModel):
+    title: str = Field(..., description="Milestone title")
+    description: str = Field(..., description="Milestone description")
+    tasks: List[DuotrakTask] = Field(..., description="Tasks to complete this milestone")
+
+
+class PartnerAccountability(BaseModel):
+    role: str = Field(..., description="Partner's accountability role")
+    check_in_schedule: str = Field(..., description="Check-in cadence")
+    shared_celebrations: str = Field(..., description="How progress is celebrated")
 
 class DuotrakGoalPlan(BaseModel):
-    """The complete goal plan optimized for partner accountability."""
+    """Canonical goal plan contract shared with frontend."""
     title: str = Field(..., description="Engaging goal title")
     description: str = Field(..., description="Detailed plan description")
-    category: str = Field(..., description="Goal category")
-    difficulty_level: float = Field(..., ge=0, le=1, description="Difficulty from 0-1")
-    estimated_duration_days: int = Field(..., description="Expected duration in days")
-    weekly_tasks: List[Dict[str, Any]] = Field(..., description="Weekly task breakdown")
-    daily_habits: List[Dict[str, Any]] = Field(..., description="Daily habit formation")
-    milestone_markers: List[Dict[str, Any]] = Field(..., description="Progress milestones")
-    partner_integration: PartnerIntegration
-    motivation_anchors: List[str] = Field(..., description="Personal motivation reminders")
-    risk_mitigation: List[Dict[str, Any]] = Field(..., description="Common pitfall solutions")
+    milestones: List[DuotrakMilestone] = Field(..., description="Milestone breakdown")
+    success_metrics: List[str] = Field(..., description="Overall success metrics")
+    partner_accountability: PartnerAccountability
 
 class GoalPlanResponse(BaseModel):
     """Final goal plan response after processing answers."""
     session_id: str
     goal_plan: DuotrakGoalPlan
-    partner_integration: PartnerIntegration
+    partner_integration: str
     personalization_score: float = Field(..., ge=0, le=10)
     execution_metadata: Dict[str, Any]
 
