@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import type { DecodedIdToken } from 'firebase-admin/auth';
+import { getSessionCookieName } from '@/lib/auth';
 
 interface CurrentUser extends DecodedIdToken {
   has_partner?: boolean;
@@ -8,7 +9,8 @@ interface CurrentUser extends DecodedIdToken {
 // This function now calls our internal API route to securely get user data
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('auth_token')?.value;
+  const sessionCookieName = getSessionCookieName();
+  const sessionCookie = cookieStore.get(sessionCookieName)?.value;
 
   if (!sessionCookie) {
     return null;
@@ -21,7 +23,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
     const response = await fetch(`${host}/api/auth/verify-session`, {
       headers: {
-        Cookie: `auth_token=${sessionCookie}`,
+        Cookie: `${sessionCookieName}=${sessionCookie}`,
       },
       // We use 'no-store' to ensure we always get the latest session status
       // and don't serve stale data from the cache.

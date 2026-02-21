@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getSessionCookieName } from '@/lib/auth';
 
 export const runtime = 'nodejs'; // Or 'edge'
 
@@ -11,7 +12,8 @@ export const runtime = 'nodejs'; // Or 'edge'
  */
 export async function GET() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('auth_token')?.value;
+  const sessionCookieName = getSessionCookieName();
+  const sessionCookie = cookieStore.get(sessionCookieName)?.value;
 
   if (!sessionCookie) {
     return NextResponse.json({ isAuthenticated: false, user: null }, { status: 401 });
@@ -24,7 +26,7 @@ export async function GET() {
 
     const response = await fetch(`${backendUrl}/api/v1/users/me`, {
       headers: {
-        'Cookie': `auth_token=${sessionCookie}`
+        'Cookie': `${sessionCookieName}=${sessionCookie}`
       }
     });
 
@@ -46,4 +48,3 @@ export async function GET() {
     );
   }
 }
-

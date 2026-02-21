@@ -57,9 +57,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "DuoTrak API"
     API_V1_STR: str = "/api/v1"
     BACKEND_CORS_ORIGINS: list[str] = ["http://127.0.0.1:3000"]
+    # Keep this aligned with src/lib/auth.ts for web/mobile session continuity.
     SESSION_COOKIE_NAME: str = "__session"
     INTERNAL_API_SECRET: str  # Required for internal API communication with Next.js
-
     class Config:
         # Pydantic-settings will automatically search for a .env file.
         case_sensitive = True
