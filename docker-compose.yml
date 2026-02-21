@@ -28,6 +28,9 @@ services:
       - OTEL_SERVICE_NAME=duotrak-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_RESOURCE_ATTRIBUTES=service.name=duotrak-backend,deployment.environment=production
+      - AI_ORCHESTRATOR=crewai
+      - AI_SHADOW_MODE=false
+      - AI_DIRECT_PYTHON_FALLBACK=true
     depends_on:
       - otel-collector
       # - db

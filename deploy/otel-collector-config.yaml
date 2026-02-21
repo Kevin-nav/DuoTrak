@@ -5,6 +5,21 @@ receivers:
       http:
 
 processors:
+  # Metric names required by cutover readiness gate:
+  # - schema_validation_success
+  # - question_endpoint_p95_seconds
+  # - plan_endpoint_p95_seconds
+  # - session_not_found_rate
+  metricstransform:
+    transforms:
+      - include: schema_validation_success
+        action: update
+      - include: question_endpoint_p95_seconds
+        action: update
+      - include: plan_endpoint_p95_seconds
+        action: update
+      - include: session_not_found_rate
+        action: update
   batch:
 
 exporters:
@@ -22,7 +37,7 @@ service:
   pipelines:
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      processors: [metricstransform, batch]
       exporters: [prometheus, logging]
     logs:
       receivers: [otlp]
