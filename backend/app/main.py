@@ -12,11 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import json
 
 from app.core.config import settings
-from app.api.v1.endpoints.auth import router as auth_router
-from app.api.v1.endpoints.users import router as users_router
-from app.api.v1.endpoints.goals import router as goals_router
-from app.api.v1.endpoints.partner_invitations import router as partner_invitations_router
-from app.api.v1.endpoints.goal_creation import router as goal_creation_router
+from app.api.v1.router import api_router
 from app.core.logging_config import setup_logging
 from app.core.limiter import limiter, key_func
 import firebase_admin
@@ -128,12 +124,8 @@ async def test_rate_limit(request: Request):
 
 
 
-# Include the authentication router
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["authentication"])
-app.include_router(users_router, prefix="/api/v1/users", tags=["users"])
-app.include_router(goals_router, prefix="/api/v1/goals", tags=["goals"])
-app.include_router(partner_invitations_router, prefix="/api/v1/partner-invitations", tags=["partner-invitations"])
-app.include_router(goal_creation_router, prefix="/api/v1/goal-creation", tags=["V3 Goal Creation"])
+# Include all versioned API routers from a single surface definition
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # ... (keep other routers if any)
 
