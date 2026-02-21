@@ -2,30 +2,13 @@ import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import { useState } from 'react';
-
-// Helper to map Convex Goal to Frontend GoalRead
-const mapGoal = (goal: any) => ({
-  ...goal,
-  id: goal._id,
-  userId: goal.user_id,
-  isHabit: goal.is_habit,
-  createdAt: new Date(goal._creationTime).toISOString(),
-  updatedAt: new Date(goal.updated_at || goal._creationTime).toISOString(),
-  tasks: goal.tasks.map((task: any) => ({
-    ...task,
-    id: task._id,
-    goal_id: task.goal_id, // Match schema (snake_case)
-    created_at: new Date(task._creationTime).toISOString(), // Match schema?
-    updated_at: new Date(task.updated_at || task._creationTime).toISOString(),
-    due_date: task.due_date ? new Date(task.due_date).toISOString() : null,
-  }))
-});
+import { mapGoalFromConvex } from '../../packages/domain/src/goals';
 
 export const useGoals = () => {
   const goals = useQuery(api.goals.list);
 
   // Transform data if loaded
-  const data = goals ? goals.map(mapGoal) : undefined;
+  const data = goals ? goals.map(mapGoalFromConvex) : undefined;
 
   return {
     data,
@@ -37,7 +20,7 @@ export const useGoals = () => {
 export const useGoal = (goalId: string) => {
   const goal = useQuery(api.goals.get, goalId ? { id: goalId as Id<"goals"> } : "skip");
 
-  const data = goal ? mapGoal(goal) : undefined;
+  const data = goal ? mapGoalFromConvex(goal) : undefined;
 
   return {
     data,
