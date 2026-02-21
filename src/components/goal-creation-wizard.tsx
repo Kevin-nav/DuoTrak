@@ -17,9 +17,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMutation as useConvexMutation } from "convex/react";
+import { useAction, useMutation as useConvexMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { getStrategicQuestions, createGoalPlan, evaluateGoalPlan } from "@/lib/api/goals";
+import {
+  getStrategicQuestionsViaBoundary,
+  createGoalPlanViaBoundary,
+  evaluateGoalPlanViaBoundary,
+} from "@/lib/api/goals";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
@@ -91,6 +95,9 @@ export default function GoalCreationWizard() {
   });
 
   const createGoal = useConvexMutation(api.goals.create);
+  const getStrategicQuestionsAction = useAction(api.onboarding.getStrategicQuestions);
+  const createGoalPlanAction = useAction(api.onboarding.createGoalPlan);
+  const evaluateGoalPlanAction = useAction(api.onboarding.evaluateGoalPlan);
   const [isCreatingGoal, setIsCreatingGoal] = useState(false);
 
   const createGoalMutation = {
@@ -121,7 +128,8 @@ export default function GoalCreationWizard() {
 
   // V3 Phase 1: Get Questions
   const getQuestionsMutation = useMutation({
-    mutationFn: getStrategicQuestions,
+    mutationFn: (requestData: any) =>
+      getStrategicQuestionsViaBoundary(requestData, { getStrategicQuestionsAction }),
     onSuccess: (data: QuestionsResponse) => {
       setSessionId(data.sessionId);
       setUserProfileSummary(data.userProfileSummary);
@@ -140,7 +148,11 @@ export default function GoalCreationWizard() {
   // V3 Phase 2: Get Plan
   const getPlanMutation = useMutation({
     mutationFn: (variables: { userId: string; sessionId: string; answers: Record<string, string> }) =>
-      createGoalPlan(variables.sessionId, { userId: variables.userId, answers: variables.answers }),
+      createGoalPlanViaBoundary(
+        variables.sessionId,
+        { userId: variables.userId, answers: variables.answers },
+        { createGoalPlanAction }
+      ),
     onSuccess: (data: GoalPlanResponse) => {
       setFinalGoalPlan(data.goalPlan);
       setCurrentStep(currentStep + 1); // Move to the final review step
@@ -161,7 +173,8 @@ export default function GoalCreationWizard() {
 
   // Dev-only: Fire-and-forget evaluation
   const evaluatePlanMutation = useMutation({
-    mutationFn: evaluateGoalPlan,
+    mutationFn: (plan: DuotrakGoalPlan) =>
+      evaluateGoalPlanViaBoundary(plan, { evaluateGoalPlanAction }),
     onSuccess: () => {
       console.log("DEV-ONLY: Goal plan sent for evaluation.");
     },

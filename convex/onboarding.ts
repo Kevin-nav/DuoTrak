@@ -1,5 +1,6 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { postGoalCreation, postGoalCreationRaw } from "./goalCreation";
 
 /**
  * Convex action to generate an onboarding plan by calling the FastAPI backend.
@@ -11,37 +12,75 @@ export const generatePlan = action({
         goalDescription: v.string(),
         contextualAnswers: v.optional(v.record(v.string(), v.string())),
     },
-    handler: async (ctx, args) => {
-        // Get the backend URL from environment variables
-        const backendUrl = process.env.FASTAPI_URL || "https://localhost:8000";
-
-        console.log("[Convex Action] Calling backend to generate onboarding plan:", args.goalTitle);
-
+    handler: async (_ctx, args) => {
         try {
-            const response = await fetch(`${backendUrl}/api/v1/goal-creation/onboarding/plan`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    goalTitle: args.goalTitle,
-                    goalDescription: args.goalDescription,
-                    contextualAnswers: args.contextualAnswers || {},
-                }),
+            const data = await postGoalCreationRaw<any>("/api/v1/goal-creation/onboarding/plan", {
+                goalTitle: args.goalTitle,
+                goalDescription: args.goalDescription,
+                contextualAnswers: args.contextualAnswers || {},
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("[Convex Action] Backend error:", response.status, errorText);
-                throw new Error(`Backend returned ${response.status}: ${errorText}`);
-            }
-
-            const data = await response.json();
             console.log("[Convex Action] Successfully generated plan with", data.tasks?.length, "tasks");
             return data;
         } catch (error: any) {
             console.error("[Convex Action] Failed to generate onboarding plan:", error.message);
             throw new Error(`Failed to generate onboarding plan: ${error.message}`);
+        }
+    },
+});
+
+export const getStrategicQuestions = action({
+    args: {
+        userId: v.string(),
+        wizardData: v.object({
+            goalDescription: v.string(),
+            motivation: v.string(),
+            availability: v.array(v.string()),
+            timeCommitment: v.string(),
+            accountabilityType: v.string(),
+            partnerName: v.optional(v.union(v.string(), v.null())),
+        }),
+    },
+    handler: async (_ctx, args) => {
+        try {
+            return await postGoalCreation<any>("/api/v1/goal-creation/questions", args as unknown as Record<string, unknown>);
+        } catch (error: any) {
+            console.error("[Convex Action] Failed to fetch strategic questions:", error.message);
+            throw new Error(`Failed to fetch strategic questions: ${error.message}`);
+        }
+    },
+});
+
+export const createGoalPlan = action({
+    args: {
+        sessionId: v.string(),
+        userId: v.string(),
+        answers: v.record(v.string(), v.string()),
+    },
+    handler: async (_ctx, args) => {
+        try {
+            return await postGoalCreation<any>(`/api/v1/goal-creation/${args.sessionId}/plan`, {
+                userId: args.userId,
+                answers: args.answers,
+            });
+        } catch (error: any) {
+            console.error("[Convex Action] Failed to create goal plan:", error.message);
+            throw new Error(`Failed to create goal plan: ${error.message}`);
+        }
+    },
+});
+
+export const evaluateGoalPlan = action({
+    args: {
+        plan: v.any(),
+    },
+    handler: async (_ctx, args) => {
+        try {
+            await postGoalCreation<void>("/api/v1/goal-creation/evaluate-plan", {
+                ...args.plan,
+            });
+        } catch (error: any) {
+            console.error("[Convex Action] Failed to evaluate goal plan:", error.message);
+            throw new Error(`Failed to evaluate goal plan: ${error.message}`);
         }
     },
 });
