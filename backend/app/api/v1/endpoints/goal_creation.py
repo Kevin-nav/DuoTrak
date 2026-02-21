@@ -9,6 +9,9 @@ from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, Answers
 from app.services.gemini_config import GeminiModelConfig
 from app.services.pinecone_service import PineconeService
 from app.services.duotrak_crew_orchestrator import DuotrakCrewOrchestrator
+from app.services.goal_creation_session_store import GoalCreationSessionStore
+from app.services.goal_plan_adapter import adapt_goal_plan_response
+from app.core.redis_config import redis_client
 from app.db.models import User
 from app.api.v1.endpoints.users import get_current_user_from_cookie
 from app.services.external_judge_crew import ExternalJudgeCrew
@@ -67,7 +70,12 @@ pinecone_service = PineconeService(
 
 duotrak_orchestrator = DuotrakCrewOrchestrator(
     pinecone_service=pinecone_service,
-    gemini_config=gemini_config
+    gemini_config=gemini_config,
+    session_store=GoalCreationSessionStore(
+        redis_client=redis_client,
+        default_ttl_seconds=getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900),
+    ),
+    session_ttl_seconds=getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900),
 )
 
 @router.on_event("startup")
@@ -165,16 +173,18 @@ async def create_goal_plan(
         # Here you would typically save the generated plan to the database
         # For now, we return it directly.
         
-        return GoalPlanResponse(
-            session_id=session_id,
-            goal_plan=plan_result["goal_plan"],
-            partner_integration=plan_result["partner_integration"],
-            personalization_score=plan_result["personalization_score"],
-            execution_metadata={"plan_generation_time_ms": plan_result["execution_time_ms"]}
-        )
+        adapted_result = adapt_goal_plan_response(session_id=session_id, raw_result=plan_result)
+        return GoalPlanResponse.model_validate(adapted_result)
     except ValueError as e:
         logger.warning(f"V3 Plan creation value error for session {session_id}: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "goal_creation_session_not_found",
+                "message": str(e),
+                "action": "Restart goal creation from /api/v1/goal-creation/questions.",
+            },
+        )
     except Exception as e:
         logger.error(f"V3 Goal plan creation failed for session {session_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create goal plan.")
