@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     INTERNAL_API_SECRET: str  # Required for internal API communication with Next.js
     GOAL_CREATION_SESSION_TTL_SECONDS: int = 900
     AI_ORCHESTRATOR: str = "crewai"
+    AI_SHADOW_MODE: bool = False
+    AI_SHADOW_ORCHESTRATOR: str = "langgraph"
 
     class Config:
         # Pydantic-settings will automatically search for a .env file.

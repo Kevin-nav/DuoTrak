@@ -14,6 +14,7 @@ from app.services.goal_creation_session_store import GoalCreationSessionStore
 from app.services.goal_plan_adapter import adapt_goal_plan_response
 from app.core.redis_config import redis_client
 from app.ai.orchestrator_factory import create_orchestrator
+from app.ai.shadow_runner import ShadowRunner
 from app.db.session import get_db
 from app.db.models import User
 from app.api.v1.endpoints.users import get_current_user_from_cookie
@@ -97,6 +98,41 @@ duotrak_orchestrator = create_orchestrator(
     ),
 )
 
+
+class _ShadowSettings:
+    def __init__(self, orchestrator_name: str, ttl_seconds: int) -> None:
+        self.AI_ORCHESTRATOR = orchestrator_name
+        self.GOAL_CREATION_SESSION_TTL_SECONDS = ttl_seconds
+
+
+def _resolve_shadow_orchestrator():
+    shadow_name = str(getattr(settings, "AI_SHADOW_ORCHESTRATOR", "")).strip().lower()
+    if not shadow_name:
+        primary_name = str(getattr(settings, "AI_ORCHESTRATOR", "crewai")).strip().lower()
+        shadow_name = "langgraph" if primary_name == "crewai" else "crewai"
+
+    shadow_settings = _ShadowSettings(
+        orchestrator_name=shadow_name,
+        ttl_seconds=int(getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900)),
+    )
+
+    return create_orchestrator(
+        settings=shadow_settings,
+        pinecone_service=pinecone_service,
+        gemini_config=gemini_config,
+        session_store=GoalCreationSessionStore(
+            redis_client=redis_client,
+            default_ttl_seconds=shadow_settings.GOAL_CREATION_SESSION_TTL_SECONDS,
+            key_prefix=f"goal_creation_session_shadow_{shadow_name}",
+        ),
+    )
+
+
+shadow_runner = ShadowRunner(
+    enabled=bool(getattr(settings, "AI_SHADOW_MODE", False)),
+    shadow_orchestrator=_resolve_shadow_orchestrator() if bool(getattr(settings, "AI_SHADOW_MODE", False)) else None,
+)
+
 @router.on_event("startup")
 async def startup_event():
     await pinecone_service.initialize()
@@ -151,6 +187,12 @@ async def get_strategic_questions(
             session_id=session_id,
             wizard_data=request.wizard_data.dict(),
             user_context=user_context
+        )
+        shadow_runner.run_questions_shadow(
+            session_id=session_id,
+            user_id=effective_user_id,
+            wizard_data=request.wizard_data.dict(),
+            user_context=user_context,
         )
         
         return QuestionsResponse(
@@ -208,6 +250,11 @@ async def create_goal_plan(
             session_id=session_id,
             user_id=effective_user_id,
             answers=request.answers
+        )
+        shadow_runner.run_plan_shadow(
+            session_id=session_id,
+            user_id=effective_user_id,
+            answers=request.answers,
         )
         
         # Here you would typically save the generated plan to the database

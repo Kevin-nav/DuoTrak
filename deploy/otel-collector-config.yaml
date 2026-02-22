@@ -10,6 +10,10 @@ processors:
   # - question_endpoint_p95_seconds
   # - plan_endpoint_p95_seconds
   # - session_not_found_rate
+  # Shadow reliability metrics:
+  # - parse_success_rate
+  # - schema_validation_rate
+  # - p95_latency_ms
   metricstransform:
     transforms:
       - include: schema_validation_success
@@ -19,6 +23,12 @@ processors:
       - include: plan_endpoint_p95_seconds
         action: update
       - include: session_not_found_rate
+        action: update
+      - include: parse_success_rate
+        action: update
+      - include: schema_validation_rate
+        action: update
+      - include: p95_latency_ms
         action: update
   batch:
 
