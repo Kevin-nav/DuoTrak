@@ -88,9 +88,6 @@ const nextConfig = {
     dirs: ['src'],
   },
   output: 'standalone',
-  experimental: {
-    instrumentationHook: true,
-  },
 };
 
 console.log('--- [next.config.mjs] End of file ---');

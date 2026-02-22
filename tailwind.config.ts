@@ -63,6 +63,16 @@ const config: Config = {
         "energy-yellow": "#DFC46D", // Muted Gold
         "celebration-purple": "#A894C2", // Muted Lavender
         "accent-blue": "#7DA0BC",   // Muted Blue
+
+        // Landing Page Warm Beige Theme
+        "landing-cream": "#FAF7F2",
+        "landing-sand": "#E8E0D6",
+        "landing-clay": "#D4C8BB",
+        "landing-espresso": "#2C2520",
+        "landing-espresso-light": "#5C4F47",
+        "landing-terracotta": "#C4704B",
+        "landing-sage": "#7A8B6F",
+        "landing-gold": "#C49A3C",
       },
       borderRadius: {
         lg: "var(--radius)",

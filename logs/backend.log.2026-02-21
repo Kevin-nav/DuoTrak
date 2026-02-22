@@ -1,0 +1,6 @@
+2026-02-21 22:37:02,253 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2026-02-21 22:37:05,126 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2026-02-21 22:37:05,362 - WARNING - app.api.v1.endpoints.goal_creation - V3 Plan creation value error for session missing: Session not found or expired. Please restart from strategic questions. (goal_creation.py:183)
+2026-02-21 22:37:05,363 - INFO - httpx - HTTP Request: POST http://test/api/v1/goal-creation/missing/plan "HTTP/1.1 404 Not Found" (_client.py:1740)
+2026-02-21 22:41:19,563 - INFO - root - Logging configured successfully. (logging_config.py:55)
+2026-02-21 22:41:19,633 - INFO - httpx - HTTP Request: POST http://test/api/v1/goal-creation/session-1/plan "HTTP/1.1 200 OK" (_client.py:1740)

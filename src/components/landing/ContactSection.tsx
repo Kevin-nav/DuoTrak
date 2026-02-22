@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MailIcon, CopyIcon } from '@/components/ui/icons';
-import { Button } from '@/components/ui/button';
+import { Copy, Check } from 'lucide-react';
 
 interface ContactCardProps {
   title: string;
@@ -17,30 +16,41 @@ const ContactCard: React.FC<ContactCardProps> = ({ title, email, description }) 
   const handleCopy = () => {
     navigator.clipboard.writeText(email);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="relative group p-6 border rounded-lg bg-slate-50/50 hover:bg-white hover:shadow-xl transition-all duration-300 overflow-hidden">
-      <div className="flex flex-col items-center text-center">
-        <div className="p-3 bg-primary-blue/10 rounded-full mb-4">
-          <MailIcon className="w-6 h-6 text-primary-blue" />
-        </div>
-        <h3 className="text-xl font-semibold text-charcoal mb-2">{title}</h3>
-        <p className="text-slate-500 mb-4">{description}</p>
-        <p className="text-primary-blue font-mono text-sm">{email}</p>
+    <div className="group relative border border-landing-clay/50 bg-white p-8 transition-all duration-300 hover:border-landing-terracotta/40 hover:bg-landing-cream flex flex-col justify-between h-full shadow-sm">
+      <div>
+        <h3 className="text-xl font-bold text-landing-espresso uppercase tracking-widest mb-4 group-hover:text-landing-terracotta transition-colors">
+          {title}
+        </h3>
+        <p className="text-landing-espresso-light font-medium mb-8">
+          {description}
+        </p>
       </div>
-      <motion.div
-        className="absolute inset-0 bg-black/50 flex items-center justify-center"
-        initial={{ opacity: 0 }}
-        whileHover={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Button onClick={handleCopy} variant="secondary" size="sm">
-          <CopyIcon className="w-4 h-4 mr-2" />
-          {copied ? 'Copied!' : 'Copy Email'}
-        </Button>
-      </motion.div>
+
+      <div className="flex items-center justify-between mt-auto pt-6 border-t border-landing-clay/40">
+        <span className="font-mono text-landing-espresso text-sm">{email}</span>
+        <button
+          onClick={handleCopy}
+          className="bg-landing-sand text-landing-espresso hover:bg-landing-terracotta hover:text-white p-3 transition-colors duration-300 rounded-sm"
+          aria-label="Copy email"
+        >
+          {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {copied && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="absolute top-4 right-4 bg-landing-sage text-white text-xs font-bold px-2 py-1 uppercase tracking-widest rounded-sm"
+        >
+          Copied!
+        </motion.div>
+      )}
     </div>
   );
 };
@@ -48,32 +58,51 @@ const ContactCard: React.FC<ContactCardProps> = ({ title, email, description }) 
 export default function ContactSection() {
   const contactDetails: ContactCardProps[] = [
     {
-      title: 'General Inquiry',
-      description: 'For all general questions about DuoTrak, we are here to help.',
+      title: 'Support',
+      description: 'Have a question or running into an issue? We\'re happy to help.',
       email: 'info@duotrak.org',
     },
     {
-      title: 'Admin & High-Level Support',
-      description: 'For direct contact with the DuoTrak administration for serious matters.',
+      title: 'Partnerships',
+      description: 'Interested in working together or integrating with DuoTrak? Let\'s talk.',
       email: 'admin@duotrak.org',
     },
     {
-      title: 'Personal Support - Charlene',
-      description: 'For specific support cases, you can reach out to Charlene directly.',
+      title: 'Say Hello',
+      description: 'Just want to chat, give feedback, or share your DuoTrak story? We\'d love to hear from you.',
       email: 'charlene@duotrak.org',
     },
   ];
 
   return (
-    <section id="contact" className="py-20 bg-slate-100">
-      <div className="container mx-auto text-center">
-        <h2 className="text-4xl font-bold text-charcoal mb-4">Get in Touch</h2>
-        <p className="text-slate-600 max-w-2xl mx-auto mb-12">
-          Have questions or feedback? We'd love to hear from you. Reach out to the right team below.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <section id="contact" className="py-32 bg-white border-t border-landing-clay relative">
+      <div className="absolute top-0 right-0 w-[30vw] h-[30vw] bg-landing-terracotta/5 blur-[120px] rounded-full pointer-events-none"></div>
+
+      <div className="container mx-auto px-6 sm:px-8 lg:px-12 max-w-7xl relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-16 border-l-4 border-landing-terracotta pl-6 md:pl-10"
+        >
+          <h2 className="text-4xl md:text-6xl font-black text-landing-espresso uppercase tracking-tighter">Get in Touch</h2>
+          <p className="text-landing-espresso-light mt-4 max-w-xl text-lg font-medium">
+            Questions? Feedback? We&apos;re real people and we&apos;d love to hear from you.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {contactDetails.map((contact, index) => (
-            <ContactCard key={index} {...contact} />
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
+              <ContactCard {...contact} />
+            </motion.div>
           ))}
         </div>
       </div>

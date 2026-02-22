@@ -25,10 +25,13 @@ export default function GoalEditPage() {
 
   useEffect(() => {
     if (goal) {
-      setName(goal.name)
-      setDescription(goal.description || "")
-      setCategory(goal.category || "")
-      setTotal(goal.total)
+      // DomainGoal has [key: string]: unknown index signature,
+      // so spread properties like name/total resolve as unknown
+      const g = goal as any;
+      setName(g.name)
+      setDescription(g.description || "")
+      setCategory(g.category || "")
+      setTotal(g.total)
     }
   }, [goal])
 
