@@ -52,7 +52,7 @@ def test_app(monkeypatch):
 
     app = FastAPI()
     app.include_router(goal_creation.router, prefix="/api/v1/goal-creation")
-    app.dependency_overrides[goal_creation.get_current_user_from_cookie] = _fake_current_user
+    app.dependency_overrides[goal_creation.get_optional_current_user_from_cookie] = _fake_current_user
     return app
 
 

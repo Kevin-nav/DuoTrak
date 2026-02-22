@@ -9,6 +9,7 @@
  */
 
 import type * as chat from "../chat.js";
+import type * as goalCreation from "../goalCreation.js";
 import type * as goals from "../goals.js";
 import type * as invitations from "../invitations.js";
 import type * as lib_r2 from "../lib/r2.js";
@@ -24,6 +25,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   chat: typeof chat;
+  goalCreation: typeof goalCreation;
   goals: typeof goals;
   invitations: typeof invitations;
   "lib/r2": typeof lib_r2;

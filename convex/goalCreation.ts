@@ -1,4 +1,5 @@
 type JsonRecord = Record<string, unknown>;
+type RequestHeaders = Record<string, string>;
 
 const DEFAULT_BACKEND_URL = "https://localhost:8000";
 
@@ -35,11 +36,13 @@ const getBackendUrl = () => process.env.FASTAPI_URL || DEFAULT_BACKEND_URL;
 export const postGoalCreation = async <TResponse>(
   endpoint: string,
   payload: JsonRecord,
+  options?: { headers?: RequestHeaders },
 ): Promise<TResponse> => {
   const response = await fetch(`${getBackendUrl()}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(options?.headers ?? {}),
     },
     body: JSON.stringify(toSnakeCase(payload)),
   });
@@ -56,11 +59,13 @@ export const postGoalCreation = async <TResponse>(
 export const postGoalCreationRaw = async <TResponse>(
   endpoint: string,
   payload: JsonRecord,
+  options?: { headers?: RequestHeaders },
 ): Promise<TResponse> => {
   const response = await fetch(`${getBackendUrl()}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(options?.headers ?? {}),
     },
     body: JSON.stringify(payload),
   });
@@ -71,4 +76,12 @@ export const postGoalCreationRaw = async <TResponse>(
   }
 
   return (await response.json()) as TResponse;
+};
+
+export const getInternalApiHeaders = (): RequestHeaders => {
+  const internalApiSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalApiSecret) {
+    throw new Error("INTERNAL_API_SECRET is required for Convex -> backend calls.");
+  }
+  return { "X-Internal-API-Key": internalApiSecret };
 };

@@ -10,7 +10,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.981.0",
+    "@aws-sdk/client-s3": "^3.995.0",
     "@emotion/is-prop-valid": "latest",
     "@headlessui/react": "^2.2.9",
     "@hookform/resolvers": "^3.10.0",

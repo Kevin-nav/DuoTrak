@@ -17,12 +17,12 @@ const customJestConfig = {
   },
   // Add more setup options before each test is run
   testMatch: [
-    "<rootDir>/src/app/(app)/**/*.test.ts",
-    "**/__tests__/**/*.ts",
-    "**/?(*.)+(spec|test).ts"
+    "<rootDir>/src/app/(app)/**/*.test.ts?(x)",
+    "**/__tests__/**/*.[jt]s?(x)",
+    "**/?(*.)+(spec|test).[jt]s?(x)"
   ],
   // For Next.js App Router, you might need to ignore specific files/folders
-  testPathIgnorePatterns: ["/node_modules/", "/.next/", "<rootDir>/src/app/api/"],
+  testPathIgnorePatterns: ["/node_modules/", "/.next/"],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
