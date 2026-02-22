@@ -14,6 +14,7 @@ import {
     Hand,
     Loader2,
 } from "lucide-react";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Message } from "@/hooks/useChat";
 
 interface MessageInputProps {
@@ -23,6 +24,7 @@ interface MessageInputProps {
     onSendNudge: (message: string) => Promise<void>;
     onTyping: () => void;
     partnerName: string;
+    currentUserId?: Id<"users">;
     disabled?: boolean;
 }
 
@@ -39,6 +41,31 @@ const NUDGE_MESSAGES = [
 
 const QUICK_EMOJIS = ["😊", "😂", "❤️", "👍", "🔥", "🎉", "💪", "🙌", "👏", "🚀", "⭐", "✨"];
 
+const CLEAN_NUDGE_MESSAGES = [
+    "Checking in! \u{1F44B}",
+    "You got this! \u{1F4AA}",
+    "Thinking of you! \u{1F4AD}",
+    "How's that goal going? \u{1F3AF}",
+    "Just sending some good vibes! \u2728",
+    "Hope you're having a great day! \u{1F60A}",
+    "Remember, progress over perfection! \u{1F31F}",
+    "You're doing amazing! Keep it up! \u{1F680}",
+];
+const CLEAN_QUICK_EMOJIS = [
+    "\u{1F60A}",
+    "\u{1F602}",
+    "\u2764\uFE0F",
+    "\u{1F44D}",
+    "\u{1F525}",
+    "\u{1F389}",
+    "\u{1F4AA}",
+    "\u{1F64C}",
+    "\u{1F44F}",
+    "\u{1F680}",
+    "\u2B50",
+    "\u2728",
+];
+
 const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
     (
         {
@@ -48,6 +75,7 @@ const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             onSendNudge,
             onTyping,
             partnerName,
+            currentUserId,
             disabled = false,
         },
         ref
@@ -71,8 +99,7 @@ const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
             const textarea = textareaRef.current;
             if (textarea) {
                 textarea.style.height = "auto";
-                const maxHeight = 120;
-                textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+                textarea.style.height = `${textarea.scrollHeight}px`;
             }
         }, [textareaRef]);
 
@@ -205,7 +232,7 @@ const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                                 <div className="w-1 h-10 bg-blue-500 rounded-full" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                                        Replying to {replyingTo.sender?.name || "message"}
+                                        Replying to {replyingTo.sender_id === currentUserId ? "You" : replyingTo.sender?.name || "message"}
                                     </p>
                                     <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                                         {replyingTo.content}
@@ -339,7 +366,7 @@ const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                                     <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                         Quick Nudges
                                     </div>
-                                    {NUDGE_MESSAGES.map((nudge, index) => (
+                                    {CLEAN_NUDGE_MESSAGES.map((nudge, index) => (
                                         <button
                                             key={index}
                                             onClick={() => handleNudge(nudge)}
@@ -376,11 +403,15 @@ const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                                 value={message}
                                 onChange={handleMessageChange}
                                 onKeyDown={handleKeyDown}
+                                onFocus={() => {
+                                    setShowAttachmentMenu(false);
+                                    setShowNudgeMenu(false);
+                                }}
                                 placeholder={`Message ${partnerName}...`}
                                 disabled={disabled}
                                 rows={1}
-                                className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 border-0 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50"
-                                style={{ maxHeight: "120px" }}
+                                enterKeyHint="send"
+                                className="w-full overflow-hidden px-4 py-3 bg-gray-100 dark:bg-gray-800 border-0 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50"
                             />
                         </div>
                     )}
@@ -406,10 +437,10 @@ const MessageInput = forwardRef<HTMLTextAreaElement, MessageInputProps>(
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                    className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 z-50"
+                                    className="absolute bottom-full right-0 mb-2 w-[17rem] bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 z-50"
                                 >
                                     <div className="grid grid-cols-6 gap-1">
-                                        {QUICK_EMOJIS.map((emoji) => (
+                                        {CLEAN_QUICK_EMOJIS.map((emoji) => (
                                             <button
                                                 key={emoji}
                                                 onClick={() => addEmoji(emoji)}

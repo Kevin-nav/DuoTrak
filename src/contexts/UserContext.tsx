@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { getAuth, signOut as firebaseSignOut } from 'firebase/auth';
 import { Id } from '../../convex/_generated/dataModel';
 
-const SESSION_COOKIE_NAME = '__session';
 const MASTER_ACCESS_COOKIE_NAME = '__master_access';
 
 export type AccountStatus = 'AWAITING_ONBOARDING' | 'AWAITING_PARTNERSHIP' | 'ONBOARDING_PARTNERED' | 'ACTIVE';
@@ -22,6 +21,13 @@ export interface UserDetails {
     bio: string | null;
     timezone: string | null;
     profile_picture_url: string | null;
+    profile_picture_variants?: {
+        original: string;
+        xl: string;
+        lg: string;
+        md: string;
+        sm: string;
+    } | null;
     account_status: string; // Convex returns string, we can cast to AccountStatus if needed
     notifications_enabled: boolean | null;
     current_streak: number | null;
@@ -34,6 +40,7 @@ export interface UserDetails {
     partnership_status: string; // Cast to PartnershipStatus
     partner_full_name: string | null;
     partner_nickname: string | null;
+    partner_profile_picture_url?: string | null;
     nickname: string | null;
     sent_invitation: any | null;
     received_invitation: any | null;
@@ -51,6 +58,7 @@ interface UserContextType {
     sendInvitation: (email: string, name: string, customMessage?: string) => Promise<{ invitation: { invitation_token: string } } | null>;
     withdrawInvitation: (invitationId: string) => Promise<void>;
     nudgePartner: (invitationId: string) => Promise<void>;
+    retryInviteEmail: (invitationId: string) => Promise<void>;
     partnerDisplayName: string;
 }
 
@@ -100,6 +108,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const sendInvitationMutation = useMutation(api.invitations.create);
     const withdrawInvitationMutation = useMutation(api.invitations.withdraw);
     const nudgePartnerMutation = useMutation(api.invitations.nudge);
+    const retryInviteEmailMutation = useMutation(api.invitations.retryInviteEmail);
 
     useEffect(() => {
         // Check for master access first (highest priority)
@@ -133,8 +142,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         bio: convexUser.bio ?? null,
         timezone: convexUser.timezone ?? null,
         profile_picture_url: convexUser.profile_picture_url ?? null,
+        profile_picture_variants: convexUser.profile_picture_variants ?? null,
         partner_full_name: convexUser.partner_full_name ?? null,
         partner_nickname: convexUser.partner_nickname ?? null,
+        partner_profile_picture_url: convexUser.partner_profile_picture_url ?? null,
         nickname: convexUser.nickname ?? null,
         // Default missing fields
         notifications_enabled: convexUser.notifications_enabled ?? true,
@@ -161,8 +172,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         try {
             const auth = getAuth();
             await firebaseSignOut(auth);
-            // Convex will automatically react to the auth state change
-            window.location.href = '/login';
+            localStorage.removeItem('csrf_token');
+            sessionStorage.removeItem('logout-timestamp');
+            // Convex will automatically react to the auth state change.
+            window.location.replace('/login');
         } catch (error) {
             console.error("Logout failed", error);
             toast.error("Logout failed. Please try again.");
@@ -177,7 +190,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const sendInvitation = async (email: string, name: string, customMessage?: string): Promise<{ invitation: { invitation_token: string } } | null> => {
         try {
             const result = await sendInvitationMutation({ email, name, message: customMessage });
-            toast.success("Invitation sent successfully!");
+            toast.success("Invitation created. Email delivery is in progress.");
             return { invitation: { invitation_token: result.invitation_token } };
         } catch (error: any) {
             toast.error(error.message || "Failed to send invitation.");
@@ -205,6 +218,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const retryInviteEmail = async (invitationId: string) => {
+        try {
+            await retryInviteEmailMutation({ invitationId: invitationId as Id<"partner_invitations"> });
+            toast.success("Retry queued. We are attempting delivery again.");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to retry invite email.");
+            throw error;
+        }
+    };
+
     const partnerDisplayName = userDetails?.partner_nickname || userDetails?.partner_full_name || 'Your Partner';
 
     return (
@@ -219,6 +242,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                 sendInvitation,
                 withdrawInvitation,
                 nudgePartner,
+                retryInviteEmail,
                 partnerDisplayName,
             }}
         >

@@ -1,5 +1,5 @@
 // src/lib/api/client.ts - Enhanced API client with auto-refresh and CSRF
-import { getCookie, setCookie, deleteCookie } from 'cookies-next';
+import { getCookie } from 'cookies-next';
 
 export class ApiClient {
   private baseUrl: string;
@@ -202,56 +202,8 @@ export class ApiClient {
     return this.get('/api/v1/users/me');
   }
 
-  // Invitation specific methods
-  async sendInvitation(email: string, name: string, customMessage?: string): Promise<any> {
-    return this.post('/api/v1/partner-invitations/invite', { receiver_email: email, receiver_name: name, message: customMessage });
-  }
-
-  async withdrawInvitation(invitationId: string): Promise<any> {
-    return this.delete(`/api/v1/partner-invitations/invitations/${invitationId}`);
-  }
-
-  /**
-   * @deprecated Use Convex api.invitations.getByToken instead
-   */
-  async getPublicInvitationDetails(token: string): Promise<{ sender_name: string; sender_profile_picture_url?: string; receiver_email: string; custom_message?: string; }> {
-    return this.get(`/api/v1/partner-invitations/details/${token}`);
-  }
-
-  /**
-   * @deprecated Use Convex api.users.checkStatusByEmail instead
-   */
-  async getUserStatusByEmail(email: string): Promise<{ user_exists: boolean; partnership_status: string | null }> {
-    return this.get(`/api/v1/users/status-by-email?email=${encodeURIComponent(email)}`);
-  }
-
-  /**
-   * @deprecated Use Convex api.invitations.accept instead
-   */
-  async acceptInvitation(token: string): Promise<any> {
-    return this.post('/api/v1/partner-invitations/accept', { invitation_token: token });
-  }
-
-  async nudgePartner(invitationId: string): Promise<any> {
-    return this.post(`/api/v1/partner-invitations/invitations/${invitationId}/nudge`);
-  }
-
   async completePartneredOnboarding(): Promise<any> {
     return this.patch('/api/v1/users/me/complete-onboarding');
-  }
-
-  /**
-   * @deprecated Use Convex api.invitations.getPendingSentInvitation instead
-   */
-  async getSentInvitationStatus(): Promise<any> {
-    return this.get('/api/v1/partner-invitations/me/sent-status');
-  }
-
-  /**
-   * @deprecated Use Convex api.invitations.markAsViewed instead
-   */
-  async markInvitationAsViewed(token: string): Promise<any> {
-    return this.patch(`/api/v1/partner-invitations/${token}/viewed`);
   }
 
   async createOnboardingGoal(goal: any, task: any): Promise<any> {

@@ -1,9 +1,15 @@
 "use client"
 
 import { motion, Variants } from "framer-motion"
-import { Plus, List, TrendingUp } from "lucide-react"
+import { Plus, List, TrendingUp, MessageCircle, UserPlus } from "lucide-react"
+import { useRouter } from "next/navigation"
 
-export default function QuickActions() {
+interface QuickActionsProps {
+  hasPartner?: boolean
+}
+
+export default function QuickActions({ hasPartner = false }: QuickActionsProps) {
+  const router = useRouter()
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -45,18 +51,28 @@ export default function QuickActions() {
       label: "Create New Shared Goal",
       icon: Plus,
       description: "Start a new goal with your partner",
+      path: "/goals/new",
     },
     {
       id: "view-goals",
       label: "View All Goals",
       icon: List,
       description: "See all your active goals",
+      path: "/goals",
     },
     {
       id: "view-progress",
       label: "View Progress",
       icon: TrendingUp,
       description: "Check your overall progress and analytics",
+      path: "/progress",
+    },
+    {
+      id: "partner-chat",
+      label: hasPartner ? "Open Partner Chat" : "Invite a Partner",
+      icon: hasPartner ? MessageCircle : UserPlus,
+      description: hasPartner ? "Jump into full-screen chat instantly" : "Add a partner to unlock duo chat",
+      path: hasPartner ? "/partner/chat" : "/invite-partner",
     },
   ]
 
@@ -77,6 +93,7 @@ export default function QuickActions() {
           return (
             <motion.button
               key={action.id}
+              onClick={() => router.push(action.path)}
               variants={buttonVariants}
               initial="hidden"
               animate="visible"

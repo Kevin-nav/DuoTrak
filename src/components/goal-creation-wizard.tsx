@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, ArrowRight, Clock, Camera, Sparkles } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -57,6 +57,8 @@ const formSchema = z.object({
   customTime: z.string().optional(),
   accountabilityType: z.enum(["visual_proof", "time_bound_action"]),
   timeWindow: z.string().optional(),
+  targetDeadline: z.string().optional(),
+  preferredCheckInStyle: z.enum(["quick_text", "photo_recap", "voice_note"]),
   tasks: z.array(taskSchema).optional(),
 });
 
@@ -66,7 +68,7 @@ export default function GoalCreationWizard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { userDetails } = useUser();
+  const { userDetails, partnerDisplayName } = useUser();
 
   // V3 State Management
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -74,6 +76,7 @@ export default function GoalCreationWizard() {
   const [userProfileSummary, setUserProfileSummary] = useState<any | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [finalGoalPlan, setFinalGoalPlan] = useState<DuotrakGoalPlan | null>(null);
+  const [planGenerationStage, setPlanGenerationStage] = useState(0);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,6 +88,8 @@ export default function GoalCreationWizard() {
       customTime: "",
       accountabilityType: "visual_proof",
       timeWindow: "",
+      targetDeadline: "",
+      preferredCheckInStyle: "quick_text",
       tasks: [],
     },
   });
@@ -171,6 +176,19 @@ export default function GoalCreationWizard() {
     },
   });
 
+  useEffect(() => {
+    if (!getPlanMutation.isPending) {
+      setPlanGenerationStage(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setPlanGenerationStage((prev) => (prev < 2 ? prev + 1 : prev));
+    }, 1400);
+
+    return () => clearInterval(interval);
+  }, [getPlanMutation.isPending]);
+
   // Dev-only: Fire-and-forget evaluation
   const evaluatePlanMutation = useMutation({
     mutationFn: (plan: DuotrakGoalPlan) =>
@@ -189,7 +207,7 @@ export default function GoalCreationWizard() {
     { id: "goal", title: "Your Goal", description: "What do you want to achieve?" },
     { id: "motivation", title: "Your Why", description: "What drives you?" },
     { id: "availability", title: "Your Schedule", description: "When can you work on this?" },
-    { id: "time", title: "Time Investment", description: "How much time can you dedicate?" },
+    { id: "time", title: "Time Investment", description: "Set a sustainable cadence and target timeline." },
     { id: "accountability", title: "Accountability", description: "How will you track completion?" },
     { id: "personalize", title: "Personalize Your Plan", description: "Answer these questions to get a tailored strategy." },
     { id: "review", title: "Review Your Plan", description: "Your hyper-personalized plan is ready." },
@@ -204,12 +222,17 @@ export default function GoalCreationWizard() {
   ]
 
   const timeCommitmentOptions = ["15-30 mins daily", "1 hour weekly", "Suggest optimal based on my input"]
+  const checkInStyleOptions = [
+    { value: "quick_text", label: "Quick Text", description: "Fast daily check-ins in a sentence or two." },
+    { value: "photo_recap", label: "Photo Recap", description: "Share a quick picture recap after sessions." },
+    { value: "voice_note", label: "Voice Note", description: "Send short audio updates for richer context." },
+  ] as const;
 
   const stepFields: (keyof z.infer<typeof formSchema>)[][] = [
     ["goalName"],
     ["motivation"],
     ["availability"],
-    ["timeCommitment", "customTime"],
+    ["timeCommitment", "customTime", "targetDeadline", "preferredCheckInStyle"],
     ["accountabilityType", "timeWindow"],
   ];
 
@@ -245,7 +268,9 @@ export default function GoalCreationWizard() {
             availability: values.availability,
             timeCommitment: values.timeCommitment,
             accountabilityType: values.accountabilityType,
-            partnerName: "Alex", // Placeholder for now
+            partnerName: partnerDisplayName || null,
+            targetDeadline: values.targetDeadline || null,
+            preferredCheckInStyle: values.preferredCheckInStyle,
           }
         });
       } else if (currentStep < steps.length - 1) {
@@ -284,8 +309,8 @@ export default function GoalCreationWizard() {
       tasks: finalGoalPlan.milestones.flatMap(m => m.tasks.map(t => ({
         name: t.description, // Assuming task description is the name
         description: t.successMetric,
-        repeatFrequency: "daily", // Placeholder
-        timeWindow: timeWindow, // Add time window if applicable
+        repeatFrequency: t.recommendedCadence || "daily",
+        timeWindow: t.recommendedTimeWindows?.[0] || timeWindow, // Prefer AI suggestion, fallback to user value
         accountabilityType: accountabilityType, // Inherit from goal
       }))),
     };
@@ -508,6 +533,70 @@ export default function GoalCreationWizard() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="targetDeadline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-charcoal dark:text-gray-100">Target completion date (optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              className="w-full p-3 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="preferredCheckInStyle"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormLabel className="text-sm font-medium text-charcoal dark:text-gray-100">Preferred partner check-in style</FormLabel>
+                          {checkInStyleOptions.map((option) => (
+                            <motion.label
+                              key={option.value}
+                              whileHover={{ scale: 1.01 }}
+                              className={`flex items-start p-3 rounded-lg border cursor-pointer transition-all ${field.value === option.value
+                                ? "border-primary-blue bg-accent-light-blue dark:bg-primary-blue/10"
+                                : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
+                                }`}
+                            >
+                              <FormControl>
+                                <input
+                                  type="radio"
+                                  name="preferredCheckInStyle"
+                                  checked={field.value === option.value}
+                                  onChange={() => field.onChange(option.value)}
+                                  className="sr-only"
+                                />
+                              </FormControl>
+                              <div className="mr-3 mt-0.5">
+                                <div
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${field.value === option.value
+                                    ? "border-primary-blue"
+                                    : "border-cool-gray dark:border-gray-600"
+                                    }`}
+                                >
+                                  {field.value === option.value && <div className="w-2 h-2 rounded-full bg-primary-blue" />}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="font-medium text-charcoal dark:text-gray-100">{option.label}</p>
+                                <p className="text-sm text-stone-gray dark:text-gray-400">{option.description}</p>
+                              </div>
+                            </motion.label>
+                          ))}
+                          <p className="text-xs text-stone-gray dark:text-gray-400">
+                            Daily partner involvement is encouraged, never forced. DuoTrak nudges consistency without blocking progress.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 )}
 
@@ -681,7 +770,9 @@ export default function GoalCreationWizard() {
                       <motion.div key="loading" className="text-center">
                         <Sparkles className="w-16 h-16 text-primary-blue mx-auto animate-spin" />
                         <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-2">Generating your hyper-personalized plan...</h3>
-                        <p className="text-stone-gray dark:text-gray-400">This is where the magic happens. Please wait a moment.</p>
+                        <p className="text-stone-gray dark:text-gray-400">
+                          {["Analyzing your consistency windows...", "Designing partner accountability rhythm...", "Drafting picture-proof guidance for each task..."][planGenerationStage]}
+                        </p>
                       </motion.div>
                     ) : (
                       <motion.div key="plan" className="space-y-6">
@@ -693,10 +784,26 @@ export default function GoalCreationWizard() {
                             <div key={index} className="p-4 border rounded-lg bg-pearl-gray dark:bg-gray-700/50">
                               <h4 className="font-semibold text-charcoal dark:text-gray-100">{milestone.title}</h4>
                               <p className="text-sm text-stone-gray dark:text-gray-400 mb-2">{milestone.description}</p>
-                              <ul className="list-disc list-inside space-y-1">
+                              <ul className="space-y-3">
                                 {milestone.tasks.map((task, taskIndex) => (
-                                  <li key={taskIndex} className="text-sm text-charcoal dark:text-gray-300">
-                                    <strong>{task.description}</strong>: <span className="text-stone-gray dark:text-gray-400">{task.successMetric}</span>
+                                  <li key={taskIndex} className="text-sm text-charcoal dark:text-gray-300 border border-cool-gray dark:border-gray-600 rounded-md p-3 bg-white dark:bg-gray-800">
+                                    <p><strong>{task.description}</strong></p>
+                                    <p className="text-stone-gray dark:text-gray-400 mt-1">{task.successMetric}</p>
+                                    <p className="mt-2"><strong>Cadence:</strong> {task.recommendedCadence}</p>
+                                    <p><strong>Best windows:</strong> {task.recommendedTimeWindows?.join(", ") || "Flexible based on your schedule"}</p>
+                                    <p><strong>Why this works:</strong> {task.consistencyRationale}</p>
+                                    <div className="mt-2">
+                                      <p><strong>Partner touchpoint:</strong> {task.partnerInvolvement?.dailyCheckInSuggestion}</p>
+                                      <p><strong>Weekly anchor:</strong> {task.partnerInvolvement?.weeklyAnchorReview}</p>
+                                    </div>
+                                    <div className="mt-2">
+                                      <p><strong>Suggested photo proof:</strong></p>
+                                      <ul className="list-disc list-inside text-stone-gray dark:text-gray-400">
+                                        {(task.proofGuidance?.whatCounts || []).map((item, proofIdx) => (
+                                          <li key={`count-${proofIdx}`}>{item}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   </li>
                                 ))}
                               </ul>

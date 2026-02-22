@@ -9,6 +9,7 @@ import { MockAuthIndicator } from "@/components/dev/MockAuthIndicator"
 import ConvexClientProvider from "./ConvexClientProvider"
 import { UserSync } from "@/components/UserSync"
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { Toaster } from "@/components/ui/sonner"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"] })
 
@@ -37,6 +38,7 @@ export default function RootLayout({
               <UserProvider>
                 {children}
                 {process.env.NODE_ENV === 'development' && <MockAuthIndicator />}
+                <Toaster position="top-center" offset={90} richColors />
               </UserProvider>
             </Providers>
           </ConvexClientProvider>

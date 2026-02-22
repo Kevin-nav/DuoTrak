@@ -21,6 +21,8 @@ export const GoalWizardDataSchema = z.object({
   time_commitment: z.string(),
   accountability_type: z.string(),
   partner_name: z.string().nullable().optional(),
+  target_deadline: z.string().nullable().optional(),
+  preferred_check_in_style: z.enum(["quick_text", "photo_recap", "voice_note"]).optional(),
 });
 
 export const GoalWizardRequestSchema = z.object({

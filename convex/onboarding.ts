@@ -38,6 +38,8 @@ export const getStrategicQuestions = action({
             timeCommitment: v.string(),
             accountabilityType: v.string(),
             partnerName: v.optional(v.union(v.string(), v.null())),
+            targetDeadline: v.optional(v.union(v.string(), v.null())),
+            preferredCheckInStyle: v.optional(v.union(v.literal("quick_text"), v.literal("photo_recap"), v.literal("voice_note"))),
         }),
     },
     handler: async (_ctx, args) => {

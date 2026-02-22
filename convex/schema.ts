@@ -13,6 +13,13 @@ export default defineSchema({
     // Profile
     bio: v.optional(v.string()),
     profile_picture_url: v.optional(v.string()),
+    profile_picture_variants: v.optional(v.object({
+      original: v.string(),
+      xl: v.string(),
+      lg: v.string(),
+      md: v.string(),
+      sm: v.string(),
+    })),
     profile_picture_storage_id: v.optional(v.union(v.id("_storage"), v.null())),
     profile_picture_version: v.optional(v.number()), // Cache busting version
     timezone: v.string(),
@@ -94,6 +101,13 @@ export default defineSchema({
     accepted_at: v.optional(v.number()),
     last_nudged_at: v.optional(v.number()),
     viewed_at: v.optional(v.number()), // When the invitation link was first opened
+    email_sent_at: v.optional(v.number()),
+    email_last_attempt_at: v.optional(v.number()),
+    email_send_status: v.optional(v.string()), // queued | sent | failed
+    email_last_error: v.optional(v.string()),
+    nudge_email_sent_at: v.optional(v.number()),
+    nudge_email_send_status: v.optional(v.string()), // queued | sent | failed
+    nudge_email_last_error: v.optional(v.string()),
 
     updated_at: v.number(),
   })
@@ -104,6 +118,23 @@ export default defineSchema({
   // ============================================
   // CHAT SYSTEM - Real-time messaging
   // ============================================
+
+  user_presence: defineTable({
+    user_id: v.id("users"),
+    last_heartbeat_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_last_heartbeat", ["last_heartbeat_at"]),
+
+  chat_typing: defineTable({
+    conversation_id: v.id("conversations"),
+    user_id: v.id("users"),
+    is_typing: v.boolean(),
+    updated_at: v.number(),
+  })
+    .index("by_conversation_user", ["conversation_id", "user_id"])
+    .index("by_conversation_updated", ["conversation_id", "updated_at"]),
 
   conversations: defineTable({
     partnership_id: v.id("partnerships"),

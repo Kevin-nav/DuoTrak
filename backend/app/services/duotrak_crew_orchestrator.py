@@ -147,6 +147,26 @@ class DuotrakCrewOrchestrator:
                     Create a hyper-personalized Duotrak goal plan using the full context.
                     Full Context: {json.dumps(full_context)}.
                     Previous Critique: {critique_feedback}.
+                    
+                    Planning priorities:
+                    1) Optimize for long-term consistency over speed.
+                    2) Encourage daily partner involvement in a flexible, non-blocking way.
+                    3) Provide advisory picture-proof guidance for each task (not strict validation rules).
+
+                    For every task include:
+                    - description
+                    - success_metric
+                    - recommended_cadence
+                    - recommended_time_windows (based on availability and time commitment)
+                    - consistency_rationale
+                    - partner_involvement:
+                      - daily_check_in_suggestion
+                      - weekly_anchor_review
+                      - fallback_if_missed
+                    - proof_guidance:
+                      - what_counts (2-4 concise bullets)
+                      - good_examples (2-3 concise bullets)
+                      - avoid_examples (1-2 concise bullets)
 
                     **IMPORTANT**: You MUST format your output as a JSON object that strictly adheres to the following schema.
                     Do not include any markdown formatting.
@@ -216,7 +236,13 @@ class DuotrakCrewOrchestrator:
         return profiler, questioner
 
     def _create_goal_planning_agents(self):
-        strategist = Agent(role='Duotrak Goal Strategist', goal='Design hyper-personalized goal plans.', backstory='Master goal strategist for partner accountability systems.', llm=self.gemini_config.get_model_for_agent('goal_strategist'), verbose=True)
+        strategist = Agent(
+            role='Duotrak Goal Strategist',
+            goal='Design hyper-personalized goal plans optimized for sustainable consistency and partner accountability.',
+            backstory='Master goal strategist for partner accountability systems. Balances ambition with durable routines and practical proof guidance.',
+            llm=self.gemini_config.get_model_for_agent('goal_strategist'),
+            verbose=True,
+        )
         critic = Agent(role='Goal Plan Quality Critic', goal='Evaluate plans to ensure exceptional quality.', backstory='QA expert with an eye for what works.', llm=self.gemini_config.get_model_for_agent('critical_analyst'), verbose=True)
         judge = Agent(role='Goal Plan Quality Judge', goal='Provide accurate quantitative evaluation of goal plans.', backstory='Final arbiter of quality.', llm=self.gemini_config.get_model_for_agent('goal_plan_arbiter'), verbose=True)
         return strategist, critic, judge
@@ -234,4 +260,38 @@ class DuotrakCrewOrchestrator:
         return [{"question": "What's the biggest obstacle you anticipate?", "question_key": "biggest_obstacle", "context": "Helps create proactive solutions.", "suggested_answers": ["Finding time", "Staying motivated"]}]
 
     def _create_fallback_plan(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        return {"title": "Strategic Plan: Personal Goal", "description": "A personalized plan to help you achieve your goal.", "category": "personal", "difficulty_level": 0.6, "estimated_duration_days": 30, "weekly_tasks": [], "daily_habits": [], "milestone_markers": [], "partner_integration": {}, "motivation_anchors": [], "risk_mitigation": []}
+        return {
+            "title": "Strategic Plan: Personal Goal",
+            "description": "A consistency-first plan designed to keep momentum with flexible partner support.",
+            "milestones": [
+                {
+                    "title": "Week 1 Foundation",
+                    "description": "Establish a realistic routine and lock in a repeatable schedule.",
+                    "tasks": [
+                        {
+                            "description": "Complete your first core session.",
+                            "success_metric": "One completed session documented with a clear progress photo.",
+                            "recommended_cadence": "3x per week",
+                            "recommended_time_windows": ["Mon/Wed/Fri mornings"],
+                            "consistency_rationale": "Three sessions per week is ambitious enough for progress but light enough to sustain.",
+                            "partner_involvement": {
+                                "daily_check_in_suggestion": "Send a quick update after each session.",
+                                "weekly_anchor_review": "Sunday 10-minute recap together.",
+                                "fallback_if_missed": "If a day is missed, shift to the next available slot without penalty.",
+                            },
+                            "proof_guidance": {
+                                "what_counts": ["A clear photo showing task output or completion evidence."],
+                                "good_examples": ["Photo of completed work artifact with timestamp context."],
+                                "avoid_examples": ["Unclear or unrelated photos without context."],
+                            },
+                        }
+                    ],
+                }
+            ],
+            "success_metrics": ["Maintain planned cadence for the first two weeks."],
+            "partner_accountability": {
+                "role": "Supportive consistency partner",
+                "check_in_schedule": "Daily encouraged, weekly anchor review",
+                "shared_celebrations": "Celebrate weekly streaks and milestone completion",
+            },
+        }

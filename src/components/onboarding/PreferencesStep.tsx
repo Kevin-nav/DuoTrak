@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api/client';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useUser } from '@/contexts/UserContext';
 import { Loader2 } from 'lucide-react';
 
@@ -20,7 +21,8 @@ interface PreferencesStepProps {
 }
 
 export default function PreferencesStep({ data, updateData, onValidationChange, onComplete }: PreferencesStepProps) {
-  const { userDetails, refetchUserDetails } = useUser();
+  const { userDetails } = useUser();
+  const updateUser = useMutation(api.users.update);
   const [notificationsEnabled, setNotificationsEnabled] = useState(data.preferences.notifications || userDetails?.notifications_enabled || true);
   const [notificationTime, setNotificationTime] = useState(data.preferences.notificationTime || 'morning');
   const [theme, setTheme] = useState(data.preferences.theme || 'system');
@@ -38,14 +40,13 @@ export default function PreferencesStep({ data, updateData, onValidationChange, 
   const handleSavePreferences = async () => {
     setIsSaving(true);
     try {
-      await apiClient.patch('/api/v1/users/me', {
+      await updateUser({
         notifications_enabled: notificationsEnabled,
         notification_time: notificationTime,
         theme: theme,
         privacy_setting: privacy,
       });
       toast.success('Preferences saved!');
-      await refetchUserDetails();
       onComplete();
     } catch (error: any) {
       toast.error(error.message || 'Failed to save preferences.');

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import {
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useChat, Message, OptimisticMessage } from "@/hooks/useChat";
+import { useUser } from "@/contexts/UserContext";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import ChatHeader from "./ChatHeader";
@@ -38,6 +39,9 @@ export default function ChatInterface({
     partnerLastSeen,
     onClose,
 }: ChatInterfaceProps) {
+    const { userDetails } = useUser();
+    const currentUserId = userDetails?._id;
+
     const {
         messages,
         conversation,
@@ -53,6 +57,40 @@ export default function ChatInterface({
         optimisticMessages,
     } = useChat({ partnerId, partnershipId });
 
+    const realMessages = useMemo(
+        () => messages.filter((message): message is Message => !("tempId" in message)),
+        [messages]
+    );
+
+    const partnerLastActivityAt = useMemo(() => {
+        for (let i = realMessages.length - 1; i >= 0; i -= 1) {
+            const message = realMessages[i];
+            const isFromPartner = currentUserId
+                ? message.sender_id !== currentUserId
+                : partnerId
+                    ? message.sender_id === partnerId
+                    : false;
+
+            if (isFromPartner) {
+                return message.created_at;
+            }
+        }
+
+        return undefined;
+    }, [realMessages, currentUserId, partnerId]);
+
+    const hasExternalPresence = partnerLastSeen !== undefined;
+    const derivedPartnerLastSeen = hasExternalPresence
+        ? partnerLastSeen
+        : partnerLastActivityAt
+            ? new Date(partnerLastActivityAt)
+            : undefined;
+    const derivedIsPartnerOnline = hasExternalPresence
+        ? isPartnerOnline
+        : partnerLastActivityAt
+            ? Date.now() - partnerLastActivityAt < 2 * 60 * 1000
+            : isPartnerOnline;
+
     // Refs
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -62,7 +100,7 @@ export default function ChatInterface({
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [isOffline, setIsOffline] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [highlightedMessageId, setHighlightedMessageId] = useState<Id<"messages"> | null>(null);
 
     // Check online status
     useEffect(() => {
@@ -79,28 +117,11 @@ export default function ChatInterface({
         };
     }, []);
 
-    // Handle keyboard on mobile
-    useEffect(() => {
-        const handleResize = () => {
-            if (typeof window !== "undefined" && window.visualViewport) {
-                const viewportHeight = window.visualViewport.height;
-                const windowHeight = window.innerHeight;
-                const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
-                setKeyboardHeight(keyboardHeight);
-            }
-        };
-
-        const visualViewport = typeof window !== "undefined" ? window.visualViewport : null;
-        if (visualViewport) {
-            visualViewport.addEventListener("resize", handleResize);
-            return () => visualViewport.removeEventListener("resize", handleResize);
-        }
-    }, []);
-
     // Auto-scroll to bottom on new messages
     useEffect(() => {
-        if (messagesEndRef.current && !showScrollButton) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        const container = messagesContainerRef.current;
+        if (container && !showScrollButton) {
+            container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
         }
     }, [messages.length, showScrollButton]);
 
@@ -116,7 +137,21 @@ export default function ChatInterface({
 
     // Scroll to bottom
     const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }, []);
+
+    const jumpToMessage = useCallback((messageId: Id<"messages">) => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        const target = container.querySelector(`[data-message-id="${messageId}"]`) as HTMLElement | null;
+        if (!target) return;
+
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMessageId(messageId);
+        window.setTimeout(() => setHighlightedMessageId((prev) => (prev === messageId ? null : prev)), 1500);
     }, []);
 
     // Group messages by date
@@ -158,7 +193,10 @@ export default function ChatInterface({
                     reply_preview: replyingTo
                         ? {
                             sender_id: replyingTo.sender_id,
-                            sender_name: replyingTo.sender?.name || "Unknown",
+                            sender_name:
+                                replyingTo.sender_id === currentUserId
+                                    ? "You"
+                                    : partnerName,
                             content: replyingTo.content.substring(0, 100),
                             message_type: replyingTo.message_type,
                         }
@@ -170,7 +208,7 @@ export default function ChatInterface({
                 console.error("Failed to send message:", error);
             }
         },
-        [sendMessage, replyingTo, scrollToBottom]
+        [sendMessage, replyingTo, scrollToBottom, currentUserId, partnerName]
     );
 
     // Handle nudge
@@ -231,8 +269,8 @@ export default function ChatInterface({
                     partnerName={partnerName}
                     partnerAvatar={partnerAvatar}
                     partnerInitials={partnerInitials}
-                    isOnline={isPartnerOnline}
-                    lastSeen={partnerLastSeen}
+                    isOnline={derivedIsPartnerOnline}
+                    lastSeen={derivedPartnerLastSeen}
                     onClose={onClose}
                 />
                 <div className="flex-1 flex items-center justify-center p-8">
@@ -255,6 +293,7 @@ export default function ChatInterface({
                     replyingTo={replyingTo}
                     onCancelReply={handleCancelReply}
                     partnerName={partnerName}
+                    currentUserId={currentUserId}
 
                     disabled={true}
                     ref={inputRef}
@@ -271,8 +310,8 @@ export default function ChatInterface({
                     partnerName={partnerName}
                     partnerAvatar={partnerAvatar}
                     partnerInitials={partnerInitials}
-                    isOnline={isPartnerOnline}
-                    lastSeen={partnerLastSeen}
+                    isOnline={derivedIsPartnerOnline}
+                    lastSeen={derivedPartnerLastSeen}
                     onClose={onClose}
                 />
                 <div className="flex-1 flex items-center justify-center">
@@ -288,16 +327,15 @@ export default function ChatInterface({
     return (
         <div
             className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950"
-            style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : undefined }}
         >
             {/* Header */}
             <ChatHeader
                 partnerName={partnerName}
                 partnerAvatar={partnerAvatar}
                 partnerInitials={partnerInitials}
-                isOnline={isPartnerOnline}
+                isOnline={derivedIsPartnerOnline}
                 isTyping={partnerIsTyping}
-                lastSeen={partnerLastSeen}
+                lastSeen={derivedPartnerLastSeen}
                 onClose={onClose}
             />
 
@@ -322,7 +360,7 @@ export default function ChatInterface({
             <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+                className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-20 sm:pb-24"
             >
                 {/* Empty state */}
                 {messages.length === 0 && (
@@ -410,11 +448,17 @@ export default function ChatInterface({
 
                             // Render real message
                             const msg = message as Message;
+                            const isOwnMessage = currentUserId
+                                ? msg.sender_id === currentUserId
+                                : partnerId
+                                    ? msg.sender_id !== partnerId
+                                    : false;
+
                             return (
                                 <MessageBubble
                                     key={msg._id}
                                     message={msg}
-                                    isOwn={msg.sender?.name === "You" || msg.sender_id === partnerId}
+                                    isOwn={isOwnMessage}
                                     showAvatar={showAvatar}
                                     isLastInGroup={isLastInGroup}
                                     partnerName={partnerName}
@@ -423,6 +467,8 @@ export default function ChatInterface({
                                     onReply={() => handleReply(msg)}
                                     onReaction={(emoji) => handleReaction(msg._id, emoji)}
                                     onDelete={() => handleDelete(msg._id)}
+                                    onJumpToRepliedMessage={jumpToMessage}
+                                    isHighlighted={highlightedMessageId === msg._id}
                                 />
                             );
                         })}
@@ -473,6 +519,7 @@ export default function ChatInterface({
                 onSendNudge={handleSendNudge}
                 onTyping={handleTyping}
                 partnerName={partnerName}
+                currentUserId={currentUserId}
                 disabled={false}
             />
         </div>

@@ -43,11 +43,19 @@ export const UserReadSchema = UserBaseSchema.extend({
   partner_id: z.string().uuid().nullable(),
   partner_full_name: z.string().nullable(),
   partner_nickname: z.string().nullable(),
+  partner_profile_picture_url: z.string().nullable().optional(),
   partnership_id: z.string().uuid().nullable(),
   sent_invitation: z.any().nullable(), // Adjust as needed if PartnerInvitation schema is available
   received_invitation: z.any().nullable(), // Adjust as needed
   bio: z.string().nullable(),
   profile_picture_url: z.string().nullable(),
+  profile_picture_variants: z.object({
+    original: z.string(),
+    xl: z.string(),
+    lg: z.string(),
+    md: z.string(),
+    sm: z.string(),
+  }).nullable().optional(),
   timezone: z.string().nullable(),
   notifications_enabled: z.boolean().nullable(),
   current_streak: z.number().nullable(),

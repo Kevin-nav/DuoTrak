@@ -1,7 +1,7 @@
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { uploadToR2, deleteFromR2, getProfilePictureKey } from "./lib/r2";
+import { uploadToR2, deletePrefixFromR2, getProfilePictureKey } from "./lib/r2";
 
 /**
  * Ensures the current user is stored in the database.
@@ -75,6 +75,7 @@ export const current = query({
       partnership_id: null as any,
       partner_full_name: null as string | null,
       partner_nickname: null as string | null,
+      partner_profile_picture_url: null as string | null,
       sent_invitation: null as any,
       received_invitation: null as any,
       badges: [] as any[], // Placeholder for now
@@ -86,6 +87,9 @@ export const current = query({
       if (partner) {
         partnerDetails.partner_id = partner._id;
         partnerDetails.partner_full_name = partner.full_name || null;
+        const partnerVariants = partner.profile_picture_variants;
+        partnerDetails.partner_profile_picture_url =
+          partnerVariants?.md || partnerVariants?.sm || partner.profile_picture_url || null;
 
         // Find active partnership to get ID and nicknames
         // We need an index for this ideally, or search by user1/user2
@@ -128,7 +132,7 @@ export const current = query({
       .filter((q) => q.eq(q.field("status"), "pending"))
       .first();
 
-    let profilePictureUrl = user.profile_picture_url;
+    let profilePictureUrl = user.profile_picture_url || user.profile_picture_variants?.md;
     if (user.profile_picture_storage_id) {
       const url = await ctx.storage.getUrl(user.profile_picture_storage_id);
       if (url) {
@@ -163,13 +167,23 @@ export const generateUploadUrl = mutation({
  */
 export const update = mutation({
   args: {
+    email: v.optional(v.string()),
     full_name: v.optional(v.string()),
     nickname: v.optional(v.string()),
     bio: v.optional(v.string()),
     timezone: v.optional(v.string()),
     theme: v.optional(v.string()),
     notifications_enabled: v.optional(v.boolean()),
+    notification_time: v.optional(v.string()),
+    privacy_setting: v.optional(v.string()),
     profile_picture_url: v.optional(v.string()),
+    profile_picture_variants: v.optional(v.object({
+      original: v.string(),
+      xl: v.string(),
+      lg: v.string(),
+      md: v.string(),
+      sm: v.string(),
+    })),
     profile_picture_storage_id: v.optional(v.union(v.id("_storage"), v.null())),
   },
   handler: async (ctx, args) => {
@@ -224,10 +238,17 @@ export const checkStatusByEmail = query({
  * Internal mutation to update profile picture URL.
  * Called by the uploadProfilePicture action after R2 upload.
  */
-export const updateProfilePictureUrl = internalMutation({
+export const updateProfilePictureData = internalMutation({
   args: {
     firebaseUid: v.string(),
     profilePictureUrl: v.string(),
+    profilePictureVariants: v.object({
+      original: v.string(),
+      xl: v.string(),
+      lg: v.string(),
+      md: v.string(),
+      sm: v.string(),
+    }),
     profilePictureVersion: v.number(),
   },
   handler: async (ctx, args) => {
@@ -242,6 +263,7 @@ export const updateProfilePictureUrl = internalMutation({
 
     await ctx.db.patch(user._id, {
       profile_picture_url: args.profilePictureUrl,
+      profile_picture_variants: args.profilePictureVariants,
       profile_picture_version: args.profilePictureVersion,
       profile_picture_storage_id: null, // Clear legacy storage reference
       updated_at: Date.now(),
@@ -270,6 +292,7 @@ export const clearProfilePictureUrl = internalMutation({
 
     await ctx.db.patch(user._id, {
       profile_picture_url: undefined,
+      profile_picture_variants: undefined,
       profile_picture_version: undefined,
       profile_picture_storage_id: null,
       updated_at: Date.now(),
@@ -285,10 +308,19 @@ export const clearProfilePictureUrl = internalMutation({
  */
 export const uploadProfilePicture = action({
   args: {
-    imageBase64: v.string(),
-    contentType: v.string(),
+    variants: v.object({
+      original: v.string(),
+      xl: v.string(),
+      lg: v.string(),
+      md: v.string(),
+      sm: v.string(),
+    }),
+    contentType: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<{ success: boolean; url: string }> => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ success: boolean; url: string; variants: Record<string, string> }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Unauthenticated");
@@ -296,24 +328,37 @@ export const uploadProfilePicture = action({
 
     const firebaseUid = identity.subject;
     const version = Date.now();
+    const contentType = args.contentType || "image/webp";
 
-    // Generate the storage key
-    const key = getProfilePictureKey(firebaseUid, version);
+    // Best-effort cleanup to avoid orphaned variants.
+    await deletePrefixFromR2(`profiles/${firebaseUid}/`).catch((error) => {
+      console.warn("Failed to cleanup old profile pictures before upload:", error);
+    });
 
-    // Convert base64 to Buffer
-    const buffer = Buffer.from(args.imageBase64, "base64");
-
-    // Upload to R2
-    const url = await uploadToR2(key, buffer, args.contentType);
+    const sizes = ["original", "xl", "lg", "md", "sm"] as const;
+    const uploaded: Record<string, string> = {};
+    for (const size of sizes) {
+      const key = getProfilePictureKey(firebaseUid, size, version);
+      const buffer = Buffer.from(args.variants[size], "base64");
+      uploaded[size] = await uploadToR2(key, buffer, contentType);
+    }
+    const preferredUrl = uploaded.md || uploaded.lg || uploaded.original;
 
     // Update the URL in Convex database
-    await ctx.runMutation(internal.users.updateProfilePictureUrl, {
+    await ctx.runMutation(internal.users.updateProfilePictureData, {
       firebaseUid,
-      profilePictureUrl: url,
+      profilePictureUrl: preferredUrl,
+      profilePictureVariants: {
+        original: uploaded.original,
+        xl: uploaded.xl,
+        lg: uploaded.lg,
+        md: uploaded.md,
+        sm: uploaded.sm,
+      },
       profilePictureVersion: version,
     });
 
-    return { success: true, url };
+    return { success: true, url: preferredUrl, variants: uploaded };
   },
 });
 
@@ -330,14 +375,9 @@ export const deleteProfilePicture = action({
 
     const firebaseUid = identity.subject;
 
-    // Get the current profile picture version to construct the key
-    // We could query the user here, but for simplicity, we'll just clear the URL
-    // and rely on the key pattern. In production, you might want to list and delete
-    // all files with the prefix profiles/{userId}/
-
     try {
-      // For now, just clear the URL in Convex
-      // R2 files will be orphaned but can be cleaned up with a scheduled job
+      await deletePrefixFromR2(`profiles/${firebaseUid}/`);
+
       await ctx.runMutation(internal.users.clearProfilePictureUrl, {
         firebaseUid,
       });

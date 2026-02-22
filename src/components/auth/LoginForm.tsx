@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import Link from 'next/link';
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { auth } from '@/lib/firebase';
 
 export default function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,10 +25,32 @@ export default function LoginForm() {
 
   const acceptInvitationMutation = useMutation(api.invitations.accept);
 
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const acceptInvitationWithAuthRetry = async (token: string) => {
+    const retryDelaysMs = [300, 600, 1200, 2000];
+    let lastError: any = null;
+    for (let i = 0; i <= retryDelaysMs.length; i++) {
+      try {
+        await acceptInvitationMutation({ token });
+        return;
+      } catch (err: any) {
+        lastError = err;
+        const message = err?.message || '';
+        const isUnauthenticated = /Unauthenticated/i.test(message);
+        if (!isUnauthenticated || i === retryDelaysMs.length) {
+          throw err;
+        }
+        await sleep(retryDelaysMs[i]);
+      }
+    }
+    throw lastError;
+  };
+
   const handleAuthSuccess = async () => {
     if (inviteToken) {
       try {
-        await acceptInvitationMutation({ token: inviteToken });
+        await acceptInvitationWithAuthRetry(inviteToken);
         toast.success('Invitation accepted!', {
           description: 'Your partnership is confirmed. Welcome to DuoTrak!',
         });
@@ -38,7 +62,7 @@ export default function LoginForm() {
       }
     }
 
-    window.location.href = '/dashboard';
+    router.replace('/dashboard');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,18 +71,7 @@ export default function LoginForm() {
     setError('');
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-      const idToken = await userCredential.user.getIdToken();
-      const sessionResponse = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-      if (!sessionResponse.ok) {
-        const errorData = await sessionResponse.json();
-        throw new Error(errorData.error || 'Failed to create session');
-      }
+      await signInWithEmailAndPassword(auth, email, password);
 
       await handleAuthSuccess();
     } catch (authError: any) {
@@ -77,18 +90,7 @@ export default function LoginForm() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-
-      const idToken = await result.user.getIdToken();
-      const sessionResponse = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-      if (!sessionResponse.ok) {
-        const errorData = await sessionResponse.json();
-        throw new Error(errorData.error || 'Failed to create session');
-      }
+      await signInWithPopup(auth, provider);
 
       await handleAuthSuccess();
     } catch (err: any) {

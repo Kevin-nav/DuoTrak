@@ -81,7 +81,7 @@ export function useChat(options: UseChatOptions) {
     // State for optimistic updates
     const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
     const [isTyping, setIsTyping] = useState(false);
-    const [partnerIsTyping, setPartnerIsTyping] = useState(false);
+    const hasActiveTypingSignalRef = useRef(false);
 
     // Typing timeout ref
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -110,6 +110,12 @@ export function useChat(options: UseChatOptions) {
         api.chat.getUnreadCount,
         conversation?._id ? { conversation_id: conversation._id } : "skip"
     ) as number | undefined;
+    const partnerTypingStatus = useQuery(
+        (api as any).chat.getPartnerTypingStatus,
+        conversation?._id && partnerId
+            ? { conversation_id: conversation._id, partner_id: partnerId }
+            : "skip"
+    ) as { is_typing: boolean } | undefined;
 
     // Mutations
     const sendMessageMutation = useMutation(api.chat.sendMessage);
@@ -118,6 +124,7 @@ export function useChat(options: UseChatOptions) {
     const removeReactionMutation = useMutation(api.chat.removeReaction);
     const deleteMessageMutation = useMutation(api.chat.deleteMessage);
     const getOrCreateConversationMutation = useMutation(api.chat.getOrCreateConversation);
+    const setTypingStatusMutation = useMutation((api as any).chat.setTypingStatus);
 
     // Auto mark as read when messages change
     useEffect(() => {
@@ -125,6 +132,28 @@ export function useChat(options: UseChatOptions) {
             markAsReadMutation({ conversation_id: conversation._id }).catch(console.error);
         }
     }, [autoMarkAsRead, conversation?._id, messages?.length, markAsReadMutation]);
+
+    const setTypingStatus = useCallback(
+        async (nextIsTyping: boolean) => {
+            if (!conversation?._id) return;
+            try {
+                await setTypingStatusMutation({
+                    conversation_id: conversation._id,
+                    is_typing: nextIsTyping,
+                });
+            } catch (error) {
+                console.error("Failed to set typing status:", error);
+            }
+        },
+        [conversation?._id, setTypingStatusMutation]
+    );
+
+    const stopTyping = useCallback(async () => {
+        if (!hasActiveTypingSignalRef.current) return;
+        hasActiveTypingSignalRef.current = false;
+        setIsTyping(false);
+        await setTypingStatus(false);
+    }, [setTypingStatus]);
 
     // Send message with optimistic update
     const sendMessage = useCallback(
@@ -138,6 +167,8 @@ export function useChat(options: UseChatOptions) {
                 is_nudge?: boolean;
             }
         ) => {
+            await stopTyping();
+
             if (!conversation?._id && !partnershipId) {
                 console.error("No conversation or partnership ID available");
                 return null;
@@ -197,7 +228,7 @@ export function useChat(options: UseChatOptions) {
                 throw error;
             }
         },
-        [conversation?._id, partnershipId, sendMessageMutation, getOrCreateConversationMutation]
+        [conversation?._id, partnershipId, sendMessageMutation, getOrCreateConversationMutation, stopTyping]
     );
 
     // Add reaction
@@ -251,9 +282,14 @@ export function useChat(options: UseChatOptions) {
 
     // Handle typing indicator
     const handleTyping = useCallback(() => {
-        if (!isTyping) {
+        if (!conversation?._id) {
+            return;
+        }
+
+        if (!hasActiveTypingSignalRef.current) {
+            hasActiveTypingSignalRef.current = true;
             setIsTyping(true);
-            // TODO: Send typing status to Redis via API
+            void setTypingStatus(true);
         }
 
         // Clear existing timeout
@@ -263,19 +299,36 @@ export function useChat(options: UseChatOptions) {
 
         // Set timeout to stop typing
         typingTimeoutRef.current = setTimeout(() => {
-            setIsTyping(false);
-            // TODO: Send stop typing to Redis via API
-        }, 3000);
-    }, [isTyping]);
+            void stopTyping();
+        }, 2500);
+    }, [conversation?._id, setTypingStatus, stopTyping]);
 
     // Cleanup typing timeout on unmount
     useEffect(() => {
+        const handleVisibilityOrBlur = () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+            void stopTyping();
+        };
+        const handleVisibilityChange = () => {
+            if (document.visibilityState !== "visible") {
+                handleVisibilityOrBlur();
+            }
+        };
+
+        window.addEventListener("blur", handleVisibilityOrBlur);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
         return () => {
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
             }
+            window.removeEventListener("blur", handleVisibilityOrBlur);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            void stopTyping();
         };
-    }, []);
+    }, [stopTyping]);
 
     // Retry failed message
     const retryMessage = useCallback(
@@ -322,7 +375,7 @@ export function useChat(options: UseChatOptions) {
 
         // Typing
         isTyping,
-        partnerIsTyping,
+        partnerIsTyping: partnerTypingStatus?.is_typing ?? false,
         handleTyping,
 
         // Optimistic state

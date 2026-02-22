@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     FIREBASE_SERVICE_ACCOUNT_JSON_PATH: str
     FIREBASE_PROJECT_ID: str
-    CLIENT_ORIGIN_URL: str = "https://localhost:3000"
+    CLIENT_ORIGIN_URL: str = "http://localhost:3000"
     REDIS_URL: str
     RESEND_API_KEY: str
     DEFAULT_FROM_EMAIL: str

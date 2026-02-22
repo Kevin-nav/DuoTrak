@@ -19,7 +19,7 @@ export default function TypingIndicator({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="flex items-end gap-2 mb-2"
+            className="flex items-end gap-1.5 mb-3"
         >
             {/* Avatar */}
             <div className="flex-shrink-0">
@@ -27,20 +27,20 @@ export default function TypingIndicator({
                     <img
                         src={partnerAvatar}
                         alt={partnerName}
-                        className="w-8 h-8 rounded-full object-cover"
+                        className="w-6 h-6 rounded-full object-cover"
                     />
                 ) : (
-                    <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                    <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-[10px] font-semibold">
                         {partnerInitials || partnerName.charAt(0).toUpperCase()}
                     </div>
                 )}
             </div>
 
             {/* Typing bubble */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
                 <div className="flex items-center gap-1">
                     <motion.div
-                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"
+                        className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
                         animate={{
                             scale: [1, 1.3, 1],
                             opacity: [0.5, 1, 0.5]
@@ -53,7 +53,7 @@ export default function TypingIndicator({
                         }}
                     />
                     <motion.div
-                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"
+                        className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
                         animate={{
                             scale: [1, 1.3, 1],
                             opacity: [0.5, 1, 0.5]
@@ -66,7 +66,7 @@ export default function TypingIndicator({
                         }}
                     />
                     <motion.div
-                        className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"
+                        className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
                         animate={{
                             scale: [1, 1.3, 1],
                             opacity: [0.5, 1, 0.5]

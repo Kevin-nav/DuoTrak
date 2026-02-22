@@ -18,9 +18,33 @@ export interface ProcessedImage {
     processedSize: number;
 }
 
+export type AvatarVariantKey = 'original' | 'xl' | 'lg' | 'md' | 'sm';
+
+export interface AvatarVariant {
+    key: AvatarVariantKey;
+    size: number;
+    base64: string;
+    blob: Blob;
+    width: number;
+    height: number;
+}
+
+export interface ProcessedAvatarSet {
+    variants: Record<AvatarVariantKey, AvatarVariant>;
+    originalSize: number;
+    totalProcessedSize: number;
+}
+
 const MAX_FILE_SIZE_MB = 5;
 const MAX_DIMENSION = 400;
 const WEBP_QUALITY = 0.85;
+const AVATAR_VARIANT_SIZES: Record<AvatarVariantKey, number> = {
+    original: 1024,
+    xl: 512,
+    lg: 256,
+    md: 128,
+    sm: 64,
+};
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 /**
@@ -111,6 +135,29 @@ function resizeImage(
     return { canvas, width, height };
 }
 
+function cropToSquareCanvas(img: HTMLImageElement, size: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('Failed to get canvas context');
+    }
+
+    const sourceWidth = img.naturalWidth || img.width;
+    const sourceHeight = img.naturalHeight || img.height;
+    const side = Math.min(sourceWidth, sourceHeight);
+    const sx = Math.floor((sourceWidth - side) / 2);
+    const sy = Math.floor((sourceHeight - side) / 2);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+
+    return canvas;
+}
+
 /**
  * Converts a canvas to a WebP blob.
  */
@@ -182,6 +229,47 @@ export async function processImage(file: File): Promise<ProcessedImage> {
         height,
         originalSize: file.size,
         processedSize: blob.size,
+    };
+}
+
+/**
+ * Generates square avatar variants for different rendering contexts.
+ * All variants are WebP and center-cropped.
+ */
+export async function processAvatarVariants(file: File): Promise<ProcessedAvatarSet> {
+    const validation = validateImage(file);
+    if (!validation.valid) {
+        throw new Error(validation.error);
+    }
+
+    const img = await loadImage(file);
+
+    const variantEntries = await Promise.all(
+        (Object.keys(AVATAR_VARIANT_SIZES) as AvatarVariantKey[]).map(async (key) => {
+            const size = AVATAR_VARIANT_SIZES[key];
+            const canvas = cropToSquareCanvas(img, size);
+            const blob = await canvasToWebP(canvas, WEBP_QUALITY);
+            const base64 = await blobToBase64(blob);
+
+            const variant: AvatarVariant = {
+                key,
+                size,
+                base64,
+                blob,
+                width: size,
+                height: size,
+            };
+            return [key, variant] as const;
+        })
+    );
+
+    const variants = Object.fromEntries(variantEntries) as Record<AvatarVariantKey, AvatarVariant>;
+    const totalProcessedSize = Object.values(variants).reduce((sum, variant) => sum + variant.blob.size, 0);
+
+    return {
+        variants,
+        originalSize: file.size,
+        totalProcessedSize,
     };
 }
 

@@ -11,6 +11,11 @@ class GoalWizardData(BaseModel):
     accountability_type: str = Field(..., description="Preferred accountability style")
     partner_name: Optional[str] = Field(None, description="Partner's name if provided")
     partner_relationship: Optional[str] = Field(None, description="Relationship to partner")
+    target_deadline: Optional[str] = Field(None, description="Target completion date if user has one")
+    preferred_check_in_style: Optional[str] = Field(
+        "quick_text",
+        description="Preferred partner check-in style: quick_text, photo_recap, voice_note",
+    )
 
 class GoalWizardRequest(BaseModel):
     user_id: str = Field(..., description="Unique user identifier")
@@ -50,6 +55,11 @@ class AnswersSubmissionRequest(BaseModel):
 class DuotrakTask(BaseModel):
     description: str = Field(..., description="Task description")
     success_metric: str = Field(..., description="How success is measured")
+    recommended_cadence: str = Field(..., description="Suggested cadence for consistency")
+    recommended_time_windows: List[str] = Field(default_factory=list, description="Recommended execution windows")
+    consistency_rationale: str = Field(..., description="Why this cadence/window is sustainable")
+    partner_involvement: Dict[str, str] = Field(default_factory=dict, description="Daily flexible partner touchpoint guidance")
+    proof_guidance: Dict[str, List[str]] = Field(default_factory=dict, description="Advisory picture proof guidance")
 
 
 class DuotrakMilestone(BaseModel):

@@ -549,3 +549,238 @@ export const getConversationByPartnerId = query({
         return conversation;
     },
 });
+
+/**
+ * Record the current user's presence heartbeat.
+ */
+export const heartbeat = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Unauthorized");
+        }
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .first();
+
+        if (!currentUser) {
+            throw new Error("User not found");
+        }
+
+        const now = Date.now();
+        const existingPresence = await ctx.db
+            .query("user_presence")
+            .withIndex("by_user", (q) => q.eq("user_id", currentUser._id))
+            .first();
+
+        if (existingPresence) {
+            await ctx.db.patch(existingPresence._id, {
+                last_heartbeat_at: now,
+                updated_at: now,
+            });
+            return existingPresence._id;
+        }
+
+        return await ctx.db.insert("user_presence", {
+            user_id: currentUser._id,
+            last_heartbeat_at: now,
+            updated_at: now,
+        });
+    },
+});
+
+/**
+ * Get partner presence status for chat.
+ */
+export const getPartnerPresence = query({
+    args: {
+        partner_id: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            return { is_online: false as const, last_seen_at: undefined as number | undefined };
+        }
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .first();
+
+        if (!currentUser) {
+            return { is_online: false as const, last_seen_at: undefined as number | undefined };
+        }
+
+        // Authorize: ensure current user and partner are in an active partnership.
+        let partnership = await ctx.db
+            .query("partnerships")
+            .withIndex("by_user1", (q) => q.eq("user1_id", currentUser._id))
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("user2_id"), args.partner_id),
+                    q.eq(q.field("status"), "active")
+                )
+            )
+            .first();
+
+        if (!partnership) {
+            partnership = await ctx.db
+                .query("partnerships")
+                .withIndex("by_user2", (q) => q.eq("user2_id", currentUser._id))
+                .filter((q) =>
+                    q.and(
+                        q.eq(q.field("user1_id"), args.partner_id),
+                        q.eq(q.field("status"), "active")
+                    )
+                )
+                .first();
+        }
+
+        if (!partnership) {
+            return { is_online: false as const, last_seen_at: undefined as number | undefined };
+        }
+
+        const presence = await ctx.db
+            .query("user_presence")
+            .withIndex("by_user", (q) => q.eq("user_id", args.partner_id))
+            .first();
+
+        if (!presence) {
+            return { is_online: false as const, last_seen_at: undefined as number | undefined };
+        }
+
+        const now = Date.now();
+        const isOnline = now - presence.last_heartbeat_at <= 70_000;
+
+        return {
+            is_online: isOnline,
+            last_seen_at: presence.last_heartbeat_at,
+        };
+    },
+});
+
+/**
+ * Set current user's typing status for a conversation.
+ */
+export const setTypingStatus = mutation({
+    args: {
+        conversation_id: v.id("conversations"),
+        is_typing: v.boolean(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Unauthorized");
+        }
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .first();
+
+        if (!currentUser) {
+            throw new Error("User not found");
+        }
+
+        const conversation = await ctx.db.get(args.conversation_id);
+        if (!conversation) {
+            throw new Error("Conversation not found");
+        }
+
+        const partnership = await ctx.db.get(conversation.partnership_id);
+        if (!partnership) {
+            throw new Error("Partnership not found");
+        }
+
+        const isParticipant =
+            currentUser._id === partnership.user1_id || currentUser._id === partnership.user2_id;
+
+        if (!isParticipant || partnership.status !== "active") {
+            throw new Error("Forbidden");
+        }
+
+        const now = Date.now();
+        const existing = await ctx.db
+            .query("chat_typing")
+            .withIndex("by_conversation_user", (q) =>
+                q.eq("conversation_id", args.conversation_id).eq("user_id", currentUser._id)
+            )
+            .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, {
+                is_typing: args.is_typing,
+                updated_at: now,
+            });
+            return existing._id;
+        }
+
+        return await ctx.db.insert("chat_typing", {
+            conversation_id: args.conversation_id,
+            user_id: currentUser._id,
+            is_typing: args.is_typing,
+            updated_at: now,
+        });
+    },
+});
+
+/**
+ * Get partner typing status for a conversation.
+ */
+export const getPartnerTypingStatus = query({
+    args: {
+        conversation_id: v.id("conversations"),
+        partner_id: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            return { is_typing: false as const };
+        }
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .first();
+
+        if (!currentUser) {
+            return { is_typing: false as const };
+        }
+
+        const conversation = await ctx.db.get(args.conversation_id);
+        if (!conversation) {
+            return { is_typing: false as const };
+        }
+
+        const partnership = await ctx.db.get(conversation.partnership_id);
+        if (!partnership || partnership.status !== "active") {
+            return { is_typing: false as const };
+        }
+
+        const isValidParticipantPair =
+            (partnership.user1_id === currentUser._id && partnership.user2_id === args.partner_id) ||
+            (partnership.user2_id === currentUser._id && partnership.user1_id === args.partner_id);
+
+        if (!isValidParticipantPair) {
+            return { is_typing: false as const };
+        }
+
+        const partnerTyping = await ctx.db
+            .query("chat_typing")
+            .withIndex("by_conversation_user", (q) =>
+                q.eq("conversation_id", args.conversation_id).eq("user_id", args.partner_id)
+            )
+            .first();
+
+        if (!partnerTyping || !partnerTyping.is_typing) {
+            return { is_typing: false as const };
+        }
+
+        const now = Date.now();
+        const isFresh = now - partnerTyping.updated_at <= 5_000;
+        return { is_typing: isFresh };
+    },
+});

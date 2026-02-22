@@ -12,7 +12,7 @@ interface ReactionPickerProps {
     position?: "left" | "right";
 }
 
-const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+const REACTIONS = ["\u{1F44D}", "\u2764\uFE0F", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F525}"];
 
 export default function ReactionPicker({
     onSelect,
@@ -97,3 +97,4 @@ export default function ReactionPicker({
         </>
     );
 }
+

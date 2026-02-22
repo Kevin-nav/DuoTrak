@@ -129,7 +129,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--theme-background)]/90 backdrop-blur-lg border-t border-[var(--theme-border)] px-4 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]"
       >
-        <div className="flex items-center justify-around max-w-md mx-auto">
+        <div className="mx-auto flex w-full max-w-md items-center justify-between gap-1">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -138,7 +138,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <motion.button
                 key={item.id}
                 onClick={() => handleNavigation(item)}
-                className={`relative flex flex-col items-center justify-center space-y-1 w-16 h-14 rounded-xl transition-all duration-300 ${isActive
+                className={`relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center space-y-1 rounded-xl transition-all duration-300 ${isActive
                     ? "text-[var(--theme-primary)]"
                     : "text-[var(--theme-muted-foreground)] hover:text-[var(--theme-foreground)] hover:bg-[var(--theme-secondary)]"
                   }`}
@@ -173,7 +173,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   )}
                 </div>
 
-                <span className={`text-[10px] font-medium tracking-wide ${isActive ? "text-[var(--theme-primary)]" : ""}`}>
+                <span className={`whitespace-nowrap text-[11px] leading-none ${isActive ? "text-[var(--theme-primary)]" : ""}`}>
                   {item.label}
                 </span>
               </motion.button>

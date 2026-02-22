@@ -13,10 +13,10 @@ import {
     FileText,
     Download,
     Reply,
-    Trash2,
     Hand,
     X,
 } from "lucide-react";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Message } from "@/hooks/useChat";
 import ReactionPicker from "./ReactionPicker";
 
@@ -31,9 +31,10 @@ interface MessageBubbleProps {
     onReply: () => void;
     onReaction: (emoji: string) => void;
     onDelete: () => void;
+    onJumpToRepliedMessage?: (messageId: Id<"messages">) => void;
+    isHighlighted?: boolean;
 }
 
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
 export default function MessageBubble({
     message,
@@ -46,9 +47,10 @@ export default function MessageBubble({
     onReply,
     onReaction,
     onDelete,
+    onJumpToRepliedMessage,
+    isHighlighted = false,
 }: MessageBubbleProps) {
     const [showReactionPicker, setShowReactionPicker] = useState(false);
-    const [showContextMenu, setShowContextMenu] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
@@ -61,9 +63,10 @@ export default function MessageBubble({
     // Double tap for heart reaction
     const lastTap = useRef<number>(0);
     const handleDoubleTap = () => {
+        if (message.is_deleted) return;
         const now = Date.now();
         if (now - lastTap.current < 300) {
-            onReaction("❤️");
+            onReaction("\u2764\uFE0F");
             lastTap.current = 0;
         } else {
             lastTap.current = now;
@@ -73,8 +76,12 @@ export default function MessageBubble({
     // Long press for context menu
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
     const handleLongPressStart = () => {
+        if (message.is_deleted) return;
         longPressTimer.current = setTimeout(() => {
             setShowReactionPicker(true);
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
         }, 500);
     };
     const handleLongPressEnd = () => {
@@ -83,10 +90,21 @@ export default function MessageBubble({
         }
     };
 
+    const handleLongPressMove = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
     // Handle swipe gesture
     const handleDragEnd = (_: any, info: PanInfo) => {
-        if (info.offset.x > 60) {
+        if (message.is_deleted) return;
+        if (info.offset.x > 60 && Math.abs(info.offset.y) < 24) {
             onReply();
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
         }
     };
 
@@ -129,10 +147,6 @@ export default function MessageBubble({
         ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
         : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700";
 
-    const tailClasses = isOwn
-        ? "border-t-blue-500"
-        : "border-t-white dark:border-t-gray-800";
-
     return (
         <>
             <motion.div
@@ -144,8 +158,11 @@ export default function MessageBubble({
                 drag="x"
                 dragConstraints={{ left: 0, right: 80 }}
                 dragElastic={0.1}
+                dragDirectionLock
                 onDragEnd={handleDragEnd}
+                onDragStart={handleLongPressEnd}
                 style={{ x }}
+                data-message-id={message._id}
             >
                 {/* Reply indicator on swipe */}
                 {!isOwn && (
@@ -183,11 +200,18 @@ export default function MessageBubble({
                 <div className="relative max-w-[80%] sm:max-w-[70%]">
                     {/* Reply preview */}
                     {message.reply_preview && (
-                        <div
+                        <button
+                            type="button"
+                            disabled={!message.reply_to_id || !onJumpToRepliedMessage}
+                            onClick={() => {
+                                if (message.reply_to_id && onJumpToRepliedMessage) {
+                                    onJumpToRepliedMessage(message.reply_to_id);
+                                }
+                            }}
                             className={`px-3 py-2 mb-1 rounded-t-2xl text-xs ${isOwn
                                     ? "bg-blue-600 border-l-2 border-blue-300"
                                     : "bg-gray-50 dark:bg-gray-700/50 border-l-2 border-gray-400"
-                                }`}
+                                } ${message.reply_to_id && onJumpToRepliedMessage ? "cursor-pointer hover:opacity-90" : ""}`}
                         >
                             <span className={`font-medium ${isOwn ? "text-blue-200" : "text-gray-600 dark:text-gray-300"}`}>
                                 {message.reply_preview.sender_name}
@@ -195,24 +219,27 @@ export default function MessageBubble({
                             <p className={`truncate ${isOwn ? "text-blue-100" : "text-gray-500 dark:text-gray-400"}`}>
                                 {message.reply_preview.content}
                             </p>
-                        </div>
+                        </button>
                     )}
 
                     {/* Main bubble */}
                     <div
                         className={`relative px-4 py-2.5 shadow-sm ${bubbleClasses} ${message.reply_preview ? "rounded-b-2xl" : "rounded-2xl"
                             } ${isOwn && isLastInGroup ? "rounded-br-sm" : ""} ${!isOwn && isLastInGroup ? "rounded-bl-sm" : ""
-                            }`}
+                            } ${isHighlighted ? "ring-2 ring-amber-400 dark:ring-amber-300" : ""}`}
                         onClick={handleDoubleTap}
                         onTouchStart={handleLongPressStart}
                         onTouchEnd={handleLongPressEnd}
+                        onTouchMove={handleLongPressMove}
                         onMouseDown={handleLongPressStart}
                         onMouseUp={handleLongPressEnd}
                         onMouseLeave={handleLongPressEnd}
                         onContextMenu={(e) => {
+                            if (message.is_deleted) return;
                             e.preventDefault();
                             setShowReactionPicker(true);
                         }}
+                        style={{ touchAction: "pan-y" }}
                     >
                         {/* Nudge indicator */}
                         {message.is_nudge && (
@@ -225,7 +252,7 @@ export default function MessageBubble({
                         {/* Deleted message */}
                         {message.is_deleted ? (
                             <p className={`text-sm italic ${isOwn ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}>
-                                This message was deleted
+                                {isOwn ? "You deleted this message" : "This message was deleted"}
                             </p>
                         ) : (
                             <>
@@ -320,7 +347,7 @@ export default function MessageBubble({
                             <span className={`text-[10px] ${isOwn ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}>
                                 {format(new Date(message.created_at), "p")}
                             </span>
-                            {isOwn && getStatusIcon()}
+                            {isOwn && !message.is_deleted && getStatusIcon()}
                         </div>
 
                         {/* WhatsApp-style bubble tail */}
@@ -344,7 +371,7 @@ export default function MessageBubble({
                     </div>
 
                     {/* Reactions display */}
-                    {message.reactions && message.reactions.length > 0 && (
+                    {!message.is_deleted && message.reactions && message.reactions.length > 0 && (
                         <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
                             {/* Group reactions by emoji */}
                             {Object.entries(
@@ -376,14 +403,13 @@ export default function MessageBubble({
                             <ReactionPicker
                                 onSelect={(emoji) => {
                                     onReaction(emoji);
-                                    setShowReactionPicker(false);
                                 }}
                                 onClose={() => setShowReactionPicker(false)}
-                                onReply={() => {
+                                onReply={!message.is_deleted ? () => {
                                     onReply();
                                     setShowReactionPicker(false);
-                                }}
-                                onDelete={isOwn ? () => {
+                                } : undefined}
+                                onDelete={isOwn && !message.is_deleted ? () => {
                                     onDelete();
                                     setShowReactionPicker(false);
                                 } : undefined}
@@ -434,3 +460,4 @@ export default function MessageBubble({
         </>
     );
 }
+

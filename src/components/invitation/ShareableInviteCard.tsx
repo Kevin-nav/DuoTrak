@@ -4,6 +4,7 @@ import React, { forwardRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Target, Heart, Sparkles, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getInviteHostLabel } from '@/lib/invites/url';
 
 interface GoalDraft {
     title: string;
@@ -142,7 +143,7 @@ const ShareableInviteCard = forwardRef<HTMLDivElement, ShareableInviteCardProps>
                             </span>
                             <span>🔥 Partner streaks</span>
                         </div>
-                        <span className="text-xs font-medium text-purple-600">duotrak.app</span>
+                        <span className="text-xs font-medium text-purple-600">{getInviteHostLabel()}</span>
                     </div>
                 </div>
 

@@ -14,6 +14,7 @@ import {
   Heart,
   Trophy,
   CheckCircle,
+  AlertTriangle,
   Plus,
   X,
   Sparkles,
@@ -26,12 +27,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useInvitation } from "@/contexts/invitation-context"
-import { apiClient } from "@/lib/api/client"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { differenceInHours } from 'date-fns';
 import SocialShareDrawer from "@/components/invitation/SocialShareDrawer"
 import { useUser } from "@/contexts/UserContext"
+import { buildInviteUrl } from "@/lib/invites/url"
 
 const successTips = [
   {
@@ -79,8 +80,10 @@ export default function InteractiveWaitingRoom() {
   const [invitationLink, setInvitationLink] = useState("")
   const [linkCopied, setLinkCopied] = useState(false)
   const [isNudging, setIsNudging] = useState(false);
+  const [isRetryingEmail, setIsRetryingEmail] = useState(false);
   const [showShareDrawer, setShowShareDrawer] = useState(false);
-  const { userDetails } = useUser();
+  const [nowMs, setNowMs] = useState(Date.now());
+  const { userDetails, nudgePartner, retryInviteEmail } = useUser();
 
   // Goal draft form
   const [goalDraft, setGoalDraft] = useState({
@@ -95,11 +98,16 @@ export default function InteractiveWaitingRoom() {
 
   useEffect(() => {
     if (invitation?.token) {
-      setInvitationLink(`https://duotrak.org/invite/${invitation.token}`)
+      setInvitationLink(buildInviteUrl(invitation.token))
     }
   }, [invitation]);
 
   const [timeRemaining, setTimeRemaining] = useState("");
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   // Derive partner status from the invitation data
   // Logic: 
@@ -170,9 +178,7 @@ export default function InteractiveWaitingRoom() {
     if (!invitation?.id || !canNudge) return;
     setIsNudging(true);
     try {
-      // Still using API client for nudge as it triggers emails/notifications
-      // We could move this to a Convex action later
-      await apiClient.nudgePartner(invitation.id as unknown as string);
+      await nudgePartner(invitation.id as unknown as string);
       toast.success("Reminder sent!", { description: "Your partner has been gently nudged." });
     } catch (error: any) {
       toast.error("Failed to send nudge", { description: error.message });
@@ -224,6 +230,47 @@ export default function InteractiveWaitingRoom() {
         return "text-gray-600"
     }
   }
+
+  const handleRetryInviteEmail = async () => {
+    if (!invitation?.id) return;
+    setIsRetryingEmail(true);
+    try {
+      await retryInviteEmail(invitation.id as unknown as string);
+    } finally {
+      setIsRetryingEmail(false);
+    }
+  };
+
+  const inviteEmailTone =
+    invitation?.emailSendStatus === "failed"
+      ? "warning"
+      : invitation?.emailSendStatus === "sent"
+        ? "success"
+        : "loading";
+
+  const inviteEmailTitle =
+    invitation?.emailSendStatus === "failed"
+      ? "Invite email did not send"
+      : invitation?.emailSendStatus === "sent"
+        ? "Invite email handed off"
+        : "Sending invite email";
+
+  const inviteEmailDescription =
+    invitation?.emailSendStatus === "failed"
+      ? `Your invitation link still works. Copy it below and share directly while delivery is retried.${invitation?.emailLastError ? ` Last error: ${invitation.emailLastError}` : ""}`
+      : invitation?.emailSendStatus === "sent"
+        ? "Our email provider accepted the message. If your partner does not see it, check spam or share the link directly."
+        : "We are still delivering your invitation email.";
+
+  const inviteRetryCooldownSeconds = useMemo(() => {
+    const lastAttempt = invitation?.emailLastAttemptAt;
+    if (!lastAttempt) return 0;
+    const remainingMs = lastAttempt + 60_000 - nowMs;
+    return Math.max(0, Math.ceil(remainingMs / 1000));
+  }, [invitation?.emailLastAttemptAt, nowMs]);
+
+  const canRetryInviteEmail =
+    invitation?.emailSendStatus === "failed" && inviteRetryCooldownSeconds === 0;
 
   return (
     <div className="space-y-5">
@@ -280,6 +327,67 @@ export default function InteractiveWaitingRoom() {
             </div>
           </CardContent>
         </Card>
+        <Card
+          className={`${
+            inviteEmailTone === "warning"
+              ? "border-amber-300 bg-amber-50"
+              : inviteEmailTone === "success"
+                ? "border-emerald-300 bg-emerald-50"
+                : "border-landing-clay/70 bg-white"
+          }`}
+        >
+          <CardContent className="flex items-start justify-between gap-4 p-4">
+            <div className="flex items-start gap-3">
+              {inviteEmailTone === "warning" ? (
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
+              ) : inviteEmailTone === "success" ? (
+                <CheckCircle className="mt-0.5 h-5 w-5 text-emerald-700" />
+              ) : (
+                <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-landing-terracotta" />
+              )}
+              <div>
+                <p className="font-semibold text-landing-espresso">{inviteEmailTitle}</p>
+                <p className="text-sm text-landing-espresso-light">{inviteEmailDescription}</p>
+              </div>
+            </div>
+            {inviteEmailTone === "warning" ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button variant="outline" onClick={copyInvitationLink}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {linkCopied ? "Copied" : "Copy link"}
+                </Button>
+                <Button
+                  onClick={handleRetryInviteEmail}
+                  disabled={isRetryingEmail || !canRetryInviteEmail}
+                  className="bg-landing-espresso text-landing-cream hover:bg-landing-terracotta"
+                >
+                  {isRetryingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {canRetryInviteEmail ? "Retry email" : `Retry in ${inviteRetryCooldownSeconds}s`}
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+        {invitation?.nudgeEmailSendStatus === "failed" ? (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="flex items-start justify-between gap-4 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
+                <div>
+                  <p className="font-semibold text-landing-espresso">Reminder email failed</p>
+                  <p className="text-sm text-landing-espresso-light">
+                    Your nudge was saved, but email delivery failed. Share the invite link directly.
+                    {invitation?.nudgeEmailLastError ? ` Last error: ${invitation.nudgeEmailLastError}` : ""}
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" onClick={copyInvitationLink}>
+                <Copy className="mr-2 h-4 w-4" />
+                {linkCopied ? "Copied" : "Copy link"}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Left Column */}

@@ -179,7 +179,7 @@ export default function DashboardContent({
         )}
       </motion.section>
 
-      <QuickActions />
+      <QuickActions hasPartner={!!hasPartner} />
     </motion.div>
   );
 }

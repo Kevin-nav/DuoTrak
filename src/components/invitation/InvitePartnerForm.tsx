@@ -74,7 +74,7 @@ export default function InvitePartnerForm() {
 
   // If the invitation has been sent, show the celebration animation.
   if (invitationSent) {
-    return <CelebrationAnimation isVisible={true} type="goal-reached" message="Invitation Sent!" />;
+    return <CelebrationAnimation isVisible={true} type="goal-reached" message="Invitation Created!" />;
   }
 
   // Otherwise, render the form.

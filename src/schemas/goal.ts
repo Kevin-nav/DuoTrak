@@ -15,6 +15,24 @@ import {
   type GoalPlanResponse,
 } from "../../packages/contracts/src/goalCreation";
 
+export {
+  GoalWizardRequestSchema,
+  StrategicQuestionSchema,
+  QuestionsResponseSchema,
+  AnswersSubmissionRequestSchema,
+  DuotrakGoalPlanSchema,
+  GoalPlanResponseSchema,
+};
+
+export type {
+  GoalWizardRequest,
+  StrategicQuestion,
+  QuestionsResponse,
+  AnswersSubmissionRequest,
+  DuotrakGoalPlan,
+  GoalPlanResponse,
+};
+
 export const TaskSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),

@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     // If loading is finished and userDetails are present, redirect to dashboard.
     if (!isLoading && userDetails) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     }
   }, [userDetails, isLoading, router]);
 

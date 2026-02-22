@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { motion } from 'framer-motion';
 import { Loader2, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api/client';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface ProfileSetupStepProps {
   data: any;
@@ -18,7 +19,8 @@ interface ProfileSetupStepProps {
 }
 
 export default function ProfileSetupStep({ data, updateData, onValidationChange, onComplete }: ProfileSetupStepProps) {
-  const { userDetails, refetchUserDetails } = useUser();
+  const { userDetails } = useUser();
+  const updateUser = useMutation(api.users.update);
   const [fullName, setFullName] = useState(data.profile.fullName || userDetails?.full_name || '');
   const [nickname, setNickname] = useState(data.profile.nickname || '');
   const [bio, setBio] = useState(data.profile.bio || userDetails?.bio || '');
@@ -47,9 +49,8 @@ export default function ProfileSetupStep({ data, updateData, onValidationChange,
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
-      await apiClient.patch('/api/v1/users/me', { full_name: fullName, nickname, bio, timezone });
+      await updateUser({ full_name: fullName, nickname, bio, timezone });
       toast.success('Profile saved!');
-      await refetchUserDetails();
       onComplete();
     } catch (error: any) {
       toast.error(error.message || 'Failed to save profile.');

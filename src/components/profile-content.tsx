@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import ThemeSwitcher from "./theme/theme-switcher"
 import { useUser } from "@/contexts/UserContext"
-import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from "firebase/auth"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"
@@ -24,7 +23,7 @@ import { api } from "../../convex/_generated/api"
 import { Id } from "../../convex/_generated/dataModel"
 import { avatarLibrary } from "@/lib/avatars"
 import { cn } from "@/lib/utils"
-import { processImage, validateImage, formatFileSize } from "@/lib/imageUtils"
+import { processAvatarVariants, validateImage, formatFileSize } from "@/lib/imageUtils"
 
 export default function ProfileContent() {
   const { userDetails, isLoading, refetchUserDetails, signOut } = useUser()
@@ -45,7 +44,7 @@ export default function ProfileContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Convex Mutations & Actions
-  const uploadProfilePicture = useAction(api.users.uploadProfilePicture);
+  const uploadProfilePicture = useAction(api.users.uploadProfilePicture) as any;
   const updateUser = useMutation(api.users.update);
 
   useEffect(() => {
@@ -78,6 +77,7 @@ export default function ProfileContent() {
     full_name,
     email,
     profile_picture_url,
+    partner_profile_picture_url,
     current_streak,
     longest_streak,
     total_tasks_completed,
@@ -99,10 +99,7 @@ export default function ProfileContent() {
 
   const handleNicknameSave = async () => {
     try {
-      await apiFetch("/api/v1/users/me", {
-        method: "PATCH",
-        body: JSON.stringify({ nickname: nickname }),
-      })
+      await updateUser({ nickname })
       refetchUserDetails()
       toast.success("Nickname updated successfully!")
     } catch (error) {
@@ -126,10 +123,7 @@ export default function ProfileContent() {
       const credential = EmailAuthProvider.credential(user.email!, currentPasswordForReauth)
       await reauthenticateWithCredential(user, credential)
       await updateEmail(user, newEmail)
-      await apiFetch("/api/v1/users/me", {
-        method: "PATCH",
-        body: JSON.stringify({ email: newEmail }),
-      })
+      await updateUser({ email: newEmail })
       setIsEmailDialogOpen(false)
       refetchUserDetails()
       toast.success("Email updated successfully!")
@@ -184,10 +178,7 @@ export default function ProfileContent() {
 
   const handleNotificationsToggle = async (enabled: boolean) => {
     try {
-      await apiFetch("/api/v1/users/me", {
-        method: "PATCH",
-        body: JSON.stringify({ notifications_enabled: enabled }),
-      })
+      await updateUser({ notifications_enabled: enabled })
       refetchUserDetails()
       toast.success("Notification settings updated!")
     } catch (error) {
@@ -198,10 +189,7 @@ export default function ProfileContent() {
 
   const handleTimezoneChange = async (value: string) => {
     try {
-      await apiFetch("/api/v1/users/me", {
-        method: "PATCH",
-        body: JSON.stringify({ timezone: value }),
-      })
+      await updateUser({ timezone: value })
       refetchUserDetails()
       toast.success("Timezone updated successfully!")
     } catch (error) {
@@ -238,16 +226,22 @@ export default function ProfileContent() {
         // Custom upload - process and upload to R2
         toast.info("Processing image...");
 
-        // Process the image (resize, convert to WebP, get base64)
-        const processed = await processImage(selectedFile);
+        // Process into multiple square variants (original/xl/lg/md/sm)
+        const processed = await processAvatarVariants(selectedFile);
 
         console.log(
-          `Image processed: ${formatFileSize(processed.originalSize)} → ${formatFileSize(processed.processedSize)}`
+          `Image processed: ${formatFileSize(processed.originalSize)} → ${formatFileSize(processed.totalProcessedSize)}`
         );
 
         // Upload to R2 via Convex action
         const result = await uploadProfilePicture({
-          imageBase64: processed.base64,
+          variants: {
+            original: processed.variants.original.base64,
+            xl: processed.variants.xl.base64,
+            lg: processed.variants.lg.base64,
+            md: processed.variants.md.base64,
+            sm: processed.variants.sm.base64,
+          },
           contentType: "image/webp",
         });
 
@@ -643,7 +637,7 @@ export default function ProfileContent() {
           <CardContent>
             <div className="flex items-center gap-4">
               <Avatar className="w-12 h-12">
-                <AvatarImage src={"/placeholder.svg"} />
+                <AvatarImage src={partner_profile_picture_url || "/placeholder.svg"} />
                 <AvatarFallback className="bg-[var(--theme-accent)] text-[var(--theme-foreground)]">
                   {userDetails.partner_nickname // Prefer nickname if available
                     ? userDetails.partner_nickname.split(" ").map((n: string) => n[0]).join("")

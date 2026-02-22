@@ -1,7 +1,7 @@
 type JsonRecord = Record<string, unknown>;
 type RequestHeaders = Record<string, string>;
 
-const DEFAULT_BACKEND_URL = "https://localhost:8000";
+const DEFAULT_BACKEND_URL = "http://localhost:8000";
 
 const toSnakeCase = (value: unknown): unknown => {
   if (Array.isArray(value)) {

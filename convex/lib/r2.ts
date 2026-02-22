@@ -4,7 +4,13 @@
  * R2 is S3-compatible, so we use the AWS SDK.
  */
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+    S3Client,
+    PutObjectCommand,
+    DeleteObjectCommand,
+    ListObjectsV2Command,
+    DeleteObjectsCommand,
+} from "@aws-sdk/client-s3";
 
 // R2 configuration from environment variables
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
@@ -88,9 +94,38 @@ export async function deleteFromR2(key: string): Promise<void> {
 }
 
 /**
- * Generates the storage key for a user's profile picture.
+ * Deletes all files under a prefix from R2 storage.
  */
-export function getProfilePictureKey(userId: string, version?: number): string {
-    const versionSuffix = version ? `_v${version}` : "";
-    return `profiles/${userId}/avatar${versionSuffix}.webp`;
+export async function deletePrefixFromR2(prefix: string): Promise<void> {
+    const client = createR2Client();
+
+    const listResponse = await client.send(
+        new ListObjectsV2Command({
+            Bucket: R2_BUCKET_NAME,
+            Prefix: prefix,
+        })
+    );
+
+    const objects = (listResponse.Contents ?? []).map((item) => ({ Key: item.Key! }));
+    if (objects.length === 0) {
+        return;
+    }
+
+    await client.send(
+        new DeleteObjectsCommand({
+            Bucket: R2_BUCKET_NAME,
+            Delete: { Objects: objects },
+        })
+    );
+}
+
+/**
+ * Generates the storage key for a user's profile picture variant.
+ */
+export function getProfilePictureKey(
+    userId: string,
+    size: "original" | "xl" | "lg" | "md" | "sm",
+    version: number
+): string {
+    return `profiles/${userId}/${size}_v${version}.webp`;
 }

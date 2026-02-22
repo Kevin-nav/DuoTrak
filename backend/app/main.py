@@ -65,9 +65,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 # Set up CORS middleware
 # Define allowed origins for local development to handle both localhost and 127.0.0.1
 allowed_origins = [
-    "https://localhost:3000",
     "http://localhost:3000",
-    "https://127.0.0.1:3000",
     "http://127.0.0.1:3000",
 ]
 
@@ -78,9 +76,7 @@ allowed_origins = [
 # Set up CORS middleware
 # Define allowed origins for local development to handle both localhost and 127.0.0.1
 allowed_origins = [
-    "https://127.0.0.1:3000",
     "http://127.0.0.1:3000",
-    "https://localhost:3000",
     "http://localhost:3000",
 ]
 
