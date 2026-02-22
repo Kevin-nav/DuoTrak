@@ -319,6 +319,8 @@ export default function GoalCreationWizard() {
         verification_mode: t.verificationMode || "photo",
         verification_mode_reason: t.verificationModeReason || "Photo verification offers clear evidence.",
         verification_confidence: typeof t.verificationConfidence === "number" ? t.verificationConfidence : 0.85,
+        time_window_start: t.timeWindowStart || undefined,
+        time_window_end: t.timeWindowEnd || undefined,
         auto_approval_policy: t.autoApprovalPolicy || "time_window_only",
         auto_approval_timeout_hours: typeof t.autoApprovalTimeoutHours === "number" ? t.autoApprovalTimeoutHours : 24,
         auto_approval_min_confidence: typeof t.autoApprovalMinConfidence === "number" ? t.autoApprovalMinConfidence : 0.85,
