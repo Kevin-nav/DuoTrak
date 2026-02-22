@@ -59,7 +59,7 @@ const isDirectPythonFallbackEnabled = () => process.env.NEXT_PUBLIC_AI_DIRECT_PY
 
 type GoalCreationActionBoundary = {
   getStrategicQuestionsAction?: (requestData: GoalWizardRequest) => Promise<QuestionsResponse>;
-  createGoalPlanAction?: (payload: { sessionId: string; requestData: AnswersSubmissionRequest }) => Promise<GoalPlanResponse>;
+  createGoalPlanAction?: (payload: { sessionId: string; userId: string; answers: Record<string, string> }) => Promise<GoalPlanResponse>;
   evaluateGoalPlanAction?: (payload: { plan: DuotrakGoalPlan }) => Promise<void>;
 };
 
@@ -83,7 +83,11 @@ export const createGoalPlanViaBoundary = async (
     return createGoalPlan(sessionId, requestData);
   }
 
-  return actionBoundary.createGoalPlanAction({ sessionId, requestData });
+  return actionBoundary.createGoalPlanAction({
+    sessionId,
+    userId: requestData.userId,
+    answers: requestData.answers,
+  });
 };
 
 // Dev-only: Fire-and-forget evaluation

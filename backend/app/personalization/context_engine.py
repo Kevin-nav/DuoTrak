@@ -18,6 +18,23 @@ class ContextualAwarenessEngine:
         }
         
         return insights
+
+    def merge_outcome_profile(self, insights: Dict[str, Any], outcome_profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Attach outcome-only behavioral signals to contextual insights used by planning.
+        """
+        merged = dict(insights)
+        merged["outcome_profile"] = {
+            "signals": outcome_profile.get("signals", "outcome_only"),
+            "window_days": outcome_profile.get("window_days", 90),
+            "completion_rate": outcome_profile.get("completion_rate", 0.0),
+            "skip_count": outcome_profile.get("skip_count", 0),
+            "streak_break_count": outcome_profile.get("streak_break_count", 0),
+            "reschedule_count": outcome_profile.get("reschedule_count", 0),
+            "average_check_in_hour": outcome_profile.get("average_check_in_hour"),
+            "sample_size": outcome_profile.get("sample_size", 0),
+        }
+        return merged
     
     async def _analyze_temporal_context(self, user_profile: Dict) -> Dict[str, Any]:
         """Analyze temporal factors affecting goal success."""

@@ -116,6 +116,25 @@ class PineconeService:
         except Exception as e:
             logger.error(f"Error retrieving user context: {str(e)}")
             return {"user_id": user_id, "historical_goals": [], "learning_confidence": 0.0}
+
+    async def _query_index(
+        self,
+        *,
+        vector: List[float],
+        filter: Dict[str, Any],
+        top_k: int,
+        include_metadata: bool = True,
+    ) -> Any:
+        """
+        Wrapper around index.query to support easier unit-testing and call-site reuse.
+        """
+        return await asyncio.to_thread(
+            self.index.query,
+            vector=vector,
+            filter=filter,
+            top_k=top_k,
+            include_metadata=include_metadata,
+        )
     
     async def store_interaction(self, user_id: str, session_id: str, interaction_type: str, data: Dict[str, Any]):
         """Store user interaction for continuous learning."""

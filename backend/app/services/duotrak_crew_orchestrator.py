@@ -13,6 +13,8 @@ from app.services.gemini_config import GeminiModelConfig
 from app.schemas.agent_crew import DuotrakGoalPlan
 from app.services.goal_creation_session_store import GoalCreationSessionStore
 from app.core.redis_config import redis_client
+from app.personalization.outcome_profile_store import OutcomeProfileStore
+from app.personalization.context_engine import context_engine
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,7 @@ class DuotrakCrewOrchestrator:
             default_ttl_seconds=session_ttl_seconds,
         )
         self.session_ttl_seconds = session_ttl_seconds
+        self.outcome_profile_store = OutcomeProfileStore(pinecone_service)
 
     def _safe_json_loads(self, raw_output: str) -> Dict[str, Any]:
         """Safely loads JSON from a string, stripping markdown backticks."""
@@ -65,6 +68,15 @@ class DuotrakCrewOrchestrator:
     async def generate_strategic_questions(self, user_id: str, session_id: str, wizard_data: Dict[str, Any], user_context: Dict[str, Any]) -> Dict[str, Any]:
         start_time = time.time()
         try:
+            outcome_profile_payload = await self.outcome_profile_store.build_profile(user_id=user_id, days=90)
+            outcome_profile = outcome_profile_payload.get("outcome_profile", {})
+            contextual_insights = await context_engine.generate_contextual_insights(user_context, "goal_creation")
+            enhanced_context = dict(user_context)
+            enhanced_context["outcome_profile"] = outcome_profile
+            enhanced_context["contextual_insights"] = context_engine.merge_outcome_profile(
+                contextual_insights, outcome_profile
+            )
+
             profiler, questioner = self._create_question_generation_agents()
             
             profiling_task = Task(
@@ -75,7 +87,7 @@ class DuotrakCrewOrchestrator:
                 {json.dumps(wizard_data, indent=2)}
 
                 **Historical Context:**
-                {json.dumps(user_context, indent=2)}
+                {json.dumps(enhanced_context, indent=2)}
 
                 **IMPORTANT INSTRUCTION:**
                 First, check if the `historical_goals` list in the Historical Context is empty.
@@ -106,8 +118,9 @@ class DuotrakCrewOrchestrator:
                 {
                     "user_id": user_id,
                     "wizard_data": wizard_data,
-                    "user_context": user_context,
+                    "user_context": enhanced_context,
                     "profile_output": profile_output,
+                    "outcome_profile": outcome_profile,
                 },
                 ttl_seconds=self.session_ttl_seconds,
             )
@@ -117,7 +130,7 @@ class DuotrakCrewOrchestrator:
 
             return {
                 "user_profile_summary": parsed_profile if parsed_profile else self._create_fallback_profile(wizard_data),
-                "questions": parsed_questions.get("questions", self._create_fallback_questions(wizard_data, user_context)),
+                "questions": parsed_questions.get("questions", self._create_fallback_questions(wizard_data, enhanced_context)),
                 "execution_time_ms": execution_time_ms
             }
         except Exception as e:

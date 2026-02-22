@@ -29,7 +29,33 @@ const createPlanActionMock = jest.fn().mockResolvedValue({
   goalPlan: {
     title: "Plan",
     description: "Plan desc",
-    milestones: [],
+    milestones: [
+      {
+        title: "Week 1",
+        description: "Start",
+        tasks: [
+          {
+            description: "Wake up at 7 AM",
+            successMetric: "Checked in by 7:10 AM",
+            recommendedCadence: "daily",
+            recommendedTimeWindows: ["Mornings (6-9 AM)"],
+            consistencyRationale: "Stable timing improves adherence.",
+            verificationMode: "time-window",
+            verificationModeReason: "Time-bound habit is best validated by check-in timing.",
+            verificationConfidence: 0.91,
+            timeWindowStart: "06:50",
+            timeWindowEnd: "07:10",
+            partnerInvolvement: {
+              dailyCheckInSuggestion: "Quick ping after wake-up",
+              weeklyAnchorReview: "Sunday review",
+            },
+            proofGuidance: {
+              whatCounts: ["Check-in in time window"],
+            },
+          },
+        ],
+      },
+    ],
     successMetrics: [],
     partnerAccountability: {
       role: "supporter",
@@ -155,5 +181,47 @@ describe("GoalCreationWizard", () => {
     });
 
     expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("renders AI verification mode guidance in review step", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GoalCreationWizard />
+      </QueryClientProvider>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByPlaceholderText(/improve my health/i);
+    fireEvent.change(screen.getByPlaceholderText(/improve my health/i), { target: { value: "Get healthier" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText("Mornings (6-9 AM)");
+    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText("15-30 mins daily");
+    fireEvent.click(screen.getByText("15-30 mins daily"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText(/visual proof/i);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText(/what gets in your way most often/i);
+    fireEvent.click(screen.getByLabelText("Time"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/verification mode:/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/time-window rule:/i)).toBeInTheDocument();
   });
 });

@@ -285,33 +285,43 @@ export default function GoalCreationWizard() {
     }
   }
 
+  const formatVerificationMode = (mode?: string) => {
+    if (!mode) return "Photo";
+    if (mode === "time-window") return "Time Window";
+    return mode.charAt(0).toUpperCase() + mode.slice(1);
+  };
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!finalGoalPlan) {
       toast({ title: "No final plan to save.", description: "Please complete the planning process.", variant: "destructive" });
       return;
     }
 
-    // Get all the rich data collected during the wizard
     const { motivation, availability, timeCommitment, accountabilityType, timeWindow } = values;
 
-    // Transform the finalGoalPlan into the format the backend expects for createGoal
     const goalToCreate = {
       name: finalGoalPlan.title,
       description: finalGoalPlan.description,
       motivation: motivation,
       category: 'General', // Or derive from plan
-      isHabit: false, // Or derive from plan
+      is_habit: false, // Or derive from plan
       color: '#FFFFFF', // Placeholder
       icon: 'default', // Placeholder
       availability: availability,
-      timeCommitment: timeCommitment,
-      accountabilityType: accountabilityType,
+      time_commitment: timeCommitment,
+      accountability_type: accountabilityType,
       tasks: finalGoalPlan.milestones.flatMap(m => m.tasks.map(t => ({
-        name: t.description, // Assuming task description is the name
+        name: t.description,
         description: t.successMetric,
-        repeatFrequency: t.recommendedCadence || "daily",
-        timeWindow: t.recommendedTimeWindows?.[0] || timeWindow, // Prefer AI suggestion, fallback to user value
-        accountabilityType: accountabilityType, // Inherit from goal
+        repeat_frequency: t.recommendedCadence || "daily",
+        time_window: t.recommendedTimeWindows?.[0] || timeWindow,
+        accountability_type: accountabilityType,
+        verification_mode: t.verificationMode || "photo",
+        verification_mode_reason: t.verificationModeReason || "Photo verification offers clear evidence.",
+        verification_confidence: typeof t.verificationConfidence === "number" ? t.verificationConfidence : 0.85,
+        auto_approval_policy: t.autoApprovalPolicy || "time_window_only",
+        auto_approval_timeout_hours: typeof t.autoApprovalTimeoutHours === "number" ? t.autoApprovalTimeoutHours : 24,
+        auto_approval_min_confidence: typeof t.autoApprovalMinConfidence === "number" ? t.autoApprovalMinConfidence : 0.85,
       }))),
     };
 
@@ -792,12 +802,22 @@ export default function GoalCreationWizard() {
                                     <p className="mt-2"><strong>Cadence:</strong> {task.recommendedCadence}</p>
                                     <p><strong>Best windows:</strong> {task.recommendedTimeWindows?.join(", ") || "Flexible based on your schedule"}</p>
                                     <p><strong>Why this works:</strong> {task.consistencyRationale}</p>
+                                    <p>
+                                      <strong>Verification mode:</strong> {formatVerificationMode(task.verificationMode)}
+                                      {typeof task.verificationConfidence === "number" ? ` (${Math.round(task.verificationConfidence * 100)}% confidence)` : ""}
+                                    </p>
+                                    <p><strong>Why this mode:</strong> {task.verificationModeReason || "Selected for reliable partner review."}</p>
+                                    {task.verificationMode === "time-window" && (
+                                      <p>
+                                        <strong>Time-window rule:</strong> Complete between {task.timeWindowStart || "configured start"} and {task.timeWindowEnd || "configured end"} for high-confidence verification.
+                                      </p>
+                                    )}
                                     <div className="mt-2">
                                       <p><strong>Partner touchpoint:</strong> {task.partnerInvolvement?.dailyCheckInSuggestion}</p>
                                       <p><strong>Weekly anchor:</strong> {task.partnerInvolvement?.weeklyAnchorReview}</p>
                                     </div>
                                     <div className="mt-2">
-                                      <p><strong>Suggested photo proof:</strong></p>
+                                      <p><strong>Suggested proof guidance:</strong></p>
                                       <ul className="list-disc list-inside text-stone-gray dark:text-gray-400">
                                         {(task.proofGuidance?.whatCounts || []).map((item, proofIdx) => (
                                           <li key={`count-${proofIdx}`}>{item}</li>

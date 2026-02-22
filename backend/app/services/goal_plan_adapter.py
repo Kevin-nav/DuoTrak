@@ -1,5 +1,7 @@
 from typing import Any, Dict, List
 
+from app.services.schedule_impact_service import apply_soft_cap_scaling, build_schedule_impact
+
 
 def _normalize_partner_integration(value: Any) -> str:
     if isinstance(value, str):
@@ -30,6 +32,15 @@ def _normalize_task(task: Dict[str, Any]) -> Dict[str, Any]:
         "recommended_cadence": str(task.get("recommended_cadence", task.get("recommendedCadence", "custom"))),
         "recommended_time_windows": [str(item) for item in recommended_time_windows],
         "consistency_rationale": str(task.get("consistency_rationale", task.get("consistencyRationale", "Built for sustainable consistency."))),
+        "verification_mode": str(task.get("verification_mode", task.get("verificationMode", "photo"))),
+        "verification_mode_reason": str(task.get("verification_mode_reason", task.get("verificationModeReason", "Photo verification offers clear evidence."))),
+        "verification_confidence": float(task.get("verification_confidence", task.get("verificationConfidence", 0.85))),
+        "time_window_start": task.get("time_window_start", task.get("timeWindowStart")),
+        "time_window_end": task.get("time_window_end", task.get("timeWindowEnd")),
+        "partner_required": bool(task.get("partner_required", task.get("partnerRequired", True))),
+        "auto_approval_policy": str(task.get("auto_approval_policy", task.get("autoApprovalPolicy", "time_window_only"))),
+        "auto_approval_timeout_hours": int(task.get("auto_approval_timeout_hours", task.get("autoApprovalTimeoutHours", 24))),
+        "auto_approval_min_confidence": float(task.get("auto_approval_min_confidence", task.get("autoApprovalMinConfidence", 0.85))),
         "partner_involvement": {
             "daily_check_in_suggestion": str(partner_involvement.get("daily_check_in_suggestion", partner_involvement.get("dailyCheckInSuggestion", "Share a quick daily update when possible."))),
             "weekly_anchor_review": str(partner_involvement.get("weekly_anchor_review", partner_involvement.get("weeklyAnchorReview", "Set one weekly 10-minute check-in."))),
@@ -74,6 +85,10 @@ def _normalize_goal_plan(goal_plan: Dict[str, Any], partner_integration: Any) ->
         "description": str(goal_plan.get("description", "")),
         "milestones": [_normalize_milestone(m) for m in milestones if isinstance(m, dict)],
         "success_metrics": [str(metric) for metric in success_metrics],
+        "adherence_weight": float(goal_plan.get("adherence_weight", goal_plan.get("adherenceWeight", 0.7))),
+        "schedule_soft_cap_percent": float(goal_plan.get("schedule_soft_cap_percent", goal_plan.get("scheduleSoftCapPercent", 10))),
+        "schedule_impact": goal_plan.get("schedule_impact", {}),
+        "decision_trace": [str(item) for item in goal_plan.get("decision_trace", goal_plan.get("decisionTrace", []))][:3],
         "partner_accountability": {
             "role": str(partner_accountability.get("role", "Supportive accountability partner")),
             "check_in_schedule": str(partner_accountability.get("check_in_schedule", partner_accountability.get("checkInSchedule", "weekly"))),
@@ -92,9 +107,44 @@ def adapt_goal_plan_response(session_id: str, raw_result: Dict[str, Any]) -> Dic
         execution_metadata = raw_result.get("execution_metadata", {})
         execution_time_ms = execution_metadata.get("plan_generation_time_ms", 0)
 
+    normalized_goal_plan = _normalize_goal_plan(goal_plan if isinstance(goal_plan, dict) else {}, partner_integration)
+    wizard_data = raw_result.get("wizard_data", {})
+    availability = wizard_data.get("availability", []) if isinstance(wizard_data, dict) else []
+    time_commitment = wizard_data.get("time_commitment") if isinstance(wizard_data, dict) else None
+
+    schedule_impact = build_schedule_impact(
+        normalized_goal_plan,
+        time_commitment=time_commitment,
+        availability=availability if isinstance(availability, list) else [],
+    )
+    normalized_goal_plan["schedule_impact"] = schedule_impact
+    if not normalized_goal_plan.get("decision_trace"):
+        normalized_goal_plan["decision_trace"] = [
+            "Prioritized consistency while keeping your schedule manageable."
+        ]
+
+    soft_cap_percent = float(normalized_goal_plan.get("schedule_soft_cap_percent", 10))
+    scaled_plan, scaled = apply_soft_cap_scaling(
+        normalized_goal_plan,
+        capacity_minutes=schedule_impact["capacity_minutes"],
+        projected_load_minutes=schedule_impact["projected_load_minutes"],
+        soft_cap_percent=soft_cap_percent,
+    )
+    if scaled:
+        normalized_goal_plan = scaled_plan
+        normalized_goal_plan["decision_trace"] = [
+            "Detected schedule overload and scaled cadence to improve stickiness.",
+            "You can still choose the higher-load version if preferred.",
+        ]
+        normalized_goal_plan["schedule_impact"] = build_schedule_impact(
+            normalized_goal_plan,
+            time_commitment=time_commitment,
+            availability=availability if isinstance(availability, list) else [],
+        )
+
     return {
         "session_id": session_id,
-        "goal_plan": _normalize_goal_plan(goal_plan if isinstance(goal_plan, dict) else {}, partner_integration),
+        "goal_plan": normalized_goal_plan,
         "partner_integration": _normalize_partner_integration(partner_integration),
         "personalization_score": float(personalization_score),
         "execution_metadata": {"plan_generation_time_ms": int(execution_time_ms)},

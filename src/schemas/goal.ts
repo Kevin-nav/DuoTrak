@@ -7,12 +7,18 @@ import {
   AnswersSubmissionRequestSchema,
   DuotrakGoalPlanSchema,
   GoalPlanResponseSchema,
+  TaskVerificationModeSchema,
+  TaskProofGuidanceSchema,
+  TaskPartnerInvolvementSchema,
   type GoalWizardRequest,
   type StrategicQuestion,
   type QuestionsResponse,
   type AnswersSubmissionRequest,
   type DuotrakGoalPlan,
   type GoalPlanResponse,
+  type TaskVerificationMode,
+  type TaskProofGuidance,
+  type TaskPartnerInvolvement,
 } from "../../packages/contracts/src/goalCreation";
 
 export {
@@ -22,6 +28,9 @@ export {
   AnswersSubmissionRequestSchema,
   DuotrakGoalPlanSchema,
   GoalPlanResponseSchema,
+  TaskVerificationModeSchema,
+  TaskProofGuidanceSchema,
+  TaskPartnerInvolvementSchema,
 };
 
 export type {
@@ -31,6 +40,9 @@ export type {
   AnswersSubmissionRequest,
   DuotrakGoalPlan,
   GoalPlanResponse,
+  TaskVerificationMode,
+  TaskProofGuidance,
+  TaskPartnerInvolvement,
 };
 
 export const TaskSchema = z.object({

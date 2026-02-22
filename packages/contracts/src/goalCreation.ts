@@ -5,6 +5,9 @@ export {
   DuotrakMilestoneSchema,
   DuotrakGoalPlanSchema,
   GoalPlanResponseSchema,
+  TaskVerificationModeSchema,
+  TaskProofGuidanceSchema,
+  TaskPartnerInvolvementSchema,
 } from "./goalPlan";
 
 export type {
@@ -12,6 +15,9 @@ export type {
   DuotrakMilestone,
   DuotrakGoalPlan,
   GoalPlanResponse,
+  TaskVerificationMode,
+  TaskProofGuidance,
+  TaskPartnerInvolvement,
 } from "./goalPlan";
 
 export const GoalWizardDataSchema = z.object({

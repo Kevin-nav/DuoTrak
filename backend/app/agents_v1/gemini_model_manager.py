@@ -28,8 +28,9 @@ class GeminiModelManager:
 
         # Model names are now passed directly in the generation call
         self.model_names = {
-            'flash': os.environ.get('GEMINI_FLASH_MODEL', 'gemini-2.5-flash'),
-            'pro': os.environ.get('GEMINI_PRO_MODEL', 'gemini-2.5-pro'),
+            'flash': os.environ.get('GEMINI_FLASH_MODEL', 'gemini-3-flash'),
+            # Flash-only policy: any legacy "pro" call is routed to flash.
+            'pro': os.environ.get('GEMINI_FLASH_MODEL', 'gemini-3-flash'),
         }
         
         # Use GenerateContentConfig instead of GenerationConfig to avoid the tools issue
@@ -68,7 +69,11 @@ class GeminiModelManager:
                                 ) -> Dict[str, Any]:
         """Execute prompt with specified model and configuration using the correct SDK approach."""
         
-        model_name = self.model_names.get(model_type)
+        if model_type not in {"flash", "pro"}:
+            raise ValueError(f"Invalid model type '{model_type}'")
+        if model_type == "pro":
+            logging.warning("Flash-only policy enabled. Routing requested 'pro' call to Gemini 3 Flash.")
+        model_name = self.model_names["flash"]
         config = self.configs.get(config_type)
         
         if not model_name or not config:
@@ -173,9 +178,11 @@ class GeminiModelManager:
         """
         Execute with a completely custom configuration for maximum flexibility.
         """
-        model_name = self.model_names.get(model_type)
-        if not model_name:
+        if model_type not in {"flash", "pro"}:
             raise ValueError(f"Invalid model type '{model_type}'")
+        if model_type == "pro":
+            logging.warning("Flash-only policy enabled. Routing requested 'pro' call to Gemini 3 Flash.")
+        model_name = self.model_names["flash"]
         
         start_time = time.time()
         

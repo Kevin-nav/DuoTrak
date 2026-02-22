@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const TaskVerificationModeSchema = z.enum([
+  "photo",
+  "voice",
+  "time-window",
+]);
+
 export const TaskProofGuidanceSchema = z.object({
   what_counts: z.array(z.string()),
   good_examples: z.array(z.string()),
@@ -18,6 +24,15 @@ export const DuotrakTaskSchema = z.object({
   recommended_cadence: z.string(),
   recommended_time_windows: z.array(z.string()),
   consistency_rationale: z.string(),
+  verification_mode: TaskVerificationModeSchema,
+  verification_mode_reason: z.string(),
+  verification_confidence: z.number().min(0).max(1),
+  time_window_start: z.string().nullable().optional(),
+  time_window_end: z.string().nullable().optional(),
+  partner_required: z.boolean(),
+  auto_approval_policy: z.enum(["time_window_only", "none"]),
+  auto_approval_timeout_hours: z.number().int().min(1),
+  auto_approval_min_confidence: z.number().min(0).max(1),
   partner_involvement: TaskPartnerInvolvementSchema,
   proof_guidance: TaskProofGuidanceSchema,
 });
@@ -33,6 +48,16 @@ export const DuotrakGoalPlanSchema = z.object({
   description: z.string(),
   milestones: z.array(DuotrakMilestoneSchema),
   success_metrics: z.array(z.string()),
+  adherence_weight: z.number().min(0).max(1),
+  schedule_soft_cap_percent: z.number().min(0).max(100),
+  schedule_impact: z.object({
+    capacity_minutes: z.number().int().min(0),
+    projected_load_minutes: z.number().int().min(0),
+    overload_percent: z.number().min(0),
+    conflict_flags: z.array(z.string()),
+    fit_band: z.enum(["good", "warning", "overloaded"]),
+  }),
+  decision_trace: z.array(z.string()).max(3),
   partner_accountability: z.object({
     role: z.string(),
     check_in_schedule: z.string(),
@@ -56,3 +81,4 @@ export type DuotrakGoalPlan = z.infer<typeof DuotrakGoalPlanSchema>;
 export type GoalPlanResponse = z.infer<typeof GoalPlanResponseSchema>;
 export type TaskProofGuidance = z.infer<typeof TaskProofGuidanceSchema>;
 export type TaskPartnerInvolvement = z.infer<typeof TaskPartnerInvolvementSchema>;
+export type TaskVerificationMode = z.infer<typeof TaskVerificationModeSchema>;

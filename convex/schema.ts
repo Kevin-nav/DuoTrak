@@ -68,6 +68,12 @@ export default defineSchema({
     due_date: v.optional(v.number()), // Timestamp
     time_window: v.optional(v.string()), // Added time_window
     accountability_type: v.optional(v.string()), // Added accountability_type override
+    verification_mode: v.optional(v.string()),
+    verification_mode_reason: v.optional(v.string()),
+    verification_confidence: v.optional(v.number()),
+    auto_approval_policy: v.optional(v.string()),
+    auto_approval_timeout_hours: v.optional(v.number()),
+    auto_approval_min_confidence: v.optional(v.number()),
     goal_id: v.id("goals"),
 
     updated_at: v.number(),

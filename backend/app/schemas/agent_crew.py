@@ -1,6 +1,7 @@
 # backend/app/schemas/agent_crew.py
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
+from typing_extensions import Literal
 
 class GoalWizardData(BaseModel):
     """Data from the Duotrak Goal Creation Wizard."""
@@ -58,6 +59,15 @@ class DuotrakTask(BaseModel):
     recommended_cadence: str = Field(..., description="Suggested cadence for consistency")
     recommended_time_windows: List[str] = Field(default_factory=list, description="Recommended execution windows")
     consistency_rationale: str = Field(..., description="Why this cadence/window is sustainable")
+    verification_mode: Literal["photo", "voice", "time-window"] = Field(..., description="Recommended verification mode")
+    verification_mode_reason: str = Field(..., description="Why this verification mode fits the task")
+    verification_confidence: float = Field(..., ge=0, le=1, description="Confidence in verification mode recommendation")
+    time_window_start: Optional[str] = Field(None, description="Start of allowed completion window (HH:MM)")
+    time_window_end: Optional[str] = Field(None, description="End of allowed completion window (HH:MM)")
+    partner_required: bool = Field(True, description="Whether partner approval is required")
+    auto_approval_policy: Literal["time_window_only", "none"] = Field("time_window_only", description="Auto-approval policy")
+    auto_approval_timeout_hours: int = Field(24, ge=1, description="Timeout before eligible auto-approval")
+    auto_approval_min_confidence: float = Field(0.85, ge=0, le=1, description="Minimum confidence for eligible auto-approval")
     partner_involvement: Dict[str, str] = Field(default_factory=dict, description="Daily flexible partner touchpoint guidance")
     proof_guidance: Dict[str, List[str]] = Field(default_factory=dict, description="Advisory picture proof guidance")
 
@@ -79,6 +89,10 @@ class DuotrakGoalPlan(BaseModel):
     description: str = Field(..., description="Detailed plan description")
     milestones: List[DuotrakMilestone] = Field(..., description="Milestone breakdown")
     success_metrics: List[str] = Field(..., description="Overall success metrics")
+    adherence_weight: float = Field(..., ge=0, le=1, description="Relative weight on adherence vs schedule fit")
+    schedule_soft_cap_percent: float = Field(..., ge=0, le=100, description="Allowed soft overload cap")
+    schedule_impact: Dict[str, Any] = Field(..., description="Deterministic schedule verification summary")
+    decision_trace: List[str] = Field(default_factory=list, max_length=3, description="Concise user-facing reasons for recommendation")
     partner_accountability: PartnerAccountability
 
 class GoalPlanResponse(BaseModel):

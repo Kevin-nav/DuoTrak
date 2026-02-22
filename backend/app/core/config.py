@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     PINECONE_INDEX_NAME: str = "duotrak-user-model-data"
 
     # Agent-specific Model Names
-    FLASH_MODEL: str = "gemini-2.5-flash"
-    PRO_MODEL: str = "gemini-2.5-pro"
+    FLASH_MODEL: str = "gemini-3-flash"
+    PRO_MODEL: str = "gemini-3-flash"
 
     # Thinking Budget Configuration
     DEFAULT_THINKING_BUDGET: int = 8000

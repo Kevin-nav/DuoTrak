@@ -118,6 +118,12 @@ export const create = mutation({
           repeat_frequency: v.optional(v.string()),
           time_window: v.optional(v.string()),
           accountability_type: v.optional(v.string()),
+          verification_mode: v.optional(v.string()),
+          verification_mode_reason: v.optional(v.string()),
+          verification_confidence: v.optional(v.number()),
+          auto_approval_policy: v.optional(v.string()),
+          auto_approval_timeout_hours: v.optional(v.number()),
+          auto_approval_min_confidence: v.optional(v.number()),
         })
       )
     ),
@@ -163,6 +169,12 @@ export const create = mutation({
           goal_id: goalId,
           time_window: task.time_window,
           accountability_type: task.accountability_type,
+          verification_mode: task.verification_mode,
+          verification_mode_reason: task.verification_mode_reason,
+          verification_confidence: task.verification_confidence,
+          auto_approval_policy: task.auto_approval_policy,
+          auto_approval_timeout_hours: task.auto_approval_timeout_hours,
+          auto_approval_min_confidence: task.auto_approval_min_confidence,
           updated_at: Date.now(),
         });
       }

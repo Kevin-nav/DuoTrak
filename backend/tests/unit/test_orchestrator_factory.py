@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from app.ai.orchestrator_factory import create_orchestrator
+from app.services import gemini_config as gemini_config_module
 
 
 class InMemorySessionStore:
@@ -30,3 +31,23 @@ def test_factory_selects_langgraph_when_flag_enabled():
         session_store=InMemorySessionStore(),
     )
     assert orchestrator.__class__.__name__ == "LangGraphGoalPipeline"
+
+
+def test_gemini_config_routes_complex_agents_to_flash_only(monkeypatch):
+    captured = {}
+
+    class FakeLLM:
+        def __init__(self, *, model, api_key, temperature):
+            captured["model"] = model
+            captured["api_key"] = api_key
+            captured["temperature"] = temperature
+
+    monkeypatch.setattr(gemini_config_module, "LLM", FakeLLM)
+    monkeypatch.setattr(gemini_config_module.settings, "FLASH_MODEL", "gemini-3-flash", raising=False)
+    monkeypatch.setattr(gemini_config_module.settings, "PRO_MODEL", "gemini-2.5-pro", raising=False)
+
+    config = gemini_config_module.GeminiModelConfig()
+    llm = config.get_model_for_agent("goal_strategist")
+
+    assert llm is not None
+    assert captured["model"] == "gemini/gemini-3-flash"
