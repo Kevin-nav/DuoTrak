@@ -226,30 +226,19 @@ export default function InteractiveWaitingRoom() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="flex justify-center"
-          >
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <Clock className="w-8 h-8 text-white" />
-            </div>
-          </motion.div>
-
-          <h1 className="text-3xl font-bold text-gray-900">Waiting for Your Partner</h1>
-
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Great! Your invitation has been sent. While you wait, let's prepare for your journey together.
-          </p>
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 rounded-xl border border-landing-clay/70 bg-landing-cream/60 p-4">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-landing-terracotta text-white">
+          <Clock className="h-5 w-5" />
         </div>
+        <div>
+          <h2 className="text-lg font-bold text-landing-espresso">Waiting for your partner</h2>
+          <p className="text-sm text-landing-espresso-light">Your invitation is sent. You can prep while they accept.</p>
+        </div>
+      </div>
 
         {/* Status Card */}
-        <Card className="border-2 border-blue-200 bg-white">
+        <Card className="border-landing-clay/70 bg-white">
           <CardContent className="p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center space-x-4">
@@ -273,13 +262,13 @@ export default function InteractiveWaitingRoom() {
                 </div>
                 <div>
                   <p className={`font-medium ${getStatusColor()}`}>{getStatusMessage()}</p>
-                  <p className="text-sm text-gray-500">Invitation expires in: {timeRemaining}</p>
+                  <p className="text-sm text-landing-espresso-light">Invitation expires in: {timeRemaining}</p>
                 </div>
               </div>
 
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">{timeRemaining.split(' ')[0]}</p>
-                <p className="text-sm text-gray-500">{timeRemaining.split(' ')[1] || '...'}</p>
+                <p className="text-2xl font-bold text-landing-espresso">{timeRemaining.split(' ')[0]}</p>
+                <p className="text-sm text-landing-espresso-light">{timeRemaining.split(' ')[1] || '...'}</p>
               </div>
 
               <div className="flex-grow flex justify-end">
@@ -292,11 +281,11 @@ export default function InteractiveWaitingRoom() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Left Column */}
           <div className="space-y-6">
             {/* Success Tips */}
-            <Card>
+            <Card className="border-landing-clay/70">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Lightbulb className="w-5 h-5 text-yellow-500" />
@@ -314,15 +303,15 @@ export default function InteractiveWaitingRoom() {
                     className="space-y-3"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-landing-terracotta">
                         {(() => {
                           const Icon = successTips[currentTip].icon;
                           return <Icon className="w-5 h-5 text-white" />;
                         })()}
                       </div>
-                      <h3 className="font-semibold text-gray-900">{successTips[currentTip].title}</h3>
+                            <h3 className="font-semibold text-landing-espresso">{successTips[currentTip].title}</h3>
                     </div>
-                    <p className="text-gray-600 ml-13">{successTips[currentTip].description}</p>
+                    <p className="ml-13 text-landing-espresso-light">{successTips[currentTip].description}</p>
                   </motion.div>
                 </AnimatePresence>
 
@@ -330,7 +319,7 @@ export default function InteractiveWaitingRoom() {
                   {successTips.map((_, index) => (
                     <div
                       key={index}
-                      className={`w-2 h-2 rounded-full transition-colors ${index === currentTip ? "bg-blue-500" : "bg-gray-300"
+                        className={`h-2 w-2 rounded-full transition-colors ${index === currentTip ? "bg-landing-terracotta" : "bg-landing-clay"
                         }`}
                     />
                   ))}
@@ -339,7 +328,7 @@ export default function InteractiveWaitingRoom() {
             </Card>
 
             {/* Goal Drafts */}
-            <Card>
+            <Card className="border-landing-clay/70">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
@@ -392,7 +381,7 @@ export default function InteractiveWaitingRoom() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Share Invitation */}
-            <Card className="border-2 border-dashed border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+            <Card className="border-2 border-dashed border-landing-clay bg-landing-cream/50">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Share2 className="w-5 h-5 text-purple-500" />
@@ -406,7 +395,7 @@ export default function InteractiveWaitingRoom() {
 
                 <Button
                   onClick={() => setShowShareDrawer(true)}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                    className="w-full bg-landing-espresso text-landing-cream hover:bg-landing-terracotta"
                 >
                   <Share2 className="w-4 h-4 mr-2" />
                   Share with Friends
@@ -427,7 +416,7 @@ export default function InteractiveWaitingRoom() {
             </Card>
 
             {/* Partnership Stats */}
-            <Card>
+            <Card className="border-landing-clay/70">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Trophy className="w-5 h-5 text-yellow-500" />
@@ -546,7 +535,6 @@ export default function InteractiveWaitingRoom() {
           invitationLink={invitationLink}
           goalDrafts={goalDrafts}
         />
-      </div>
     </div>
   )
 }

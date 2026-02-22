@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import ProfileSetupStep from './ProfileSetupStep';
 import PreferencesStep from './PreferencesStep';
 import InteractiveWaitingRoom from './InteractiveWaitingRoom';
 import { useOnboardingGuard } from '@/hooks/useOnboardingGuard';
+import FlowShell from '@/components/flow/FlowShell';
+import FlowActionBar from '@/components/flow/FlowActionBar';
 
 const steps = [
   { id: 'profile', title: 'Your Profile', description: 'Let your partner know who you are.', component: ProfileSetupStep },
@@ -82,90 +83,68 @@ export default function InviterOnboardingFlow() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Progress Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Your DuoTrak Setup</h1>
-            <span className="text-sm text-gray-500">
-              Step {currentStep + 1} of {steps.length}
-            </span>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex flex-col items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${completedSteps.includes(index)
-                      ? "bg-green-500 text-white"
-                      : index === currentStep
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-500"
-                      }`}
-                  >
-                    {completedSteps.includes(index) ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-500 mt-1 hidden sm:block">
-                    {step.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Step Content */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <CurrentStepComponent
-                data={onboardingData}
-                updateData={updateData}
-                onValidationChange={setIsCurrentStepValid}
-                onComplete={handleNext}
-              />
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      {currentStep < steps.length - 1 && (
-        <div className="bg-white border-t p-4">
-          <div className="max-w-4xl mx-auto flex justify-end">
-            <div className="flex gap-4">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 0 || isUserLoading}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
+    <FlowShell
+      stepLabel={`Step ${currentStep + 1} of ${steps.length}`}
+      title={steps[currentStep].title}
+      subtitle={steps[currentStep].description}
+      progress={progress}
+      backHref="/invite-partner/pending"
+      statusChip={currentStep === steps.length - 1 ? 'Waiting Room' : 'Onboarding'}
+      actionBar={
+        currentStep < steps.length - 1 ? (
+          <FlowActionBar
+            secondary={
+              <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0 || isUserLoading}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Previous
               </Button>
+            }
+            primary={
               <Button onClick={handleNext} disabled={!isCurrentStepValid || isUserLoading}>
                 Next
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </div>
+            }
+          />
+        ) : undefined
+      }
+    >
+      <div className="mb-4 flex flex-wrap gap-2">
+        {steps.map((step, index) => (
+          <div
+            key={step.id}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+              completedSteps.includes(index)
+                ? 'border-landing-sage/40 bg-landing-sage/15 text-landing-espresso'
+                : index === currentStep
+                  ? 'border-landing-terracotta/40 bg-landing-terracotta/15 text-landing-espresso'
+                  : 'border-landing-clay bg-white text-landing-espresso-light'
+            }`}
+          >
+            {completedSteps.includes(index) ? <Check className="h-3.5 w-3.5" /> : null}
+            {step.title}
           </div>
-        </div>
-      )}
-    </div>
+        ))}
+      </div>
+
+      <div className="w-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <CurrentStepComponent
+              data={onboardingData}
+              updateData={updateData}
+              onValidationChange={setIsCurrentStepValid}
+              onComplete={handleNext}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </FlowShell>
   );
 }

@@ -79,32 +79,37 @@ export default function InvitePartnerForm() {
 
   // Otherwise, render the form.
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-5">
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-left">Partner's Name *</label>
-            <Input {...register('partnerName')} placeholder="e.g., Alex" />
+            <label className="mb-1.5 block text-sm font-semibold text-landing-espresso-light">Partner's Name *</label>
+            <Input {...register('partnerName')} placeholder="e.g., Alex" className="h-11 border-landing-clay bg-landing-cream/40" />
             {errors.partnerName && <p className="text-red-500 text-sm mt-1 text-left">{errors.partnerName.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-left">Partner's Email *</label>
-            <Input type="email" {...register('partnerEmail')} placeholder="alex@example.com" />
+            <label className="mb-1.5 block text-sm font-semibold text-landing-espresso-light">Partner's Email *</label>
+            <Input type="email" {...register('partnerEmail')} placeholder="alex@example.com" className="h-11 border-landing-clay bg-landing-cream/40" />
             {errors.partnerEmail && <p className="text-red-500 text-sm mt-1 text-left">{errors.partnerEmail.message}</p>}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 text-left">Personal Message (Optional)</label>
-          <Textarea {...register('customMessage')} placeholder="Add a personal touch to your invitation..." rows={3} className="resize-none" />
+          <label className="mb-1.5 block text-sm font-semibold text-landing-espresso-light">Personal Message (Optional)</label>
+          <Textarea
+            {...register('customMessage')}
+            placeholder="Add a personal touch to your invitation..."
+            rows={3}
+            className="resize-none border-landing-clay bg-landing-cream/40"
+          />
         </div>
 
         <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={() => setShowPreview(!showPreview)} className="flex items-center gap-2">
+          <Button type="button" variant="outline" onClick={() => setShowPreview(!showPreview)} className="flex items-center gap-2 border-landing-clay">
             <Eye className="w-4 h-4" />
             {showPreview ? 'Hide Preview' : 'Preview Email'}
           </Button>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full bg-landing-espresso text-landing-cream hover:bg-landing-terracotta" disabled={isSubmitting}>
             {isSubmitting ? 'Sending...' : 'Send Invitation'}
           </Button>
         </div>
@@ -116,10 +121,10 @@ export default function InvitePartnerForm() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-gray-50 rounded-xl p-6 border border-gray-200"
+          className="rounded-xl border border-landing-clay bg-landing-cream/60 p-5"
         >
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-white">
+          <div className="overflow-hidden rounded-lg border border-landing-clay bg-white shadow-sm">
+            <div className="bg-landing-espresso p-4 text-landing-cream">
               <div className="flex items-center gap-2">
                 <Heart className="w-5 h-5" />
                 <span className="font-semibold">DuoTrak Invitation</span>
@@ -139,7 +144,7 @@ export default function InvitePartnerForm() {
                   <p>{defaultMessage}</p>
                 )}
               </div>
-              <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
+              <Button className="w-full bg-landing-espresso text-landing-cream hover:bg-landing-terracotta">
                 Accept Invitation & Join DuoTrak
               </Button>
             </div>

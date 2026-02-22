@@ -2,31 +2,31 @@
 
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { Loader2, Rocket, Target, Users } from 'lucide-react';
+import { useMutation } from 'convex/react';
+import { toast } from 'sonner';
+import { api } from '../../../../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { motion } from 'framer-motion';
-import { Loader2, Rocket, Users, Target } from 'lucide-react';
-import Link from 'next/link';
-import { useMutation } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
+import FlowShell from '@/components/flow/FlowShell';
+import FlowActionBar from '@/components/flow/FlowActionBar';
 
 const onboardingSteps = [
   {
-    icon: <Users className="w-12 h-12 text-primary-blue" />,
-    title: 'Welcome to DuoTrak!',
-    description: "You're about to start a shared journey of motivation and success with your partner.",
+    icon: Users,
+    title: 'Welcome to DuoTrak',
+    description: "You are about to start a shared journey of motivation and success with your partner.",
   },
   {
-    icon: <Target className="w-12 h-12 text-primary-blue" />,
-    title: 'Set Shared Goals',
-    description: 'Create goals together, assign tasks, and visualize your joint progress every step of the way.',
+    icon: Target,
+    title: 'Set shared goals',
+    description: 'Create goals together, assign tasks, and track progress with accountability.',
   },
   {
-    icon: <Rocket className="w-12 h-12 text-primary-blue" />,
-    title: 'Achieve More, Together',
-    description: "Stay accountable, celebrate victories, and build momentum. Let's get started!",
+    icon: Rocket,
+    title: 'Launch together',
+    description: 'Stay consistent, celebrate wins, and build long-term momentum as a duo.',
   },
 ];
 
@@ -34,21 +34,14 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-
   const [currentStep, setCurrentStep] = useState(0);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Use Convex mutation for accepting invitation
   const acceptInvitationMutation = useMutation(api.invitations.accept);
 
   const isLastStep = currentStep === onboardingSteps.length - 1;
-
-  const handleNext = () => {
-    if (!isLastStep) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+  const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
+  const Icon = onboardingSteps[currentStep].icon;
 
   const handleFinalize = async () => {
     if (!token) {
@@ -62,20 +55,14 @@ function OnboardingContent() {
 
     setIsProcessing(true);
     try {
-      // Accept the invitation via Convex - this creates the partnership
       await acceptInvitationMutation({ token });
       toast.success('Partnership created successfully!');
-
-      // Clean up localStorage
       localStorage.removeItem('duotrak-partner-info');
       localStorage.removeItem('duotrak-goal-drafts');
       localStorage.removeItem('duotrak-invitation-token');
       localStorage.removeItem('inviterOnboardingStep');
-
-      // Redirect to the dashboard
       router.push('/dashboard');
     } catch (error: any) {
-      // Handle specific error cases
       if (error.message?.includes('already have a partner')) {
         toast.error('You are already in a partnership. Redirecting to dashboard...');
         router.push('/dashboard');
@@ -95,65 +82,64 @@ function OnboardingContent() {
     }
   };
 
-  const { icon, title, description } = onboardingSteps[currentStep];
-
   return (
-    <Card className="w-full max-w-md text-center">
-      <CardHeader>
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="flex justify-center mb-6"
-        >
-          {icon}
-        </motion.div>
-        <CardTitle className="text-2xl font-bold">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLastStep && (
-          <div className="flex items-center space-x-2 justify-center mt-6">
-            <Checkbox
-              id="terms"
-              checked={termsAccepted}
-              onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-            />
-            <label
-              htmlFor="terms"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
+    <FlowShell
+      stepLabel={`Step ${currentStep + 1} of ${onboardingSteps.length}`}
+      title={onboardingSteps[currentStep].title}
+      subtitle={onboardingSteps[currentStep].description}
+      progress={progress}
+      statusChip={isLastStep ? 'Ready to complete' : 'Onboarding'}
+      actionBar={
+        <FlowActionBar
+          primary={
+            isLastStep ? (
+              <Button onClick={handleFinalize} disabled={!termsAccepted || isProcessing}>
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Complete Setup
+              </Button>
+            ) : (
+              <Button onClick={() => setCurrentStep((prev) => prev + 1)}>Next</Button>
+            )
+          }
+        />
+      }
+    >
+      <div className="space-y-5 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-landing-terracotta text-white">
+          <Icon className="h-10 w-10" />
+        </div>
+
+        <div className="mx-auto max-w-lg text-sm text-landing-espresso-light">
+          This quick setup makes sure both partners start with clear expectations and shared motivation.
+        </div>
+
+        {isLastStep ? (
+          <div className="mx-auto mt-4 flex max-w-md items-start gap-3 rounded-xl border border-landing-clay bg-landing-cream/50 p-4 text-left">
+            <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(checked) => setTermsAccepted(checked as boolean)} />
+            <label htmlFor="terms" className="text-sm leading-relaxed text-landing-espresso-light">
               I agree to the{' '}
-              <Link href="/terms" className="underline text-primary-blue">
+              <Link href="/terms" className="font-semibold text-landing-terracotta hover:text-landing-espresso">
                 Terms of Service
-              </Link>
+              </Link>{' '}
+              and understand this will create a partnership.
             </label>
           </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-center">
-        {isLastStep ? (
-          <Button onClick={handleFinalize} className="w-full" disabled={!termsAccepted || isProcessing}>
-            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            Complete Setup
-          </Button>
-        ) : (
-          <Button onClick={handleNext} className="w-full">
-            Next
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+        ) : null}
+      </div>
+    </FlowShell>
   );
 }
 
 export default function OnboardingPage() {
   return (
-    <div className="container mx-auto flex items-center justify-center min-h-screen p-4">
-      <Suspense fallback={<div className="flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
-        <OnboardingContent />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-landing-cream">
+          <Loader2 className="h-8 w-8 animate-spin text-landing-terracotta" />
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   );
 }

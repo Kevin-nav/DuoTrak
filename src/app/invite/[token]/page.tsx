@@ -1,17 +1,16 @@
-// src/app/invite/[token]/page.tsx
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { apiClient } from '@/lib/api/client';
 import { useUser } from '@/contexts/UserContext';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import FlowShell from '@/components/flow/FlowShell';
+import FlowStatusCard from '@/components/flow/FlowStatusCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +20,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface PublicInvitationDetails {
   sender_name: string;
@@ -29,7 +28,6 @@ interface PublicInvitationDetails {
   expires_at: string;
 }
 
-// This page is for the person who has been invited.
 export default function AcceptInvitationPage() {
   const router = useRouter();
   const params = useParams();
@@ -37,7 +35,6 @@ export default function AcceptInvitationPage() {
   const { userDetails, isLoading: isUserLoading } = useUser();
   const [isConsentDialogOpen, setIsConsentDialogOpen] = useState(false);
 
-  // 1. Fetch public details of the invitation to show who invited the user.
   const { data: invitationDetails, error: queryError, isLoading: isQueryLoading } = useQuery<PublicInvitationDetails>({
     queryKey: ['invitation', token],
     queryFn: () => apiClient.get(`/partner-invitations/invitations/details/${token}`),
@@ -45,14 +42,12 @@ export default function AcceptInvitationPage() {
     retry: false,
   });
 
-  // 2. Mutation to accept the invitation.
   const { mutate: acceptInvitation, isPending: isAccepting } = useMutation({
     mutationFn: () => apiClient.post('/partner-invitations/accept', { invitation_token: token }),
     onSuccess: () => {
       toast.success("Partnership created!", {
         description: "You are now partners. Redirecting you to the dashboard.",
       });
-      // Redirect to dashboard, middleware will handle the rest.
       router.push('/dashboard');
     },
     onError: (error: any) => {
@@ -64,92 +59,85 @@ export default function AcceptInvitationPage() {
   });
 
   const handleAccept = () => {
-    // If user is not logged in, redirect them to signup, but keep the token.
     if (!userDetails) {
-      router.push(`/signup?invite_token=${token}`);
+      router.push(`/signup?token=${token}`);
       return;
     }
-    // If user is logged in, open the consent dialog.
     setIsConsentDialogOpen(true);
-  };
-
-  const handleConfirmAccept = () => {
-    acceptInvitation();
   };
 
   const isLoading = isQueryLoading || isUserLoading;
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Verifying invitation...</p>
+      <div className="flex min-h-screen items-center justify-center bg-landing-cream">
+        <Loader2 className="h-10 w-10 animate-spin text-landing-terracotta" />
       </div>
     );
   }
 
   if (queryError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md text-center bg-destructive/10 border-destructive">
-          <CardHeader>
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-destructive text-destructive-foreground">
-              <AlertTriangle className="h-6 w-6" />
-            </div>
-            <CardTitle className="mt-4">Invitation Invalid</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive-foreground">
-              This invitation link is either invalid or has expired. Please ask for a new invitation.
-            </p>
-            <Button variant="secondary" className="mt-6" onClick={() => router.push('/')}>Go to Homepage</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <FlowShell stepLabel="Invitation" title="Invitation invalid" subtitle="This invitation link is invalid or expired." progress={65}>
+        <FlowStatusCard
+          tone="warning"
+          title="Unable to verify invitation"
+          description="Please ask your partner to send a fresh invitation link."
+          actions={<Button variant="outline" onClick={() => router.push('/')}>Go to Homepage</Button>}
+        />
+      </FlowShell>
     );
   }
 
   return (
     <>
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <Card className="w-full max-w-md text-center shadow-lg">
-          <CardHeader>
-            <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20">
-              {/* In a real app, you might fetch the sender's avatar URL */}
-              <AvatarFallback className="text-4xl bg-primary text-primary-foreground">
-                {invitationDetails?.sender_name.charAt(0).toUpperCase()}
+      <FlowShell
+        stepLabel="Step 3 of 4"
+        title="You are invited"
+        subtitle={`${invitationDetails?.sender_name} invited you to join DuoTrak as their partner.`}
+        progress={75}
+        statusChip="Awaiting acceptance"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 rounded-xl border border-landing-clay/70 bg-landing-cream/50 p-4">
+            <Avatar className="h-12 w-12">
+              <AvatarFallback className="bg-landing-terracotta text-white">
+                {invitationDetails?.sender_name?.charAt(0).toUpperCase() ?? '?'}
               </AvatarFallback>
             </Avatar>
-            <CardTitle className="text-2xl">You're Invited!</CardTitle>
-            <CardDescription>
-              <span className="font-bold text-primary">{invitationDetails?.sender_name}</span> has invited you to become their partner on DuoTrak.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-6">
-              By accepting, you will start sharing goals and tracking progress together.
-            </p>
-            <Button onClick={handleAccept} className="w-full" disabled={isAccepting}>
-              {isAccepting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Accept Invitation'}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+            <div>
+              <p className="font-semibold text-landing-espresso">{invitationDetails?.sender_name}</p>
+              <p className="text-sm text-landing-espresso-light">Ready to set shared goals with you</p>
+            </div>
+          </div>
+          <p className="text-sm text-landing-espresso-light">
+            By accepting, you will start sharing progress and accountability in DuoTrak.
+          </p>
+          <Button
+            onClick={handleAccept}
+            className="h-12 w-full bg-landing-espresso text-base font-bold text-landing-cream hover:bg-landing-terracotta"
+            disabled={isAccepting}
+          >
+            {isAccepting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Accept Invitation
+          </Button>
+        </div>
+      </FlowShell>
 
       <AlertDialog open={isConsentDialogOpen} onOpenChange={setIsConsentDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Partnership</AlertDialogTitle>
             <AlertDialogDescription>
-              You are already logged in as <span className="font-semibold text-primary">{userDetails?.email}</span>.
-              Do you want to form a partnership with <span className="font-semibold text-primary">{invitationDetails?.sender_name}</span>?
-              This action cannot be undone.
+              You are logged in as <span className="font-semibold text-landing-terracotta">{userDetails?.email}</span>.
+              Do you want to form a partnership with <span className="font-semibold text-landing-terracotta">{invitationDetails?.sender_name}</span>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAccept} disabled={isAccepting}>
-              {isAccepting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Yes, become partners'}
+            <AlertDialogAction onClick={() => acceptInvitation()} disabled={isAccepting}>
+              {isAccepting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Yes, become partners
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
