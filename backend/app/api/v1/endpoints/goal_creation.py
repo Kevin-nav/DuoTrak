@@ -10,10 +10,10 @@ from app.core.config import settings
 from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, AnswersSubmissionRequest, GoalPlanResponse, OnboardingPlanRequest, OnboardingPlanResponse, OnboardingPlanTask
 from app.services.gemini_config import GeminiModelConfig
 from app.services.pinecone_service import PineconeService
-from app.services.duotrak_crew_orchestrator import DuotrakCrewOrchestrator
 from app.services.goal_creation_session_store import GoalCreationSessionStore
 from app.services.goal_plan_adapter import adapt_goal_plan_response
 from app.core.redis_config import redis_client
+from app.ai.orchestrator_factory import create_orchestrator
 from app.db.session import get_db
 from app.db.models import User
 from app.api.v1.endpoints.users import get_current_user_from_cookie
@@ -87,14 +87,14 @@ pinecone_service = PineconeService(
     index_name=settings.PINECONE_INDEX_NAME
 )
 
-duotrak_orchestrator = DuotrakCrewOrchestrator(
+duotrak_orchestrator = create_orchestrator(
+    settings=settings,
     pinecone_service=pinecone_service,
     gemini_config=gemini_config,
     session_store=GoalCreationSessionStore(
         redis_client=redis_client,
         default_ttl_seconds=getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900),
     ),
-    session_ttl_seconds=getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900),
 )
 
 @router.on_event("startup")

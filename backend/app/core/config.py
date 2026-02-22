@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # Keep this aligned with src/lib/auth.ts for web/mobile session continuity.
     SESSION_COOKIE_NAME: str = "__session"
     INTERNAL_API_SECRET: str  # Required for internal API communication with Next.js
+    GOAL_CREATION_SESSION_TTL_SECONDS: int = 900
+    AI_ORCHESTRATOR: str = "crewai"
+
     class Config:
         # Pydantic-settings will automatically search for a .env file.
         case_sensitive = True
