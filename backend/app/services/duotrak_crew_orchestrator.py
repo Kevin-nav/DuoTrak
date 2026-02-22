@@ -11,6 +11,8 @@ from datetime import datetime
 from app.services.pinecone_service import PineconeService
 from app.services.gemini_config import GeminiModelConfig
 from app.schemas.agent_crew import DuotrakGoalPlan
+from app.services.goal_creation_session_store import GoalCreationSessionStore
+from app.core.redis_config import redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +35,21 @@ class UserHistoryTool(BaseTool):
 class DuotrakCrewOrchestrator:
     """Main orchestrator for the Duotrak Goal Creation Crew with a two-phase approach."""
     
-    def __init__(self, pinecone_service: PineconeService, gemini_config: GeminiModelConfig):
+    def __init__(
+        self,
+        pinecone_service: PineconeService,
+        gemini_config: GeminiModelConfig,
+        session_store: Optional[GoalCreationSessionStore] = None,
+        session_ttl_seconds: int = 900,
+    ):
         self.pinecone_service = pinecone_service
         self.gemini_config = gemini_config
         self.user_history_tool = UserHistoryTool(pinecone_service=pinecone_service)
-        self.active_sessions: Dict[str, Dict[str, Any]] = {}
+        self.session_store = session_store or GoalCreationSessionStore(
+            redis_client=redis_client,
+            default_ttl_seconds=session_ttl_seconds,
+        )
+        self.session_ttl_seconds = session_ttl_seconds
 
     def _safe_json_loads(self, raw_output: str) -> Dict[str, Any]:
         """Safely loads JSON from a string, stripping markdown backticks."""
@@ -89,7 +101,16 @@ class DuotrakCrewOrchestrator:
             profile_output = profiling_task.output.raw
             questions_output = question_task.output.raw
             
-            self.active_sessions[session_id] = {"user_id": user_id, "wizard_data": wizard_data, "user_context": user_context, "profile_output": profile_output}
+            await self.session_store.put(
+                session_id,
+                {
+                    "user_id": user_id,
+                    "wizard_data": wizard_data,
+                    "user_context": user_context,
+                    "profile_output": profile_output,
+                },
+                ttl_seconds=self.session_ttl_seconds,
+            )
             
             parsed_profile = self._safe_json_loads(profile_output)
             parsed_questions = self._safe_json_loads(questions_output)
@@ -105,10 +126,10 @@ class DuotrakCrewOrchestrator:
 
     async def create_goal_plan_from_answers(self, session_id: str, user_id: str, answers: Dict[str, str]) -> Dict[str, Any]:
         start_time = time.time()
-        if session_id not in self.active_sessions:
-            raise ValueError("Session not found.")
-        
-        session_data = self.active_sessions[session_id]
+        session_data = await self.session_store.get(session_id)
+        if session_data is None:
+            raise ValueError("Session not found or expired. Please restart from strategic questions.")
+
         full_context = {**session_data, "strategic_answers": answers}
         
         try:

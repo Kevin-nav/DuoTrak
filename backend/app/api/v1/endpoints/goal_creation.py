@@ -2,7 +2,9 @@
 import asyncio
 import logging
 import uuid
+import hmac
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, AnswersSubmissionRequest, GoalPlanResponse, OnboardingPlanRequest, OnboardingPlanResponse, OnboardingPlanTask
@@ -12,6 +14,7 @@ from app.services.duotrak_crew_orchestrator import DuotrakCrewOrchestrator
 from app.services.goal_creation_session_store import GoalCreationSessionStore
 from app.services.goal_plan_adapter import adapt_goal_plan_response
 from app.core.redis_config import redis_client
+from app.db.session import get_db
 from app.db.models import User
 from app.api.v1.endpoints.users import get_current_user_from_cookie
 from app.services.external_judge_crew import ExternalJudgeCrew
@@ -22,6 +25,22 @@ import json
 router = APIRouter()
 logger = logging.getLogger(__name__)
 from app.services.gemini_service import gemini_service
+
+def _is_internal_request(request: Request) -> bool:
+    internal_api_key = request.headers.get("X-Internal-API-Key")
+    if not internal_api_key:
+        return False
+    return hmac.compare_digest(internal_api_key, settings.INTERNAL_API_SECRET)
+
+async def get_optional_current_user_from_cookie(
+    request: Request, db: AsyncSession = Depends(get_db)
+) -> User | None:
+    try:
+        return await get_current_user_from_cookie(request, db)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            return None
+        raise
 
 def run_evaluation_in_background(plan: DuotrakGoalPlan):
     """The function that will be run in the background."""
@@ -84,8 +103,9 @@ async def startup_event():
 
 @router.post("/questions", response_model=QuestionsResponse)
 async def get_strategic_questions(
+    http_request: Request,
     request: GoalWizardRequest,
-    current_user: User = Depends(get_current_user_from_cookie)
+    current_user: User | None = Depends(get_optional_current_user_from_cookie),
 ):
     """
     V3 Agentic Workflow - Phase 1: Generate strategic questions.
@@ -115,11 +135,19 @@ async def get_strategic_questions(
       - `execution_metadata`: Performance metrics for the agentic workflow.
     """
     try:
+        is_internal = _is_internal_request(http_request)
+        if not is_internal and current_user is None:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+        effective_user_id = request.user_id if is_internal else str(current_user.id)
+        if not is_internal and request.user_id != effective_user_id:
+            raise HTTPException(status_code=403, detail="User ID mismatch")
+
         session_id = str(uuid.uuid4())
-        user_context = await pinecone_service.get_user_context(str(current_user.id))
+        user_context = await pinecone_service.get_user_context(effective_user_id)
         
         questions_result = await duotrak_orchestrator.generate_strategic_questions(
-            user_id=str(current_user.id),
+            user_id=effective_user_id,
             session_id=session_id,
             wizard_data=request.wizard_data.dict(),
             user_context=user_context
@@ -131,15 +159,19 @@ async def get_strategic_questions(
             strategic_questions=questions_result["questions"],
             execution_metadata={"question_generation_time_ms": questions_result["execution_time_ms"]}
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"V3 Question generation failed for user {current_user.id}: {e}", exc_info=True)
+        user_for_log = request.user_id if request and request.user_id else "unknown"
+        logger.error(f"V3 Question generation failed for user {user_for_log}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate strategic questions.")
 
 @router.post("/{session_id}/plan", response_model=GoalPlanResponse)
 async def create_goal_plan(
+    http_request: Request,
     session_id: str,
     request: AnswersSubmissionRequest,
-    current_user: User = Depends(get_current_user_from_cookie)
+    current_user: User | None = Depends(get_optional_current_user_from_cookie),
 ):
     """
     V3 Agentic Workflow - Phase 2: Process answers and generate the complete goal plan.
@@ -164,9 +196,17 @@ async def create_goal_plan(
       - `execution_metadata`: Performance metrics for the agentic workflow.
     """
     try:
+        is_internal = _is_internal_request(http_request)
+        if not is_internal and current_user is None:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+        effective_user_id = request.user_id if is_internal else str(current_user.id)
+        if not is_internal and request.user_id != effective_user_id:
+            raise HTTPException(status_code=403, detail="User ID mismatch")
+
         plan_result = await duotrak_orchestrator.create_goal_plan_from_answers(
             session_id=session_id,
-            user_id=str(current_user.id),
+            user_id=effective_user_id,
             answers=request.answers
         )
         
@@ -185,6 +225,8 @@ async def create_goal_plan(
                 "action": "Restart goal creation from /api/v1/goal-creation/questions.",
             },
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"V3 Goal plan creation failed for session {session_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create goal plan.")
