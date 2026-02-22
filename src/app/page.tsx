@@ -1,5 +1,6 @@
 import LandingNavbar from '@/components/landing/LandingNavbar';
 import HeroSection from '@/components/landing/HeroSection';
+import ValuesStrip from '@/components/landing/ValuesStrip';
 import ProblemSection from '@/components/landing/ProblemSection';
 import FeaturesSection from '@/components/landing/FeaturesSection';
 import HowItWorksSection from '@/components/landing/HowItWorksSection';
@@ -13,6 +14,7 @@ export default function LandingPage() {
       <LandingNavbar />
       <main className="overflow-x-hidden pt-20">
         <HeroSection />
+        <ValuesStrip />
         <ProblemSection />
         <FeaturesSection />
         <HowItWorksSection />

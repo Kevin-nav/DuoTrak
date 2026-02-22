@@ -29,15 +29,15 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-32 bg-white relative border-t border-landing-clay">
+    <section id="how-it-works" className="relative border-t border-landing-clay bg-white py-20 sm:py-24 md:py-28">
       <div className="container mx-auto px-6 sm:px-8 lg:px-12 max-w-7xl">
-        <div className="flex flex-col md:flex-row justify-between relative mb-24 items-end">
+        <div className="relative mb-14 flex flex-col justify-between gap-4 md:mb-20 md:flex-row md:items-end">
           <motion.h2
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
-            className="text-6xl md:text-8xl font-black text-landing-espresso uppercase tracking-tighter"
+            className="text-4xl font-black uppercase tracking-tighter text-landing-espresso sm:text-5xl md:text-8xl"
           >
             How It
             <br />
@@ -48,7 +48,7 @@ export default function HowItWorksSection() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-landing-espresso-light font-medium text-base max-w-xs text-right mt-8 md:mt-0"
+            className="mt-1 max-w-xs text-left text-sm font-medium text-landing-espresso-light sm:text-base md:mt-0 md:text-right"
           >
             Three steps. That&apos;s it. No complicated setup, no learning curve.
           </motion.p>
@@ -58,7 +58,7 @@ export default function HowItWorksSection() {
           {/* Vertical axis line */}
           <div className="absolute left-8 top-0 bottom-0 w-[1px] bg-landing-clay hidden md:block"></div>
 
-          <div className="flex flex-col gap-24 relative z-10">
+          <div className="relative z-10 flex flex-col gap-12 sm:gap-16 md:gap-24">
             {steps.map((step, index) => (
               <div key={index} className="flex flex-col md:flex-row items-start md:items-center gap-8 md:gap-16 group">
                 <motion.div
@@ -66,7 +66,7 @@ export default function HowItWorksSection() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true, margin: "-100px" }}
                   transition={{ type: "spring", bounce: 0.4, duration: 0.8, delay: 0.1 }}
-                  className={`${step.color} p-6 md:p-8 shrink-0 relative z-10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 rounded-sm`}
+                  className={`${step.color} relative z-10 shrink-0 rounded-xl p-5 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 sm:p-6 md:p-8`}
                 >
                   {step.icon}
                 </motion.div>
@@ -76,14 +76,14 @@ export default function HowItWorksSection() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true, margin: "-100px" }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="flex flex-col md:flex-row items-start md:items-center justify-between w-full border-b border-landing-clay/50 pb-8 group-hover:border-landing-terracotta transition-colors duration-500"
+                  className="flex w-full flex-col items-start justify-between border-b border-landing-clay/50 pb-7 transition-colors duration-500 group-hover:border-landing-terracotta md:flex-row md:items-center md:pb-8"
                 >
                   <div className="max-w-xl">
-                    <div className="text-landing-clay font-black text-7xl md:text-9xl tracking-tighter absolute -z-10 -mt-10 md:-mt-16 -ml-4 md:-ml-8 opacity-40 transition-all duration-300 group-hover:text-landing-sand group-hover:translate-x-4">
+                    <div className="absolute -z-10 -ml-3 -mt-8 text-6xl font-black tracking-tighter text-landing-clay opacity-40 transition-all duration-300 group-hover:translate-x-3 group-hover:text-landing-sand sm:text-7xl md:-ml-8 md:-mt-16 md:text-9xl">
                       {step.num}
                     </div>
-                    <h3 className="text-3xl md:text-5xl font-black text-landing-espresso mb-4 uppercase tracking-tight">{step.title}</h3>
-                    <p className="text-landing-espresso-light text-lg md:text-xl font-medium">{step.description}</p>
+                    <h3 className="mb-3 text-2xl font-black uppercase tracking-tight text-landing-espresso sm:text-3xl md:mb-4 md:text-5xl">{step.title}</h3>
+                    <p className="text-base font-medium text-landing-espresso-light sm:text-lg md:text-xl">{step.description}</p>
                   </div>
                 </motion.div>
               </div>

@@ -13,11 +13,12 @@ interface GoogleSignInButtonProps {
 const GoogleSignInButton = ({ onClick, text, disabled }: GoogleSignInButtonProps) => {
   return (
     <motion.button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      whileHover={{ scale: disabled ? 1 : 1.03 }}
-      whileTap={{ scale: disabled ? 1 : 0.98 }}
-      className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-cool-gray rounded-xl bg-white text-charcoal hover:bg-pearl-gray transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue disabled:opacity-50 disabled:cursor-not-allowed"
+      whileHover={{ scale: disabled ? 1 : 1.01 }}
+      whileTap={{ scale: disabled ? 1 : 0.99 }}
+      className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-landing-clay bg-landing-cream px-4 text-sm font-semibold text-landing-espresso transition-colors hover:bg-landing-sand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-landing-terracotta focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <GoogleIcon />
       {text}

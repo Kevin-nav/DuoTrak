@@ -1,58 +1,63 @@
-import React from 'react';
-import Footer from '@/components/layout/Footer';
 import { Shield, Database, Cog, Lock, CheckSquare, Mail } from 'lucide-react';
+import LegalPageShell from '@/components/legal/LegalPageShell';
 
-const Section = ({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
-    <h2 className="flex items-center text-2xl font-bold text-gray-900 dark:text-white mb-4">
-      {icon}
-      {title}
-    </h2>
-    <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-      {children}
-    </div>
-  </div>
-);
+const sections = [
+  {
+    title: 'Introduction',
+    icon: Shield,
+    content:
+      'Your privacy matters to us. This policy explains what we collect, why we collect it, and how we protect it while you use DuoTrak.',
+  },
+  {
+    title: 'Information We Collect',
+    icon: Database,
+    content:
+      'We collect account details and app usage data needed to provide shared goal tracking, partner collaboration, and support services.',
+  },
+  {
+    title: 'How We Use Data',
+    icon: Cog,
+    content:
+      'We use your information to operate DuoTrak features, improve reliability, and communicate important updates related to your account and goals.',
+  },
+  {
+    title: 'Security',
+    icon: Lock,
+    content:
+      'We apply practical safeguards to protect personal data. No system is perfect, but we continuously improve operational security and monitoring.',
+  },
+  {
+    title: 'Your Choices',
+    icon: CheckSquare,
+    content:
+      'You can request access, updates, or deletion of your account data. Some requests may impact feature availability if required data is removed.',
+  },
+  {
+    title: 'Contact',
+    icon: Mail,
+    content: 'For privacy questions, contact support@duotrak.com.',
+  },
+];
 
-const PrivacyPolicyPage = () => {
+export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-16 sm:py-24">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white sm:text-5xl">Privacy Policy</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Last updated: {new Date().toLocaleDateString()}</p>
-        </div>
-
-        <div className="space-y-8">
-          <Section title="Introduction" icon={<Shield className="w-6 h-6 mr-3 text-primary-blue" />}>
-            <p>Your privacy is important to us. It is DuoTrak's policy to respect your privacy regarding any information we may collect from you across our application.</p>
-          </Section>
-
-          <Section title="Information We Collect" icon={<Database className="w-6 h-6 mr-3 text-primary-blue" />}>
-            <p>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we’re collecting it and how it will be used.</p>
-          </Section>
-
-          <Section title="How We Use Your Information" icon={<Cog className="w-6 h-6 mr-3 text-primary-blue" />}>
-            <p>We use the information we collect to operate, maintain, and provide you the features and functionality of the Service, as well as to communicate directly with you, such as to send you email messages.</p>
-          </Section>
-
-          <Section title="Data Security" icon={<Lock className="w-6 h-6 mr-3 text-primary-blue" />}>
-            <p>We take the security of your data seriously and use commercially acceptable means to protect your personal information. However, no method of transmission over the internet or method of electronic storage is 100% secure.</p>
-          </Section>
-
-          <Section title="Your Rights and Choices" icon={<CheckSquare className="w-6 h-6 mr-3 text-primary-blue" />}>
-            <p>You are free to refuse our request for your personal information, with the understanding that we may be unable to provide you with some of your desired services. You have the right to access, update, or delete the information we have on you.</p>
-          </Section>
-
-          <Section title="Contact Us" icon={<Mail className="w-6 h-6 mr-3 text-primary-blue" />}>
-            <p>If you have any questions about this Privacy Policy, please contact us at <a href="mailto:support@duotrak.com" className="text-primary-blue hover:underline">support@duotrak.com</a>.</p>
-          </Section>
-        </div>
-
-        <Footer />
-      </div>
-    </div>
+    <LegalPageShell
+      eyebrow="Privacy"
+      title="Privacy Policy"
+      summary="How DuoTrak handles your information so accountability stays supportive, secure, and respectful."
+    >
+      {sections.map((section) => {
+        const Icon = section.icon;
+        return (
+          <section key={section.title} className="rounded-2xl border border-landing-clay/70 bg-white/95 p-5 shadow-sm sm:p-6">
+            <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-landing-espresso sm:text-2xl">
+              <Icon className="h-5 w-5 text-landing-sage" />
+              {section.title}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-landing-espresso-light sm:text-base">{section.content}</p>
+          </section>
+        );
+      })}
+    </LegalPageShell>
   );
-};
-
-export default PrivacyPolicyPage;
+}

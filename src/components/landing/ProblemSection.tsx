@@ -23,7 +23,7 @@ const painPoints = [
 
 export default function ProblemSection() {
     return (
-        <section className="py-24 md:py-32 bg-white relative overflow-hidden">
+        <section className="relative overflow-hidden bg-white py-20 sm:py-24 md:py-28">
             {/* Subtle diagonal lines */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.04]">
                 <div className="absolute top-0 left-0 w-full h-full" style={{
@@ -37,17 +37,17 @@ export default function ProblemSection() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
                     transition={{ duration: 0.6 }}
-                    className="text-center mb-20"
+                    className="mb-14 text-center sm:mb-16 md:mb-20"
                 >
-                    <h2 className="text-4xl md:text-6xl font-black text-landing-espresso tracking-tighter mb-6">
+                    <h2 className="mb-4 text-3xl font-black tracking-tighter text-landing-espresso sm:text-4xl md:mb-6 md:text-6xl">
                         You&apos;ve tried tracking alone.
                     </h2>
-                    <p className="text-xl md:text-2xl text-landing-espresso-light font-light max-w-2xl mx-auto">
+                    <p className="mx-auto max-w-2xl text-lg font-light text-landing-espresso-light sm:text-xl md:text-2xl">
                         It didn&apos;t work. Here&apos;s why.
                     </p>
                 </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 mb-20">
+                <div className="mb-16 grid grid-cols-1 gap-4 sm:gap-6 md:mb-20 md:grid-cols-3">
                     {painPoints.map((point, index) => (
                         <motion.div
                             key={index}
@@ -55,12 +55,12 @@ export default function ProblemSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-80px" }}
                             transition={{ duration: 0.5, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                            className="relative bg-landing-cream p-8 border border-landing-clay/50 group hover:border-landing-terracotta/40 transition-all duration-500 rounded-sm"
+                            className="group relative rounded-xl border border-landing-clay/50 bg-landing-cream p-5 transition-all duration-500 hover:border-landing-terracotta/40 sm:p-7 md:p-8"
                         >
                             <div className="text-landing-terracotta/60 mb-6 group-hover:text-landing-terracotta transition-colors duration-300">
                                 {point.icon}
                             </div>
-                            <h3 className="text-xl font-bold text-landing-espresso mb-3 tracking-tight">
+                            <h3 className="mb-3 text-lg font-bold tracking-tight text-landing-espresso sm:text-xl">
                                 {point.title}
                             </h3>
                             <p className="text-landing-espresso-light font-medium leading-relaxed">

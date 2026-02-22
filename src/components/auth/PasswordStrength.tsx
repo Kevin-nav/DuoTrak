@@ -15,8 +15,8 @@ interface PasswordStrengthProps {
 }
 
 const Requirement = ({ met, children }: { met: boolean; children: React.ReactNode }) => (
-  <div className="flex items-center gap-2 text-sm">
-    <div className="w-4 h-4 flex items-center justify-center">
+  <div className="flex items-center gap-2 text-xs sm:text-sm">
+    <div className="flex h-4 w-4 items-center justify-center">
       <AnimatePresence>
         {met ? (
           <motion.svg
@@ -24,7 +24,7 @@ const Requirement = ({ met, children }: { met: boolean; children: React.ReactNod
             animate={{ scale: 1, rotate: 0 }}
             exit={{ scale: 0, rotate: 90 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="w-4 h-4 text-green-500"
+            className="h-4 w-4 text-landing-sage"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -33,17 +33,17 @@ const Requirement = ({ met, children }: { met: boolean; children: React.ReactNod
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </motion.svg>
         ) : (
-          <div className="w-2 h-2 rounded-full bg-stone-gray" />
+          <div className="h-2 w-2 rounded-full bg-landing-clay" />
         )}
       </AnimatePresence>
     </div>
-    <span className={met ? 'text-charcoal' : 'text-stone-gray'}>{children}</span>
+    <span className={met ? 'font-medium text-landing-espresso' : 'text-landing-espresso-light'}>{children}</span>
   </div>
 );
 
 const PasswordStrength = ({ criteria }: PasswordStrengthProps) => {
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-1 p-2 rounded-lg bg-pearl-gray/60">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl border border-landing-clay/70 bg-landing-cream/80 p-3">
       <Requirement met={criteria.minLength}>8+ characters</Requirement>
       <Requirement met={criteria.hasUpper}>1 uppercase</Requirement>
       <Requirement met={criteria.hasNumber}>1 number</Requirement>

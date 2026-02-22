@@ -1,76 +1,79 @@
-import React from 'react';
-import Footer from '@/components/layout/Footer';
 import { Info, HelpCircle, BookOpen, Mail, ChevronDown } from 'lucide-react';
+import LegalPageShell from '@/components/legal/LegalPageShell';
 
-const FaqItem = ({ question, children }: { question: string, children: React.ReactNode }) => (
-  <details className="group bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg cursor-pointer">
-    <summary className="flex items-center justify-between font-semibold text-gray-800 dark:text-gray-200">
+const FaqItem = ({ question, answer }: { question: string; answer: string }) => (
+  <details className="group rounded-xl border border-landing-clay/70 bg-landing-cream/70 p-4">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-landing-espresso">
       {question}
-      <ChevronDown className="w-5 h-5 transition-transform duration-300 group-open:rotate-180" />
+      <ChevronDown className="h-5 w-5 text-landing-espresso-light transition-transform duration-300 group-open:rotate-180" />
     </summary>
-    <div className="mt-3 text-gray-600 dark:text-gray-400">
-      {children}
-    </div>
+    <p className="mt-3 text-sm leading-relaxed text-landing-espresso-light sm:text-base">{answer}</p>
   </details>
 );
 
-const HelpPage = () => {
+export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 py-16 sm:py-24">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white sm:text-5xl">How can we help?</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Your guide to getting the most out of DuoTrak.</p>
+    <LegalPageShell
+      eyebrow="Help"
+      title="How can we help?"
+      summary="Practical guidance for setting up DuoTrak fast and getting the most from your accountability partnership."
+    >
+      <section className="rounded-2xl border border-landing-clay/70 bg-white/95 p-5 shadow-sm sm:p-6">
+        <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-landing-espresso sm:text-2xl">
+          <Info className="h-5 w-5 text-landing-terracotta" />
+          About DuoTrak
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-landing-espresso-light sm:text-base">
+          DuoTrak helps accountability partners stay consistent through shared goals, proof-based check-ins, and daily encouragement.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-landing-clay/70 bg-white/95 p-5 shadow-sm sm:p-6">
+        <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-landing-espresso sm:text-2xl">
+          <BookOpen className="h-5 w-5 text-landing-sage" />
+          Getting Started
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-landing-espresso-light sm:text-base">
+          Invite your partner, define a shared goal, then check in consistently with proof. Keep updates short, honest, and encouraging.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-landing-clay/70 bg-white/95 p-5 shadow-sm sm:p-6">
+        <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-landing-espresso sm:text-2xl">
+          <HelpCircle className="h-5 w-5 text-landing-gold" />
+          Frequently Asked Questions
+        </h2>
+        <div className="mt-4 space-y-3">
+          <FaqItem
+            question="Can I use DuoTrak by myself?"
+            answer="Yes. DuoTrak works best with a partner, but you can still use it solo while keeping your progress history and routines."
+          />
+          <FaqItem
+            question="How do I invite a partner?"
+            answer="Open your Partner page, send an invitation link, and wait for your partner to accept. Once accepted, your shared dashboard activates automatically."
+          />
+          <FaqItem
+            question="What if my partner misses a day?"
+            answer="Use chat to support each other and reset expectations quickly. DuoTrak is built for consistency over perfection."
+          />
         </div>
-        
-        <div className="space-y-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
-            <h2 className="flex items-center text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              <Info className="w-6 h-6 mr-3 text-primary-blue" />
-              About DuoTrak
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">DuoTrak is a collaborative goal-tracking application designed to help partners stay aligned and motivated. By sharing progress and celebrating milestones together, you and your partner can achieve your goals more effectively.</p>
-          </div>
+      </section>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
-            <h2 className="flex items-center text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              <BookOpen className="w-6 h-6 mr-3 text-primary-blue" />
-              How to Use DuoTrak
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">Getting started is simple. Invite your partner, set your shared goals, and begin tracking your progress. Update your tasks, leave encouraging notes, and watch your collective progress grow. The dashboard gives you a clear overview of where you both stand.</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8">
-            <h2 className="flex items-center text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              <HelpCircle className="w-6 h-6 mr-3 text-primary-blue" />
-              Frequently Asked Questions
-            </h2>
-            <div className="space-y-4">
-              <FaqItem question="Can I use DuoTrak by myself?">
-                <p>DuoTrak is designed for partners, but you can use it solo by not inviting a partner. However, the core experience is built around collaboration.</p>
-              </FaqItem>
-              <FaqItem question="How do I invite a partner?">
-                <p>Navigate to the 'Partner' page from the main navigation. You will find an option to send an invitation to your partner's email address.</p>
-              </FaqItem>
-            </div>
-          </div>
-
-          <div className="text-center bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-            <h2 className="flex items-center justify-center text-2xl font-bold text-gray-900 dark:text-white mb-3">
-              <Mail className="w-6 h-6 mr-3 text-primary-blue" />
-              Still have questions?
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">We're here to help! Please feel free to reach out to our support team.</p>
-            <a href="mailto:support@duotrak.com" className="inline-block bg-primary-blue text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-300">
-              Contact Support
-            </a>
-          </div>
-        </div>
-
-        <Footer />
-      </div>
-    </div>
+      <section className="rounded-2xl border border-landing-clay/70 bg-white/95 p-6 text-center shadow-sm sm:p-7">
+        <h2 className="flex items-center justify-center gap-2 text-xl font-bold tracking-tight text-landing-espresso sm:text-2xl">
+          <Mail className="h-5 w-5 text-landing-terracotta" />
+          Still have questions?
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-landing-espresso-light sm:text-base">
+          Reach out to support@duotrak.com and we will help you as quickly as possible.
+        </p>
+        <a
+          href="mailto:support@duotrak.com"
+          className="mt-5 inline-flex rounded-xl bg-landing-espresso px-5 py-3 text-sm font-bold text-landing-cream transition-colors hover:bg-landing-terracotta"
+        >
+          Contact Support
+        </a>
+      </section>
+    </LegalPageShell>
   );
-};
-
-export default HelpPage;
+}

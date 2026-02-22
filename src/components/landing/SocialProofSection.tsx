@@ -29,7 +29,7 @@ const testimonials = [
 
 export default function SocialProofSection() {
     return (
-        <section className="py-32 bg-landing-cream border-t border-landing-clay relative overflow-hidden">
+        <section className="relative overflow-hidden border-t border-landing-clay bg-landing-cream py-20 sm:py-24 md:py-28">
             {/* Subtle glow */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[60vw] h-[40vw] bg-landing-terracotta/5 blur-[120px] rounded-full pointer-events-none" />
 
@@ -40,7 +40,7 @@ export default function SocialProofSection() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6 }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24"
+                    className="mb-14 grid grid-cols-1 gap-4 sm:gap-5 md:mb-20 md:grid-cols-3"
                 >
                     {stats.map((stat, index) => (
                         <motion.div
@@ -49,12 +49,12 @@ export default function SocialProofSection() {
                             whileInView={{ opacity: 1, scale: 1 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.5, delay: index * 0.1 }}
-                            className="bg-white border border-landing-clay/50 p-8 text-center group hover:border-landing-terracotta/30 transition-all duration-500 shadow-sm"
+                            className="group border border-landing-clay/50 bg-white p-5 text-center shadow-sm transition-all duration-500 hover:border-landing-terracotta/30 sm:p-7"
                         >
                             <div className="flex items-center justify-center gap-2 text-landing-terracotta mb-3">
                                 {stat.icon}
                             </div>
-                            <div className="text-4xl md:text-5xl font-black text-landing-espresso tracking-tighter mb-2">
+                            <div className="mb-2 text-3xl font-black tracking-tighter text-landing-espresso sm:text-4xl md:text-5xl">
                                 {stat.value}
                             </div>
                             <div className="text-landing-espresso-light font-medium text-sm uppercase tracking-widest">
@@ -71,7 +71,7 @@ export default function SocialProofSection() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.5 }}
-                        className="text-3xl md:text-5xl font-black text-landing-espresso tracking-tighter mb-4"
+                        className="mb-4 text-3xl font-black tracking-tighter text-landing-espresso sm:text-4xl md:text-5xl"
                     >
                         Real people. Real results.
                     </motion.h3>
@@ -84,7 +84,7 @@ export default function SocialProofSection() {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
                     {testimonials.map((testimonial, index) => (
                         <motion.div
                             key={index}
@@ -92,7 +92,7 @@ export default function SocialProofSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.5, delay: index * 0.15 }}
-                            className="bg-white p-8 border-l-2 border-landing-terracotta/30 hover:border-landing-terracotta transition-all duration-500 group flex flex-col shadow-sm"
+                            className="group flex flex-col border-l-2 border-landing-terracotta/30 bg-white p-5 shadow-sm transition-all duration-500 hover:border-landing-terracotta sm:p-7"
                         >
                             <Quote className="h-6 w-6 text-landing-terracotta/20 mb-4 group-hover:text-landing-terracotta transition-colors duration-300" />
                             <p className="text-landing-espresso-light text-base leading-relaxed mb-6 flex-1 font-medium">

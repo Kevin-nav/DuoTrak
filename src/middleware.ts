@@ -14,6 +14,9 @@ const PUBLIC_ROUTES = [
   '/signup',
   '/forgot-password',
   '/invite-acceptance',
+  '/terms',
+  '/privacy',
+  '/help',
 ];
 
 // Routes that an authenticated user should NOT be able to access
@@ -25,6 +28,10 @@ const INVITER_SETUP_ROUTE = '/onboarding/inviter';
 const INVITE_PARTNER_ROUTE = '/invite-partner';
 const PENDING_INVITE_ROUTE = '/invite-partner/pending';
 const DASHBOARD_ROUTE = '/dashboard';
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
 
 // --- Type Definitions ---
 type AccountStatus = 'AWAITING_ONBOARDING' | 'AWAITING_PARTNERSHIP' | 'ONBOARDING_PARTNERED' | 'ACTIVE';
@@ -350,7 +357,7 @@ export async function middleware(request: NextRequest) {
   // Unauthenticated User Logic
   if (!sessionCookie) {
     // If trying to access protected route, redirect to login
-    if (!PUBLIC_ROUTES.includes(pathname)) {
+    if (!isPublicRoute(pathname)) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       return NextResponse.redirect(url);

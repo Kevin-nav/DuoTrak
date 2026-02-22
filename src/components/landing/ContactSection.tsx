@@ -20,9 +20,9 @@ const ContactCard: React.FC<ContactCardProps> = ({ title, email, description }) 
   };
 
   return (
-    <div className="group relative border border-landing-clay/50 bg-white p-8 transition-all duration-300 hover:border-landing-terracotta/40 hover:bg-landing-cream flex flex-col justify-between h-full shadow-sm">
+    <div className="group relative flex h-full flex-col justify-between rounded-2xl border border-landing-clay/50 bg-white p-5 shadow-sm transition-all duration-300 hover:border-landing-terracotta/40 hover:bg-landing-cream sm:p-7">
       <div>
-        <h3 className="text-xl font-bold text-landing-espresso uppercase tracking-widest mb-4 group-hover:text-landing-terracotta transition-colors">
+        <h3 className="mb-3 text-lg font-bold uppercase tracking-widest text-landing-espresso transition-colors group-hover:text-landing-terracotta sm:text-xl">
           {title}
         </h3>
         <p className="text-landing-espresso-light font-medium mb-8">
@@ -31,7 +31,7 @@ const ContactCard: React.FC<ContactCardProps> = ({ title, email, description }) 
       </div>
 
       <div className="flex items-center justify-between mt-auto pt-6 border-t border-landing-clay/40">
-        <span className="font-mono text-landing-espresso text-sm">{email}</span>
+        <span className="font-mono text-xs text-landing-espresso sm:text-sm">{email}</span>
         <button
           onClick={handleCopy}
           className="bg-landing-sand text-landing-espresso hover:bg-landing-terracotta hover:text-white p-3 transition-colors duration-300 rounded-sm"
@@ -75,7 +75,7 @@ export default function ContactSection() {
   ];
 
   return (
-    <section id="contact" className="py-32 bg-white border-t border-landing-clay relative">
+    <section id="contact" className="relative border-t border-landing-clay bg-white py-20 sm:py-24 md:py-28">
       <div className="absolute top-0 right-0 w-[30vw] h-[30vw] bg-landing-terracotta/5 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className="container mx-auto px-6 sm:px-8 lg:px-12 max-w-7xl relative z-10">
@@ -84,15 +84,15 @@ export default function ContactSection() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-16 border-l-4 border-landing-terracotta pl-6 md:pl-10"
+          className="mb-12 border-l-4 border-landing-terracotta pl-4 sm:mb-14 sm:pl-6 md:mb-16 md:pl-10"
         >
-          <h2 className="text-4xl md:text-6xl font-black text-landing-espresso uppercase tracking-tighter">Get in Touch</h2>
-          <p className="text-landing-espresso-light mt-4 max-w-xl text-lg font-medium">
+          <h2 className="text-3xl font-black uppercase tracking-tighter text-landing-espresso sm:text-4xl md:text-6xl">Get in Touch</h2>
+          <p className="mt-3 max-w-xl text-base font-medium text-landing-espresso-light sm:mt-4 sm:text-lg">
             Questions? Feedback? We&apos;re real people and we&apos;d love to hear from you.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
           {contactDetails.map((contact, index) => (
             <motion.div
               key={index}

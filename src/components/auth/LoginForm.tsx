@@ -1,55 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import Link from 'next/link';
 import { useMutation } from 'convex/react';
+import { toast } from 'sonner';
 import { api } from '../../../convex/_generated/api';
+import AuthShell from '@/components/auth/AuthShell';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
-import AnimatedTextCharacter from '@/components/ui/AnimatedTextCharacter';
-import Link from 'next/link';
-import { toast } from 'sonner';
+import { auth } from '@/lib/firebase';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('token');
 
-  // Convex mutation for accepting invitations (if coming from invite link)
   const acceptInvitationMutation = useMutation(api.invitations.accept);
 
-  /**
-   * With Convex, auth state syncs automatically via:
-   * 1. ConvexProviderWithAuth in the layout detects Firebase auth
-   * 2. UserSync component stores/updates user in Convex DB
-   * 3. UserContext uses useQuery(api.users.current) for reactive state
-   * 
-   * We just need to: complete Firebase auth → redirect
-   */
   const handleAuthSuccess = async () => {
-    // If there's an invite token, accept it via Convex
     if (inviteToken) {
       try {
         await acceptInvitationMutation({ token: inviteToken });
-        toast.success("Invitation accepted!", {
-          description: "Your partnership is confirmed. Welcome to DuoTrak!",
+        toast.success('Invitation accepted!', {
+          description: 'Your partnership is confirmed. Welcome to DuoTrak!',
         });
       } catch (err: any) {
         console.error('Failed to accept invitation:', err);
         toast.error('Partnership Error', {
-          description: err.message || 'Failed to auto-accept invitation.'
+          description: err.message || 'Failed to auto-accept invitation.',
         });
       }
     }
 
-    // Redirect - the ConvexProviderWithAuth will handle syncing auth state
     window.location.href = '/dashboard';
   };
 
@@ -61,7 +49,6 @@ export default function LoginForm() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Create session cookie by calling the login API
       const idToken = await userCredential.user.getIdToken();
       const sessionResponse = await fetch('/api/auth/login', {
         method: 'POST',
@@ -74,10 +61,10 @@ export default function LoginForm() {
       }
 
       await handleAuthSuccess();
-    } catch (error: any) {
-      const friendlyError = error.code?.startsWith('auth/')
+    } catch (authError: any) {
+      const friendlyError = authError.code?.startsWith('auth/')
         ? 'Invalid email or password. Please try again.'
-        : error.message || 'Login failed. Please try again.';
+        : authError.message || 'Login failed. Please try again.';
       setError(friendlyError);
       toast.error(friendlyError);
     } finally {
@@ -92,7 +79,6 @@ export default function LoginForm() {
     try {
       const result = await signInWithPopup(auth, provider);
 
-      // Create session cookie by calling the login API
       const idToken = await result.user.getIdToken();
       const sessionResponse = await fetch('/api/auth/login', {
         method: 'POST',
@@ -110,7 +96,7 @@ export default function LoginForm() {
       if (err.code === 'auth/popup-blocked-by-browser') {
         friendlyError = 'Login popup blocked. Please allow popups for this site and try again.';
       } else if (err.code === 'auth/popup-closed-by-user') {
-        friendlyError = 'Login cancelled. You can try again whenever you are ready.';
+        friendlyError = 'Login canceled. You can try again whenever you are ready.';
       } else if (!err.code?.startsWith('auth/')) {
         friendlyError = err.message || 'Login failed. Please try again.';
       }
@@ -122,43 +108,78 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full text-center animate-fadeInUp">
-      <div className="flex justify-center">
-        <AnimatedTextCharacter text="Welcome Back!" className="text-3xl font-bold text-charcoal mb-2" />
-      </div>
-      <p className="text-base text-stone-gray mb-8">Let's pick up where you left off.</p>
+    <AuthShell
+      badge="Welcome Back"
+      title="Log in to your duo"
+      subtitle="Jump back into your shared goals and keep the streak alive."
+      footer={
+        <p>
+          New to DuoTrak?{' '}
+          <Link href="/signup" className="font-bold text-landing-terracotta hover:text-landing-espresso">
+            Create an account
+          </Link>
+        </p>
+      }
+    >
+      <div className="space-y-4">
+        {error && (
+          <p className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+        )}
 
-      <div className="w-full max-w-lg mx-auto">
-        {error && <p className="mb-4 text-sm text-red-600 bg-red-100 border border-red-300 rounded-lg py-2 px-4">{error}</p>}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <label className="block space-y-1.5 text-left">
+            <span className="text-xs font-semibold uppercase tracking-[0.1em] text-landing-espresso-light">Email</span>
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              required
+              disabled={isLoading}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-12 rounded-xl border-landing-clay bg-landing-cream/40"
+            />
+          </label>
 
-        <form className="w-full space-y-4" onSubmit={handleSubmit}>
-          <Input type="email" placeholder="Email Address" required disabled={isLoading} value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input type="password" placeholder="Password" required disabled={isLoading} value={password} onChange={(e) => setPassword(e.target.value)} />
-          <div className="w-full text-right -mt-2">
-            <Link href="/forgot-password" className="text-sm font-medium text-primary-blue hover:underline">
+          <label className="block space-y-1.5 text-left">
+            <span className="text-xs font-semibold uppercase tracking-[0.1em] text-landing-espresso-light">Password</span>
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              required
+              disabled={isLoading}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12 rounded-xl border-landing-clay bg-landing-cream/40"
+            />
+          </label>
+
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-sm font-semibold text-landing-terracotta hover:text-landing-espresso">
               Forgot your password?
             </Link>
           </div>
-          <Button type="submit" className="w-full !mt-5" disabled={isLoading}>
-            {isLoading ? 'Signing In...' : 'Log In'}
+
+          <Button
+            type="submit"
+            className="h-12 w-full rounded-xl bg-landing-espresso text-base font-bold text-landing-cream hover:bg-landing-terracotta"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing in...' : 'Log In'}
           </Button>
         </form>
 
-        <div className="my-6 flex items-center">
-          <div className="flex-grow border-t border-cool-gray"></div>
-          <span className="mx-4 text-sm text-stone-gray">OR</span>
-          <div className="flex-grow border-t border-cool-gray"></div>
+        <div className="flex items-center gap-3 py-1">
+          <div className="h-px flex-1 bg-landing-clay" />
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-landing-espresso-light">or</span>
+          <div className="h-px flex-1 bg-landing-clay" />
         </div>
 
-        <GoogleSignInButton onClick={handleGoogleSignIn} text="Sign in with Google" disabled={isLoading} />
-      </div>
+        <GoogleSignInButton onClick={handleGoogleSignIn} text="Continue with Google" disabled={isLoading} />
 
-      <p className="text-sm text-stone-gray mt-6">
-        Don't have an account?{' '}
-        <Link href="/signup" className="font-bold text-primary-blue hover:underline">
-          Sign Up
-        </Link>
-      </p>
-    </div>
+        <p className="rounded-xl border border-landing-clay/70 bg-landing-sand/50 px-4 py-3 text-xs leading-relaxed text-landing-espresso-light">
+          Secure sign-in with protected session cookies. Your account and partnership data stay under your control.
+        </p>
+      </div>
+    </AuthShell>
   );
 }
