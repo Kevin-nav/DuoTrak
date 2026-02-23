@@ -51,9 +51,19 @@ export default function JournalPageEditor() {
   const reduceMotion = useReducedMotion();
 
   const [draftBlocks, setDraftBlocks] = useState<BlockInput[]>([]);
+  const [hasInitializedFromServer, setHasInitializedFromServer] = useState(false);
   const [suggestion, setSuggestion] = useState<SuggestionState>(null);
 
   useEffect(() => {
+    setHasInitializedFromServer(false);
+    setDraftBlocks([]);
+    setSuggestion(null);
+  }, [pageId]);
+
+  useEffect(() => {
+    if (hasInitializedFromServer) return;
+    if (isLoading) return;
+
     if (blocks.length > 0) {
       setDraftBlocks(
         blocks.map((block: any) => ({
@@ -71,7 +81,8 @@ export default function JournalPageEditor() {
     } else {
       setDraftBlocks([createBlock("paragraph")]);
     }
-  }, [blocks]);
+    setHasInitializedFromServer(true);
+  }, [blocks, hasInitializedFromServer, isLoading]);
 
   const mentionOptions = useMemo<MentionOption[]>(() => {
     const options: MentionOption[] = [];
