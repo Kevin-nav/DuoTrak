@@ -57,6 +57,15 @@ export const createGoalPlan = async (sessionId: string, requestData: AnswersSubm
 
 const isDirectPythonFallbackEnabled = () => process.env.NEXT_PUBLIC_AI_DIRECT_PYTHON_FALLBACK === "true";
 
+const shouldFallbackToDirectApi = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return (
+    message.includes("INTERNAL_API_SECRET is required for Convex -> backend calls") ||
+    message.includes("Failed to fetch strategic questions: INTERNAL_API_SECRET is required") ||
+    message.includes("Failed to create goal plan: INTERNAL_API_SECRET is required")
+  );
+};
+
 type GoalCreationActionBoundary = {
   getStrategicQuestionsAction?: (requestData: GoalWizardRequest) => Promise<QuestionsResponse>;
   createGoalPlanAction?: (payload: { sessionId: string; userId: string; answers: Record<string, string> }) => Promise<GoalPlanResponse>;
@@ -71,7 +80,15 @@ export const getStrategicQuestionsViaBoundary = async (
     return getStrategicQuestions(requestData);
   }
 
-  return actionBoundary.getStrategicQuestionsAction(requestData);
+  try {
+    return await actionBoundary.getStrategicQuestionsAction(requestData);
+  } catch (error) {
+    if (!shouldFallbackToDirectApi(error)) {
+      throw error;
+    }
+    console.warn("[Goal API] Convex boundary unavailable due missing INTERNAL_API_SECRET, falling back to direct backend call.");
+    return getStrategicQuestions(requestData);
+  }
 };
 
 export const createGoalPlanViaBoundary = async (
@@ -83,11 +100,19 @@ export const createGoalPlanViaBoundary = async (
     return createGoalPlan(sessionId, requestData);
   }
 
-  return actionBoundary.createGoalPlanAction({
-    sessionId,
-    userId: requestData.userId,
-    answers: requestData.answers,
-  });
+  try {
+    return await actionBoundary.createGoalPlanAction({
+      sessionId,
+      userId: requestData.userId,
+      answers: requestData.answers,
+    });
+  } catch (error) {
+    if (!shouldFallbackToDirectApi(error)) {
+      throw error;
+    }
+    console.warn("[Goal API] Convex boundary unavailable due missing INTERNAL_API_SECRET, falling back to direct backend call.");
+    return createGoalPlan(sessionId, requestData);
+  }
 };
 
 // Dev-only: Fire-and-forget evaluation

@@ -275,4 +275,62 @@ describe("GoalCreationWizard", () => {
     expect(screen.getByText(/matches your strongest completion window from recent outcomes/i)).toBeInTheDocument();
     expect(screen.queryByText(/this fourth reason should be hidden/i)).not.toBeInTheDocument();
   });
+
+  it("falls back to direct backend call when Convex action misses INTERNAL_API_SECRET", async () => {
+    getQuestionsActionMock.mockRejectedValueOnce(
+      new Error("Failed to fetch strategic questions: INTERNAL_API_SECRET is required for Convex -> backend calls.")
+    );
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      sessionId: "session-fallback",
+      userProfileSummary: { archetype: "builder", riskFactors: ["none"] },
+      strategicQuestions: [
+        {
+          question: "Fallback question?",
+          questionKey: "fallback_q",
+          context: "fallback",
+          suggestedAnswers: ["A", "B"],
+        },
+      ],
+      executionMetadata: { questionGenerationTimeMs: 111 },
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GoalCreationWizard />
+      </QueryClientProvider>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByPlaceholderText(/improve my health/i);
+    fireEvent.change(screen.getByPlaceholderText(/improve my health/i), { target: { value: "Get healthier" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText("Mornings (6-9 AM)");
+    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText("15-30 mins daily");
+    fireEvent.click(screen.getByText("15-30 mins daily"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText(/visual proof/i);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/goal-creation/questions",
+        expect.any(Object)
+      );
+    });
+    expect(await screen.findByText(/fallback question/i)).toBeInTheDocument();
+  });
 });

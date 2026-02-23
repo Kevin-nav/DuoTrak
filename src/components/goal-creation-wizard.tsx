@@ -796,6 +796,18 @@ export default function GoalCreationWizard() {
                       <motion.div key="plan" className="space-y-6">
                         <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
                         <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
+                        {finalGoalPlan.scheduleImpact && (
+                          <div className="rounded-lg border border-cool-gray dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-sm">
+                            <p className="font-semibold text-charcoal dark:text-gray-100">Schedule impact</p>
+                            <p className="text-stone-gray dark:text-gray-300">
+                              Weekly load: {finalGoalPlan.scheduleImpact.projectedLoadMinutes} / {finalGoalPlan.scheduleImpact.capacityMinutes} mins
+                            </p>
+                            <p className="text-stone-gray dark:text-gray-300">
+                              Fit: {finalGoalPlan.scheduleImpact.fitBand}
+                              {typeof finalGoalPlan.scheduleImpact.overloadPercent === "number" && ` · Overload ${finalGoalPlan.scheduleImpact.overloadPercent}%`}
+                            </p>
+                          </div>
+                        )}
                         {recommendationReasons.length > 0 && (
                           <div className="rounded-lg border border-primary-blue/30 bg-accent-light-blue dark:bg-primary-blue/10 p-3">
                             <button
