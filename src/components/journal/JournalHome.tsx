@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useJournal";
 import { BookOpenText, Lock, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 const tabs: Array<{ id: JournalSpaceType; label: string; icon: any }> = [
   { id: "shared", label: "Shared Journal", icon: Users },
@@ -26,6 +27,7 @@ const tabs: Array<{ id: JournalSpaceType; label: string; icon: any }> = [
 
 export default function JournalHome() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<JournalSpaceType>("shared");
   const ensureSpaces = useEnsureJournalSpaces();
   const { entries, message, isLoading } = useJournalHome(activeTab);
@@ -42,8 +44,18 @@ export default function JournalHome() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4">
-        <section className="rounded-2xl border border-landing-clay bg-white/95 p-4 shadow-sm">
+      <motion.div
+        initial={reduceMotion ? undefined : { opacity: 0, y: 8 }}
+        animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        className="space-y-4"
+      >
+        <motion.section
+          initial={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-2xl border border-landing-clay bg-white/95 p-4 shadow-sm"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="inline-flex items-center gap-2 text-xl font-black tracking-tight text-landing-espresso">
@@ -61,9 +73,10 @@ export default function JournalHome() {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
-                <button
+                <motion.button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
+                  whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                   className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
                     isActive
                       ? "bg-landing-espresso text-landing-cream"
@@ -74,13 +87,19 @@ export default function JournalHome() {
                     <Icon className="h-4 w-4" />
                     {tab.label}
                   </span>
-                </button>
+                </motion.button>
               );
             })}
           </div>
-        </section>
+        </motion.section>
 
-        <JournalSearch />
+        <motion.div
+          initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, delay: 0.02, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <JournalSearch />
+        </motion.div>
 
         <JournalPagesPanel
           spaceType={activeTab}
@@ -97,46 +116,57 @@ export default function JournalHome() {
           onOpenPage={(pageId) => router.push(`/journal/pages/${pageId}`)}
         />
 
-        <JournalComposer
-          spaceType={activeTab}
-          onCreate={async (payload) => {
-            try {
-              await createEntry(payload);
-              toast.success("Entry saved.");
-            } catch (error: any) {
-              toast.error(error?.message || "Failed to save entry.");
-              throw error;
-            }
-          }}
-        />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            initial={reduceMotion ? undefined : { opacity: 0, y: 10 }}
+            animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-4"
+          >
+            <JournalComposer
+              spaceType={activeTab}
+              onCreate={async (payload) => {
+                try {
+                  await createEntry(payload);
+                  toast.success("Entry saved.");
+                } catch (error: any) {
+                  toast.error(error?.message || "Failed to save entry.");
+                  throw error;
+                }
+              }}
+            />
 
-        {isLoading ? (
-          <div className="rounded-2xl border border-landing-clay bg-white p-6 text-sm text-landing-espresso-light">
-            Loading journal entries...
-          </div>
-        ) : null}
+            {isLoading ? (
+              <div className="rounded-2xl border border-landing-clay bg-white p-6 text-sm text-landing-espresso-light">
+                Loading journal entries...
+              </div>
+            ) : null}
 
-        {!isLoading && message ? (
-          <div className="rounded-2xl border border-landing-clay bg-white p-6 text-sm text-landing-espresso-light">
-            {message}
-          </div>
-        ) : null}
+            {!isLoading && message ? (
+              <div className="rounded-2xl border border-landing-clay bg-white p-6 text-sm text-landing-espresso-light">
+                {message}
+              </div>
+            ) : null}
 
-        {!isLoading && !message ? (
-          <JournalEntriesList
-            entries={entries}
-            activeSpaceType={activeTab}
-            onSharePrivateEntry={async (entryId) => {
-              try {
-                await sharePrivateEntry(entryId);
-                toast.success("Entry shared with partner.");
-              } catch (error: any) {
-                toast.error(error?.message || "Could not share entry.");
-              }
-            }}
-          />
-        ) : null}
-      </div>
+            {!isLoading && !message ? (
+              <JournalEntriesList
+                entries={entries}
+                activeSpaceType={activeTab}
+                onSharePrivateEntry={async (entryId) => {
+                  try {
+                    await sharePrivateEntry(entryId);
+                    toast.success("Entry shared with partner.");
+                  } catch (error: any) {
+                    toast.error(error?.message || "Could not share entry.");
+                  }
+                }}
+              />
+            ) : null}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
     </DashboardLayout>
   );
 }

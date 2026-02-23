@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { FileText, PlusSquare } from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
+import { motion, useReducedMotion } from "framer-motion";
 
 interface JournalPagesPanelProps {
   spaceType: JournalSpaceType;
@@ -17,6 +18,7 @@ export default function JournalPagesPanel({
   onCreatePage,
   onOpenPage,
 }: JournalPagesPanelProps) {
+  const reduceMotion = useReducedMotion();
   const [title, setTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -33,7 +35,12 @@ export default function JournalPagesPanel({
   };
 
   return (
-    <section className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
+    <motion.section
+      initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
+    >
       <div className="mb-3 flex items-center justify-between">
         <h2 className="inline-flex items-center gap-2 text-base font-bold text-landing-espresso">
           <FileText className="h-4 w-4" />
@@ -48,14 +55,15 @@ export default function JournalPagesPanel({
           placeholder="Create a Notion-style page"
           className="flex-1 rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
         />
-        <button
+        <motion.button
           type="submit"
           disabled={isSaving}
+          whileTap={reduceMotion ? undefined : { scale: 0.98 }}
           className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2.5 py-2 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream disabled:opacity-70"
         >
           <PlusSquare className="h-3.5 w-3.5" />
           {isSaving ? "Adding..." : "Add"}
-        </button>
+        </motion.button>
       </form>
 
       {pages.length === 0 ? (
@@ -63,18 +71,20 @@ export default function JournalPagesPanel({
       ) : (
         <div className="space-y-2">
           {pages.map((page) => (
-            <button
+            <motion.button
               type="button"
               key={page._id}
               onClick={() => onOpenPage(page._id)}
+              whileHover={reduceMotion ? undefined : { y: -1 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.99 }}
               className="rounded-lg border border-landing-clay bg-landing-cream px-3 py-2 text-sm text-landing-espresso"
             >
               {page.icon ? `${page.icon} ` : ""}
               {page.title}
-            </button>
+            </motion.button>
           ))}
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }

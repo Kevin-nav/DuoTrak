@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { Plus, Save } from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
+import { motion, useReducedMotion } from "framer-motion";
 
 interface JournalComposerProps {
   spaceType: JournalSpaceType;
@@ -16,6 +17,7 @@ interface JournalComposerProps {
 }
 
 export default function JournalComposer({ spaceType, onCreate }: JournalComposerProps) {
+  const reduceMotion = useReducedMotion();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [mood, setMood] = useState("");
@@ -48,7 +50,13 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
   };
 
   return (
-    <form onSubmit={onSubmit} className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
+    <motion.form
+      onSubmit={onSubmit}
+      initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
+    >
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-bold text-landing-espresso">
           <span className="inline-flex items-center gap-2">
@@ -89,15 +97,16 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
       </div>
 
       <div className="mt-3 flex justify-end">
-        <button
+        <motion.button
           type="submit"
           disabled={isSaving}
+          whileTap={reduceMotion ? undefined : { scale: 0.98 }}
           className="inline-flex items-center gap-1.5 rounded-lg bg-landing-espresso px-3 py-2 text-sm font-semibold text-landing-cream disabled:opacity-70"
         >
           <Save className="h-4 w-4" />
           {isSaving ? "Saving..." : "Save Entry"}
-        </button>
+        </motion.button>
       </div>
-    </form>
+    </motion.form>
   );
 }
