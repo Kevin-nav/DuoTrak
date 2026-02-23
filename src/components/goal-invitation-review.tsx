@@ -11,6 +11,7 @@ interface GoalInvitationReviewProps {
   goalDescription?: string
   suggestedRoutine?: string[]
   accountabilityType?: "visual" | "time-bound"
+  recommendationReasons?: string[]
   onAccept?: () => void
   onReject?: () => void
   onEdit?: () => void
@@ -28,6 +29,7 @@ export default function GoalInvitationReview({
     "Gradually increase duration each week",
   ],
   accountabilityType = "visual",
+  recommendationReasons = [],
   onAccept,
   onReject,
   onEdit,
@@ -36,6 +38,7 @@ export default function GoalInvitationReview({
   const [rejectReason, setRejectReason] = useState("")
   const [showEditMode, setShowEditMode] = useState(false)
   const [editedRoutine, setEditedRoutine] = useState(suggestedRoutine)
+  const [showReasons, setShowReasons] = useState(false)
 
   const rejectReasons = ["Too busy right now", "Not interested in this goal", "Not a priority", "Schedule conflict"]
 
@@ -106,6 +109,29 @@ export default function GoalInvitationReview({
             </div>
           </div>
         </motion.div>
+
+        {recommendationReasons.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-accent-light-blue dark:bg-primary-blue/10 border border-primary-blue/20 rounded-xl p-4 mb-6"
+          >
+            <button
+              type="button"
+              onClick={() => setShowReasons((prev) => !prev)}
+              className="w-full text-left text-sm font-semibold text-primary-blue"
+            >
+              Why this routine was recommended {showReasons ? "▲" : "▼"}
+            </button>
+            {showReasons && (
+              <ul className="mt-2 space-y-1 text-sm text-stone-gray dark:text-gray-300">
+                {recommendationReasons.slice(0, 3).map((reason, index) => (
+                  <li key={`reason-${index}`}>• {reason}</li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        )}
 
         {/* Personalized Routine */}
         <motion.div

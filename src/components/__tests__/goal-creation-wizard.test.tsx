@@ -29,6 +29,12 @@ const createPlanActionMock = jest.fn().mockResolvedValue({
   goalPlan: {
     title: "Plan",
     description: "Plan desc",
+    decisionTrace: [
+      "Aligned with your preferred morning routine.",
+      "Keeps weekly workload under your target capacity.",
+      "Matches your strongest completion window from recent outcomes.",
+      "This fourth reason should be hidden.",
+    ],
     milestones: [
       {
         title: "Week 1",
@@ -223,5 +229,50 @@ describe("GoalCreationWizard", () => {
       expect(screen.getByText(/verification mode:/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/time-window rule:/i)).toBeInTheDocument();
+  });
+
+  it("shows concise why-this-recommendation reasons capped at three", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GoalCreationWizard />
+      </QueryClientProvider>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByPlaceholderText(/improve my health/i);
+    fireEvent.change(screen.getByPlaceholderText(/improve my health/i), { target: { value: "Get healthier" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText("Mornings (6-9 AM)");
+    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText("15-30 mins daily");
+    fireEvent.click(screen.getByText("15-30 mins daily"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText(/visual proof/i);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText(/what gets in your way most often/i);
+    fireEvent.click(screen.getByLabelText("Time"));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    const toggle = await screen.findByRole("button", { name: /why this recommendation/i });
+    fireEvent.click(toggle);
+
+    expect(screen.getByText(/aligned with your preferred morning routine/i)).toBeInTheDocument();
+    expect(screen.getByText(/keeps weekly workload under your target capacity/i)).toBeInTheDocument();
+    expect(screen.getByText(/matches your strongest completion window from recent outcomes/i)).toBeInTheDocument();
+    expect(screen.queryByText(/this fourth reason should be hidden/i)).not.toBeInTheDocument();
   });
 });

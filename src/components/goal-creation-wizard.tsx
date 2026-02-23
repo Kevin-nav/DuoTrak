@@ -77,6 +77,7 @@ export default function GoalCreationWizard() {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [finalGoalPlan, setFinalGoalPlan] = useState<DuotrakGoalPlan | null>(null);
   const [planGenerationStage, setPlanGenerationStage] = useState(0);
+  const [showRecommendationReasons, setShowRecommendationReasons] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -290,6 +291,11 @@ export default function GoalCreationWizard() {
     if (mode === "time-window") return "Time Window";
     return mode.charAt(0).toUpperCase() + mode.slice(1);
   };
+
+  const recommendationReasons = (finalGoalPlan?.decisionTrace || [])
+    .slice(0, 3)
+    .map((reason) => reason.trim())
+    .filter((reason) => reason.length > 0);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!finalGoalPlan) {
@@ -790,6 +796,24 @@ export default function GoalCreationWizard() {
                       <motion.div key="plan" className="space-y-6">
                         <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
                         <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
+                        {recommendationReasons.length > 0 && (
+                          <div className="rounded-lg border border-primary-blue/30 bg-accent-light-blue dark:bg-primary-blue/10 p-3">
+                            <button
+                              type="button"
+                              onClick={() => setShowRecommendationReasons((prev) => !prev)}
+                              className="w-full text-left text-sm font-semibold text-primary-blue"
+                            >
+                              Why this recommendation {showRecommendationReasons ? "▲" : "▼"}
+                            </button>
+                            {showRecommendationReasons && (
+                              <ul className="mt-2 space-y-1 text-sm text-stone-gray dark:text-gray-300">
+                                {recommendationReasons.map((reason, reasonIndex) => (
+                                  <li key={`reason-${reasonIndex}`}>• {reason}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
 
                         <div className="space-y-4">
                           {finalGoalPlan.milestones.map((milestone, index) => (
