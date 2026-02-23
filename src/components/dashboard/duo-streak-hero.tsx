@@ -1,8 +1,9 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Flame, Zap, Star, Sparkles } from "lucide-react"
+import { Star, Sparkles } from "lucide-react"
 import { useEffect, useState } from "react"
+import Mascot from "@/components/mascot/Mascot"
 
 interface DuoStreakHeroProps {
   streakCount?: number
@@ -132,11 +133,6 @@ export default function DuoStreakHero({
         )}
       </AnimatePresence>
 
-      import Mascot from '@/components/mascot/Mascot';
-
-// ... (imports)
-
-// ... (inside component)
       <div className="relative z-10 text-center space-y-6">
         <div className="space-y-2">
           <div className="flex justify-center items-center space-x-4">
@@ -144,7 +140,6 @@ export default function DuoStreakHero({
           </div>
 
           <div className="relative inline-block">
-// ... (rest of component)
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

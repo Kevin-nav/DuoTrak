@@ -67,9 +67,21 @@ const shouldFallbackToDirectApi = (error: unknown): boolean => {
 };
 
 type GoalCreationActionBoundary = {
-  getStrategicQuestionsAction?: (requestData: GoalWizardRequest) => Promise<QuestionsResponse>;
+  getStrategicQuestionsAction?: (requestData: {
+    userId: string;
+    wizardData: {
+      goalDescription: string;
+      motivation: string;
+      availability: string[];
+      timeCommitment: string;
+      accountabilityType: string;
+      partnerName?: string | null;
+      targetDeadline?: string | null;
+      preferredCheckInStyle?: "quick_text" | "photo_recap" | "voice_note";
+    };
+  }) => Promise<QuestionsResponse>;
   createGoalPlanAction?: (payload: { sessionId: string; userId: string; answers: Record<string, string> }) => Promise<GoalPlanResponse>;
-  evaluateGoalPlanAction?: (payload: { plan: DuotrakGoalPlan }) => Promise<void>;
+  evaluateGoalPlanAction?: (payload: { plan: DuotrakGoalPlan }) => Promise<void | null>;
 };
 
 export const getStrategicQuestionsViaBoundary = async (
@@ -81,7 +93,19 @@ export const getStrategicQuestionsViaBoundary = async (
   }
 
   try {
-    return await actionBoundary.getStrategicQuestionsAction(requestData);
+    return await actionBoundary.getStrategicQuestionsAction({
+      userId: requestData.user_id,
+      wizardData: {
+        goalDescription: requestData.wizard_data.goal_description,
+        motivation: requestData.wizard_data.motivation,
+        availability: requestData.wizard_data.availability,
+        timeCommitment: requestData.wizard_data.time_commitment,
+        accountabilityType: requestData.wizard_data.accountability_type,
+        partnerName: requestData.wizard_data.partner_name ?? null,
+        targetDeadline: requestData.wizard_data.target_deadline ?? null,
+        preferredCheckInStyle: requestData.wizard_data.preferred_check_in_style,
+      },
+    });
   } catch (error) {
     if (!shouldFallbackToDirectApi(error)) {
       throw error;
@@ -103,7 +127,7 @@ export const createGoalPlanViaBoundary = async (
   try {
     return await actionBoundary.createGoalPlanAction({
       sessionId,
-      userId: requestData.userId,
+      userId: requestData.user_id,
       answers: requestData.answers,
     });
   } catch (error) {

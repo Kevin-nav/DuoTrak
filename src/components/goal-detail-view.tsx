@@ -5,11 +5,11 @@ import { ArrowLeft, Camera, Clock, CheckCircle, Upload, X } from "lucide-react"
 import { useState } from "react"
 import MouseGlowEffect from "./mouse-glow-effect"
 
-import { GoalRead } from "@/schemas/goal";
+import { DomainGoal } from "../../packages/domain/src/goals";
 import { useRouter } from "next/navigation";
 
 interface GoalDetailViewProps {
-  goal: GoalRead;
+  goal: DomainGoal;
 }
 
 export default function GoalDetailView({ goal }: GoalDetailViewProps) {

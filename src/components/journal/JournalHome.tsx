@@ -17,6 +17,7 @@ import {
   useSharePrivateEntry,
 } from "@/hooks/useJournal";
 import { BookOpenText, Lock, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const tabs: Array<{ id: JournalSpaceType; label: string; icon: any }> = [
   { id: "shared", label: "Shared Journal", icon: Users },
@@ -24,6 +25,7 @@ const tabs: Array<{ id: JournalSpaceType; label: string; icon: any }> = [
 ];
 
 export default function JournalHome() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<JournalSpaceType>("shared");
   const ensureSpaces = useEnsureJournalSpaces();
   const { entries, message, isLoading } = useJournalHome(activeTab);
@@ -92,6 +94,7 @@ export default function JournalHome() {
               throw error;
             }
           }}
+          onOpenPage={(pageId) => router.push(`/journal/pages/${pageId}`)}
         />
 
         <JournalComposer

@@ -8,12 +8,14 @@ interface JournalPagesPanelProps {
   spaceType: JournalSpaceType;
   pages: any[];
   onCreatePage: (payload: { spaceType: JournalSpaceType; title: string; icon?: string }) => Promise<any>;
+  onOpenPage: (pageId: string) => void;
 }
 
 export default function JournalPagesPanel({
   spaceType,
   pages,
   onCreatePage,
+  onOpenPage,
 }: JournalPagesPanelProps) {
   const [title, setTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -61,13 +63,15 @@ export default function JournalPagesPanel({
       ) : (
         <div className="space-y-2">
           {pages.map((page) => (
-            <div
+            <button
+              type="button"
               key={page._id}
+              onClick={() => onOpenPage(page._id)}
               className="rounded-lg border border-landing-clay bg-landing-cream px-3 py-2 text-sm text-landing-espresso"
             >
               {page.icon ? `${page.icon} ` : ""}
               {page.title}
-            </div>
+            </button>
           ))}
         </div>
       )}

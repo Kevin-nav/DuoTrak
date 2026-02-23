@@ -48,6 +48,30 @@ export function useCreateJournalPage() {
   return (payload: { spaceType: JournalSpaceType; title: string; icon?: string }) => mutation(payload);
 }
 
+export function useJournalPage(pageId: string) {
+  const data = useQuery((api as any).journal.getPageWithBlocks, pageId ? ({ pageId } as any) : "skip") as
+    | { page: any; blocks: any[] }
+    | undefined;
+  return {
+    page: data?.page ?? null,
+    blocks: data?.blocks ?? [],
+    isLoading: data === undefined,
+  };
+}
+
+export function useReplaceJournalPageBlocks() {
+  const mutation = useMutation((api as any).journal.replacePageBlocks);
+  return (payload: {
+    pageId: string;
+    blocks: Array<{
+      type: string;
+      content?: string;
+      checked?: boolean;
+      meta_json?: string;
+    }>;
+  }) => mutation(payload as any);
+}
+
 export function useUpdateJournalEntry() {
   const mutation = useMutation((api as any).journal.updateEntry);
   return (payload: {

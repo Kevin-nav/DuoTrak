@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, ArrowRight, Clock, Camera, Sparkles } from "lucide-react"
@@ -71,7 +71,7 @@ export default function GoalCreationWizard() {
   const { userDetails, partnerDisplayName } = useUser();
 
   // V3 State Management
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [session_id, setSessionId] = useState<string | null>(null);
   const [strategicQuestions, setStrategicQuestions] = useState<StrategicQuestion[] | null>(null);
   const [userProfileSummary, setUserProfileSummary] = useState<any | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
@@ -137,9 +137,9 @@ export default function GoalCreationWizard() {
     mutationFn: (requestData: any) =>
       getStrategicQuestionsViaBoundary(requestData, { getStrategicQuestionsAction }),
     onSuccess: (data: QuestionsResponse) => {
-      setSessionId(data.sessionId);
-      setUserProfileSummary(data.userProfileSummary);
-      setStrategicQuestions(data.strategicQuestions);
+      setSessionId(data.session_id);
+      setUserProfileSummary(data.user_profile_summary);
+      setStrategicQuestions(data.strategic_questions);
       setCurrentStep(currentStep + 1); // Move to the new questions step
     },
     onError: (error) => {
@@ -153,19 +153,19 @@ export default function GoalCreationWizard() {
 
   // V3 Phase 2: Get Plan
   const getPlanMutation = useMutation({
-    mutationFn: (variables: { userId: string; sessionId: string; answers: Record<string, string> }) =>
+    mutationFn: (variables: { user_id: string; session_id: string; answers: Record<string, string> }) =>
       createGoalPlanViaBoundary(
-        variables.sessionId,
-        { userId: variables.userId, answers: variables.answers },
+        variables.session_id,
+        { user_id: variables.user_id, answers: variables.answers },
         { createGoalPlanAction }
       ),
     onSuccess: (data: GoalPlanResponse) => {
-      setFinalGoalPlan(data.goalPlan);
+      setFinalGoalPlan(data.goal_plan);
       setCurrentStep(currentStep + 1); // Move to the final review step
 
       // Conditionally trigger evaluation only in development
       if (process.env.NODE_ENV === 'development') {
-        evaluatePlanMutation.mutate(data.goalPlan);
+        evaluatePlanMutation.mutate(data.goal_plan);
       }
     },
     onError: (error) => {
@@ -243,8 +243,8 @@ export default function GoalCreationWizard() {
         toast({ title: "User not found. Please log in again.", variant: "destructive" });
         return;
       }
-      if (sessionId && Object.keys(userAnswers).length === strategicQuestions?.length) {
-        getPlanMutation.mutate({ userId: userDetails.id, sessionId, answers: userAnswers });
+      if (session_id && Object.keys(userAnswers).length === strategicQuestions?.length) {
+        getPlanMutation.mutate({ user_id: userDetails.id, session_id, answers: userAnswers });
       } else {
         toast({ title: "Please answer all questions.", variant: "destructive" });
       }
@@ -262,16 +262,16 @@ export default function GoalCreationWizard() {
         }
         const values = form.getValues();
         getQuestionsMutation.mutate({
-          userId: userDetails.id,
-          wizardData: {
-            goalDescription: values.goalName,
+          user_id: userDetails.id,
+          wizard_data: {
+            goal_description: values.goalName,
             motivation: values.motivation,
             availability: values.availability,
-            timeCommitment: values.timeCommitment,
-            accountabilityType: values.accountabilityType,
-            partnerName: partnerDisplayName || null,
-            targetDeadline: values.targetDeadline || null,
-            preferredCheckInStyle: values.preferredCheckInStyle,
+            time_commitment: values.timeCommitment,
+            accountability_type: values.accountabilityType,
+            partner_name: partnerDisplayName || null,
+            target_deadline: values.targetDeadline || null,
+            preferred_check_in_style: values.preferredCheckInStyle,
           }
         });
       } else if (currentStep < steps.length - 1) {
@@ -292,10 +292,10 @@ export default function GoalCreationWizard() {
     return mode.charAt(0).toUpperCase() + mode.slice(1);
   };
 
-  const recommendationReasons = (finalGoalPlan?.decisionTrace || [])
+  const recommendationReasons = (finalGoalPlan?.decision_trace || [])
     .slice(0, 3)
-    .map((reason) => reason.trim())
-    .filter((reason) => reason.length > 0);
+    .map((reason: string) => reason.trim())
+    .filter((reason: string) => reason.length > 0);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!finalGoalPlan) {
@@ -318,18 +318,18 @@ export default function GoalCreationWizard() {
       accountability_type: accountabilityType,
       tasks: finalGoalPlan.milestones.flatMap(m => m.tasks.map(t => ({
         name: t.description,
-        description: t.successMetric,
-        repeat_frequency: t.recommendedCadence || "daily",
-        time_window: t.recommendedTimeWindows?.[0] || timeWindow,
+        description: t.success_metric,
+        repeat_frequency: t.recommended_cadence || "daily",
+        time_window: t.recommended_time_windows?.[0] || timeWindow,
         accountability_type: accountabilityType,
-        verification_mode: t.verificationMode || "photo",
-        verification_mode_reason: t.verificationModeReason || "Photo verification offers clear evidence.",
-        verification_confidence: typeof t.verificationConfidence === "number" ? t.verificationConfidence : 0.85,
-        time_window_start: t.timeWindowStart || undefined,
-        time_window_end: t.timeWindowEnd || undefined,
-        auto_approval_policy: t.autoApprovalPolicy || "time_window_only",
-        auto_approval_timeout_hours: typeof t.autoApprovalTimeoutHours === "number" ? t.autoApprovalTimeoutHours : 24,
-        auto_approval_min_confidence: typeof t.autoApprovalMinConfidence === "number" ? t.autoApprovalMinConfidence : 0.85,
+        verification_mode: t.verification_mode || "photo",
+        verification_mode_reason: t.verification_mode_reason || "Photo verification offers clear evidence.",
+        verification_confidence: typeof t.verification_confidence === "number" ? t.verification_confidence : 0.85,
+        time_window_start: t.time_window_start || undefined,
+        time_window_end: t.time_window_end || undefined,
+        auto_approval_policy: t.auto_approval_policy || "time_window_only",
+        auto_approval_timeout_hours: typeof t.auto_approval_timeout_hours === "number" ? t.auto_approval_timeout_hours : 24,
+        auto_approval_min_confidence: typeof t.auto_approval_min_confidence === "number" ? t.auto_approval_min_confidence : 0.85,
       }))),
     };
 
@@ -713,7 +713,7 @@ export default function GoalCreationWizard() {
                                       <FormControl>
                                         <Input
                                           type="text"
-                                          placeholder="e.g., 7:00 AM ± 10 mins"
+                                          placeholder="e.g., 7:00 AM Â± 10 mins"
                                           {...field}
                                           className="w-full p-2 border border-cool-gray dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none text-sm"
                                         />
@@ -757,17 +757,17 @@ export default function GoalCreationWizard() {
                         </div>
                         <div className="space-y-4">
                           {strategicQuestions?.map((q) => (
-                            <div key={q.questionKey}>
+                            <div key={q.question_key}>
                               <FormLabel>{q.question}</FormLabel>
                               {/* Simple radio group for now */}
                               <div className="mt-2 space-y-2">
-                                {q.suggestedAnswers.map(answer => (
+                                {q.suggested_answers.map((answer: string) => (
                                   <label key={answer} className="flex items-center p-3 rounded-lg border border-cool-gray dark:border-gray-600 cursor-pointer hover:border-primary-blue">
                                     <input
                                       type="radio"
-                                      name={q.questionKey}
+                                      name={q.question_key}
                                       value={answer}
-                                      onChange={(e) => setUserAnswers({ ...userAnswers, [q.questionKey]: e.target.value })}
+                                      onChange={(e) => setUserAnswers({ ...userAnswers, [q.question_key]: e.target.value })}
                                       className="mr-3"
                                     />
                                     {answer}
@@ -796,15 +796,15 @@ export default function GoalCreationWizard() {
                       <motion.div key="plan" className="space-y-6">
                         <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
                         <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
-                        {finalGoalPlan.scheduleImpact && (
+                        {finalGoalPlan.schedule_impact && (
                           <div className="rounded-lg border border-cool-gray dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-sm">
                             <p className="font-semibold text-charcoal dark:text-gray-100">Schedule impact</p>
                             <p className="text-stone-gray dark:text-gray-300">
-                              Weekly load: {finalGoalPlan.scheduleImpact.projectedLoadMinutes} / {finalGoalPlan.scheduleImpact.capacityMinutes} mins
+                              Weekly load: {finalGoalPlan.schedule_impact.projected_load_minutes} / {finalGoalPlan.schedule_impact.capacity_minutes} mins
                             </p>
                             <p className="text-stone-gray dark:text-gray-300">
-                              Fit: {finalGoalPlan.scheduleImpact.fitBand}
-                              {typeof finalGoalPlan.scheduleImpact.overloadPercent === "number" && ` · Overload ${finalGoalPlan.scheduleImpact.overloadPercent}%`}
+                              Fit: {finalGoalPlan.schedule_impact.fit_band}
+                              {typeof finalGoalPlan.schedule_impact.overload_percent === "number" && ` · Overload ${finalGoalPlan.schedule_impact.overload_percent}%`}
                             </p>
                           </div>
                         )}
@@ -819,8 +819,8 @@ export default function GoalCreationWizard() {
                             </button>
                             {showRecommendationReasons && (
                               <ul className="mt-2 space-y-1 text-sm text-stone-gray dark:text-gray-300">
-                                {recommendationReasons.map((reason, reasonIndex) => (
-                                  <li key={`reason-${reasonIndex}`}>• {reason}</li>
+                                {recommendationReasons.map((reason: string, reasonIndex: number) => (
+                                  <li key={`reason-${reasonIndex}`}>- {reason}</li>
                                 ))}
                               </ul>
                             )}
@@ -836,28 +836,28 @@ export default function GoalCreationWizard() {
                                 {milestone.tasks.map((task, taskIndex) => (
                                   <li key={taskIndex} className="text-sm text-charcoal dark:text-gray-300 border border-cool-gray dark:border-gray-600 rounded-md p-3 bg-white dark:bg-gray-800">
                                     <p><strong>{task.description}</strong></p>
-                                    <p className="text-stone-gray dark:text-gray-400 mt-1">{task.successMetric}</p>
-                                    <p className="mt-2"><strong>Cadence:</strong> {task.recommendedCadence}</p>
-                                    <p><strong>Best windows:</strong> {task.recommendedTimeWindows?.join(", ") || "Flexible based on your schedule"}</p>
-                                    <p><strong>Why this works:</strong> {task.consistencyRationale}</p>
+                                    <p className="text-stone-gray dark:text-gray-400 mt-1">{task.success_metric}</p>
+                                    <p className="mt-2"><strong>Cadence:</strong> {task.recommended_cadence}</p>
+                                    <p><strong>Best windows:</strong> {task.recommended_time_windows?.join(", ") || "Flexible based on your schedule"}</p>
+                                    <p><strong>Why this works:</strong> {task.consistency_rationale}</p>
                                     <p>
-                                      <strong>Verification mode:</strong> {formatVerificationMode(task.verificationMode)}
-                                      {typeof task.verificationConfidence === "number" ? ` (${Math.round(task.verificationConfidence * 100)}% confidence)` : ""}
+                                      <strong>Verification mode:</strong> {formatVerificationMode(task.verification_mode)}
+                                      {typeof task.verification_confidence === "number" ? ` (${Math.round(task.verification_confidence * 100)}% confidence)` : ""}
                                     </p>
-                                    <p><strong>Why this mode:</strong> {task.verificationModeReason || "Selected for reliable partner review."}</p>
-                                    {task.verificationMode === "time-window" && (
+                                    <p><strong>Why this mode:</strong> {task.verification_mode_reason || "Selected for reliable partner review."}</p>
+                                    {task.verification_mode === "time-window" && (
                                       <p>
-                                        <strong>Time-window rule:</strong> Complete between {task.timeWindowStart || "configured start"} and {task.timeWindowEnd || "configured end"} for high-confidence verification.
+                                        <strong>Time-window rule:</strong> Complete between {task.time_window_start || "configured start"} and {task.time_window_end || "configured end"} for high-confidence verification.
                                       </p>
                                     )}
                                     <div className="mt-2">
-                                      <p><strong>Partner touchpoint:</strong> {task.partnerInvolvement?.dailyCheckInSuggestion}</p>
-                                      <p><strong>Weekly anchor:</strong> {task.partnerInvolvement?.weeklyAnchorReview}</p>
+                                      <p><strong>Partner touchpoint:</strong> {task.partner_involvement?.daily_check_in_suggestion}</p>
+                                      <p><strong>Weekly anchor:</strong> {task.partner_involvement?.weekly_anchor_review}</p>
                                     </div>
                                     <div className="mt-2">
                                       <p><strong>Suggested proof guidance:</strong></p>
                                       <ul className="list-disc list-inside text-stone-gray dark:text-gray-400">
-                                        {(task.proofGuidance?.whatCounts || []).map((item, proofIdx) => (
+                                        {(task.proof_guidance?.what_counts || []).map((item: string, proofIdx: number) => (
                                           <li key={`count-${proofIdx}`}>{item}</li>
                                         ))}
                                       </ul>
@@ -922,3 +922,11 @@ export default function GoalCreationWizard() {
     </div>
   )
 }
+
+
+
+
+
+
+
+

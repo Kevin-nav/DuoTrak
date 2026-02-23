@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { Plus, Target, Search, Users, User, Edit, Copy, Archive } from "lucide-react"
@@ -6,7 +6,6 @@ import { useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useArchiveGoal, useDuplicateGoal, useGoals } from "@/hooks/useGoals"
-import { GoalRead } from "@/schemas/goal"
 import DashboardLayout from "./dashboard-layout"
 import MouseGlowEffect from "./mouse-glow-effect"
 import { useQueryClient } from "@tanstack/react-query"
@@ -22,9 +21,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import React from "react"
+import { DomainGoal } from "../../packages/domain/src/goals"
 
 // Define a type alias to avoid confusion
-type Goal = GoalRead;
+type Goal = DomainGoal;
 
 export default function GoalsHome() {
   const { data: goals = [], isLoading, isError } = useGoals();
@@ -106,7 +106,7 @@ export default function GoalsHome() {
   };
 
   const getStatusEmoji = (status: string) => {
-    return status === "Completed" ? "✅" : "🎉";
+    return status === "Completed" ? "âœ…" : "ðŸŽ‰";
   };
 
   const containerVariants: Variants = {
@@ -191,7 +191,7 @@ export default function GoalsHome() {
                               <div className="flex-1">
                                 <h3 className="text-lg font-bold text-charcoal dark:text-gray-100 truncate">{goal.name}</h3>
                                 <p className="text-sm text-stone-gray dark:text-gray-400">
-                                  {goal.category} • {goal.is_habit ? 'Habit' : 'Project'}
+                                  {goal.category} • {goal.isHabit ? 'Habit' : 'Project'}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -297,3 +297,4 @@ export default function GoalsHome() {
     </DashboardLayout>
   );
 }
+
