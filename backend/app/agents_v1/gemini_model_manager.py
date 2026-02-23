@@ -28,9 +28,8 @@ class GeminiModelManager:
 
         # Model names are now passed directly in the generation call
         self.model_names = {
-            'flash': os.environ.get('GEMINI_FLASH_MODEL', 'gemini-3-flash'),
-            # Flash-only policy: any legacy "pro" call is routed to flash.
-            'pro': os.environ.get('GEMINI_FLASH_MODEL', 'gemini-3-flash'),
+            'flash': os.environ.get('GEMINI_FLASH_MODEL', 'gemini-3-flash-preview'),
+            'pro': os.environ.get('GEMINI_PRO_MODEL', 'gemini-2.5-pro'),
         }
         
         # Use GenerateContentConfig instead of GenerationConfig to avoid the tools issue

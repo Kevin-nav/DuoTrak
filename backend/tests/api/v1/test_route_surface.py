@@ -2,15 +2,15 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_removed_legacy_routes_not_registered(client):
-    legacy_questions_response = await client.post(
+async def test_removed_routes_not_registered(client):
+    removed_routes = [
         "/api/v1/agent-crew/wizard/questions",
-        json={"user_id": "user-1", "wizard_data": {}},
-    )
-    assert legacy_questions_response.status_code == 410
+        "/api/v1/users/me",
+        "/api/v1/goals",
+        "/api/v1/partner-invitations/invitations",
+        "/api/v1/storage/upload-profile-picture",
+    ]
 
-    legacy_answers_response = await client.post(
-        "/api/v1/agent-crew/session-1/answers",
-        json={"user_id": "user-1", "answers": {"q1": "a1"}},
-    )
-    assert legacy_answers_response.status_code == 410
+    for route in removed_routes:
+        response = await client.get(route)
+        assert response.status_code == 404

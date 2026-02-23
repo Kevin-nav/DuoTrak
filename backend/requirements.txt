@@ -1,37 +1,6 @@
-alembic
-aiosqlite
-asyncpg
-bleach
-cryptography
-email-validator
-fastapi
-fastapi-csrf-protect
-firebase-admin
-crewai
-langchain-google-genai
-google-generativeai
-httpx
-pinecone-client
-langchain-pinecone
-psycopg2-binary
-pydantic-settings
-PyJWT
-pyreadline3
-pytest
-pytest-asyncio
-python-dotenv
-python-multipart
-redis
-resend==0.8.0
-slowapi
-sqlalchemy[asyncio]
-supabase
-tenacity
-uvicorn[standard]
-boto3
-
-# OpenTelemetry
-opentelemetry-distro
-opentelemetry-exporter-otlp
-opentelemetry-instrumentation-fastapi
-opentelemetry-instrumentation-sqlalchemy
+# Managed by uv. Prefer:
+#   uv sync
+#   uv lock
+#
+# This file is retained for compatibility with tooling that expects requirements.txt.
+-r requirements-uv.txt

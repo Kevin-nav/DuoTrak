@@ -3,8 +3,7 @@ import asyncio
 import logging
 import uuid
 import hmac
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.core.config import settings
 from app.core.logging_config import emit_goal_operation_event
@@ -16,9 +15,6 @@ from app.services.goal_plan_adapter import adapt_goal_plan_response
 from app.core.redis_config import redis_client
 from app.ai.orchestrator_factory import create_orchestrator
 from app.ai.shadow_runner import ShadowRunner
-from app.db.session import get_db
-from app.db.models import User
-from app.api.v1.endpoints.users import get_current_user_from_cookie
 from app.services.external_judge_crew import ExternalJudgeCrew
 from app.schemas.agent_crew import DuotrakGoalPlan
 from fastapi import BackgroundTasks
@@ -44,16 +40,6 @@ def _allow_dev_browser_goal_creation(request: Request) -> bool:
         return False
     origin = (request.headers.get("origin") or "").lower()
     return origin in {"http://localhost:3000", "http://127.0.0.1:3000"}
-
-async def get_optional_current_user_from_cookie(
-    request: Request, db: AsyncSession = Depends(get_db)
-) -> User | None:
-    try:
-        return await get_current_user_from_cookie(request, db)
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-            return None
-        raise
 
 def run_evaluation_in_background(plan: DuotrakGoalPlan):
     """The function that will be run in the background."""
@@ -158,7 +144,6 @@ async def startup_event():
 async def get_strategic_questions(
     http_request: Request,
     request: GoalWizardRequest,
-    current_user: User | None = Depends(get_optional_current_user_from_cookie),
 ):
     """
     V3 Agentic Workflow - Phase 1: Generate strategic questions.
@@ -191,18 +176,13 @@ async def get_strategic_questions(
         is_internal = _is_internal_request(http_request)
         allow_dev_browser = _allow_dev_browser_goal_creation(http_request)
 
-        if is_internal:
+        if is_internal or allow_dev_browser:
             effective_user_id = request.user_id
-        elif current_user is not None:
-            effective_user_id = str(current_user.id)
-            if request.user_id != effective_user_id:
-                raise HTTPException(status_code=403, detail="User ID mismatch")
-        elif allow_dev_browser:
-            effective_user_id = request.user_id
-            logger.warning(
-                "Using dev browser auth bypass for /goal-creation/questions (user_id=%s)",
-                effective_user_id,
-            )
+            if allow_dev_browser and not is_internal:
+                logger.warning(
+                    "Using dev browser auth bypass for /goal-creation/questions (user_id=%s)",
+                    effective_user_id,
+                )
         else:
             raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -247,7 +227,6 @@ async def create_goal_plan(
     http_request: Request,
     session_id: str,
     request: AnswersSubmissionRequest,
-    current_user: User | None = Depends(get_optional_current_user_from_cookie),
 ):
     """
     V3 Agentic Workflow - Phase 2: Process answers and generate the complete goal plan.
@@ -275,19 +254,14 @@ async def create_goal_plan(
         is_internal = _is_internal_request(http_request)
         allow_dev_browser = _allow_dev_browser_goal_creation(http_request)
 
-        if is_internal:
+        if is_internal or allow_dev_browser:
             effective_user_id = request.user_id
-        elif current_user is not None:
-            effective_user_id = str(current_user.id)
-            if request.user_id != effective_user_id:
-                raise HTTPException(status_code=403, detail="User ID mismatch")
-        elif allow_dev_browser:
-            effective_user_id = request.user_id
-            logger.warning(
-                "Using dev browser auth bypass for /goal-creation/%s/plan (user_id=%s)",
-                session_id,
-                effective_user_id,
-            )
+            if allow_dev_browser and not is_internal:
+                logger.warning(
+                    "Using dev browser auth bypass for /goal-creation/%s/plan (user_id=%s)",
+                    session_id,
+                    effective_user_id,
+                )
         else:
             raise HTTPException(status_code=401, detail="Not authenticated")
 

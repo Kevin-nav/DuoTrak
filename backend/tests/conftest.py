@@ -15,7 +15,6 @@ from sqlalchemy.orm import sessionmaker
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.core.security import get_current_user
 from app.db import models
 from app.schemas.user import AccountStatus
 
@@ -31,11 +30,6 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-def override_get_current_user():
-    # This is a mock user that simulates a verified Firebase user
-    return {"uid": "test_firebase_uid_123", "email": "testuser@example.com"}
-
-
 @pytest.fixture(scope="session")
 def event_loop():
     """Create an instance of the default event loop for each test session."""
@@ -47,7 +41,6 @@ def event_loop():
 @pytest_asyncio.fixture(scope="session")
 async def test_app() -> FastAPI:
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield app

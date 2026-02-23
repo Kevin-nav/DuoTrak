@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
@@ -12,22 +10,19 @@ class MissingSessionOrchestrator:
         raise ValueError("Session not found or expired. Please restart from strategic questions.")
 
 
-async def _fake_user():
-    return SimpleNamespace(id="u1")
-
-
 @pytest.mark.asyncio
 async def test_missing_session_returns_404(monkeypatch):
     app = FastAPI()
     app.include_router(goal_creation.router, prefix="/api/v1/goal-creation")
 
-    app.dependency_overrides[goal_creation.get_optional_current_user_from_cookie] = _fake_user
+    monkeypatch.setattr(goal_creation.settings, "INTERNAL_API_SECRET", "test-secret", raising=False)
     monkeypatch.setattr(goal_creation, "duotrak_orchestrator", MissingSessionOrchestrator())
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/v1/goal-creation/missing/plan",
             json={"user_id": "u1", "answers": {"q": "a"}},
+            headers={"X-Internal-API-Key": "test-secret"},
         )
 
     assert response.status_code == 404

@@ -16,20 +16,11 @@ load_dotenv(dotenv_path=env_file)
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
-    # These settings are loaded from the .env file and are required.
-    # If a variable is not found, the app will fail to start.
+    # Core backend settings
     DATABASE_URL: str
-    FIREBASE_SERVICE_ACCOUNT_JSON_PATH: str
-    FIREBASE_PROJECT_ID: str
     CLIENT_ORIGIN_URL: str = "http://localhost:3000"
     REDIS_URL: str
-    RESEND_API_KEY: str
-    DEFAULT_FROM_EMAIL: str
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
     SECRET_KEY: str
-    CSRF_SECRET_KEY: str
     R2_ACCOUNT_ID: str
     R2_ACCESS_KEY_ID: str
     R2_SECRET_ACCESS_KEY: str
@@ -41,8 +32,8 @@ class Settings(BaseSettings):
     PINECONE_INDEX_NAME: str = "duotrak-user-model-data"
 
     # Agent-specific Model Names
-    FLASH_MODEL: str = "gemini-3-flash"
-    PRO_MODEL: str = "gemini-3-flash"
+    FLASH_MODEL: str = "gemini-3-flash-preview"
+    PRO_MODEL: str = "gemini-2.5-pro"
 
     # Thinking Budget Configuration
     DEFAULT_THINKING_BUDGET: int = 8000
@@ -71,10 +62,3 @@ class Settings(BaseSettings):
 
 # Create a single, reusable instance of the settings
 settings = Settings()
-
-# Create a dedicated settings class for the CSRF protector
-class CsrfProtectSettings(BaseSettings):
-    secret_key: str = settings.CSRF_SECRET_KEY
-
-    class Config:
-        case_sensitive = True

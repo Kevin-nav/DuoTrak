@@ -20,13 +20,13 @@ class GeminiModelConfig:
         All roles are pinned to Gemini 3 Flash.
         """
         _ = agent_role
-        model_base_name = settings.FLASH_MODEL or "gemini-3-flash"
-        if model_base_name != "gemini-3-flash":
+        model_base_name = settings.FLASH_MODEL or "gemini-3-flash-preview"
+        if model_base_name != "gemini-3-flash-preview":
             logger.warning(
-                "Overriding FLASH_MODEL=%s to gemini-3-flash due to Flash-only policy.",
+                "Overriding FLASH_MODEL=%s to gemini-3-flash-preview due to Flash-only policy.",
                 model_base_name,
             )
-            model_base_name = "gemini-3-flash"
+            model_base_name = "gemini-3-flash-preview"
 
         model_name = f"gemini/{model_base_name}"
 

@@ -43,11 +43,11 @@ def test_gemini_config_routes_complex_agents_to_flash_only(monkeypatch):
             captured["temperature"] = temperature
 
     monkeypatch.setattr(gemini_config_module, "LLM", FakeLLM)
-    monkeypatch.setattr(gemini_config_module.settings, "FLASH_MODEL", "gemini-3-flash", raising=False)
+    monkeypatch.setattr(gemini_config_module.settings, "FLASH_MODEL", "gemini-3-flash-preview", raising=False)
     monkeypatch.setattr(gemini_config_module.settings, "PRO_MODEL", "gemini-2.5-pro", raising=False)
 
     config = gemini_config_module.GeminiModelConfig()
     llm = config.get_model_for_agent("goal_strategist")
 
     assert llm is not None
-    assert captured["model"] == "gemini/gemini-3-flash"
+    assert captured["model"] == "gemini/gemini-3-flash-preview"

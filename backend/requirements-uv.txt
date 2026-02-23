@@ -1,0 +1,25 @@
+# Generated target dependency set for uv migration.
+# Run `uv export --format requirements-txt --output-file requirements-uv.txt`
+# after `uv sync` in an environment with network access.
+aiosqlite
+alembic
+asyncpg
+boto3
+crewai==1.9.3
+fastapi
+google-genai==1.64.0
+httpx
+langchain-google-genai==4.2.1
+numpy
+pinecone-client
+psycopg2-binary
+pydantic-settings
+PyJWT
+python-dotenv
+python-multipart
+redis
+slowapi
+sqlalchemy[asyncio]
+tenacity
+typing-extensions
+uvicorn[standard]

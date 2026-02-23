@@ -11,24 +11,26 @@ class GeminiService:
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not set in environment variables or .env file.")
         self.api_key = api_key
+        self.flash_model = settings.FLASH_MODEL or "gemini-3-flash-preview"
+        self.pro_model = settings.PRO_MODEL or "gemini-2.5-pro"
 
     def get_flash_model(self, use_zero_thinking_budget: bool = True) -> ChatGoogleGenerativeAI:
         """
-        Gets a Gemini 2.5 Flash model instance, optimized for speed and cost.
+        Gets a Gemini Flash model instance, optimized for speed and cost.
 
         Args:
             use_zero_thinking_budget: If True, sets the thinking_budget to 0,
                                       ideal for classification or simple extraction tasks.
         
         Returns:
-            An instance of ChatGoogleGenerativeAI configured for Gemini 2.5 Flash.
+            An instance of ChatGoogleGenerativeAI configured for Gemini Flash.
         """
         generation_config = {}
         if use_zero_thinking_budget:
             generation_config["thinking_budget"] = 0
 
         return ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model=self.flash_model,
             google_api_key=self.api_key,
             temperature=0.7,
             top_p=0.95,
@@ -37,11 +39,11 @@ class GeminiService:
 
     def get_pro_model(self) -> ChatGoogleGenerativeAI:
         """
-        Gets a Gemini 2.5 Pro model instance for complex reasoning,
+        Gets a Gemini Pro model instance for complex reasoning,
         creative generation, and critical analysis tasks.
         """
         return ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro",
+            model=self.pro_model,
             google_api_key=self.api_key,
             temperature=0.7,
             top_p=0.95

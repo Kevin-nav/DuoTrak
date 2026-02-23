@@ -56,9 +56,6 @@ def test_app(monkeypatch):
     def _fake_emit_goal_operation_event(event_name: str, **fields):
         telemetry_events.append({"event_name": event_name, **fields})
 
-    async def _fake_current_user():
-        return _User()
-
     async def _fake_initialize():
         return None
 
@@ -67,12 +64,12 @@ def test_app(monkeypatch):
         "create_goal_plan_from_answers",
         _fake_create_goal_plan_from_answers,
     )
+    monkeypatch.setattr(goal_creation.settings, "INTERNAL_API_SECRET", "test-secret", raising=False)
     monkeypatch.setattr(goal_creation, "emit_goal_operation_event", _fake_emit_goal_operation_event)
     monkeypatch.setattr(goal_creation.pinecone_service, "initialize", _fake_initialize)
 
     app = FastAPI()
     app.include_router(goal_creation.router, prefix="/api/v1/goal-creation")
-    app.dependency_overrides[goal_creation.get_optional_current_user_from_cookie] = _fake_current_user
     app.state.telemetry_events = telemetry_events
     return app
 
@@ -92,6 +89,7 @@ async def test_create_goal_plan_returns_contract_shape(authed_client: AsyncClien
     response = await authed_client.post(
         f"/api/v1/goal-creation/{seeded_session}/plan",
         json={"user_id": "user-1", "answers": {"q1": "a1"}},
+        headers={"X-Internal-API-Key": "test-secret"},
     )
 
     assert response.status_code == 200

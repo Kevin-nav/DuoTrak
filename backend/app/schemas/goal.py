@@ -102,7 +102,7 @@ class GoalSuggestionResponse(BaseModel):
     tasks: List[SuggestedTask] = Field(..., min_items=3, max_items=5)
     success_tips: List[str] = Field(..., min_items=2, max_items=4)
     generated_at: str
-    model_version: str = "gemini-3-flash"
+    model_version: str = "gemini-3-flash-preview"
 
 class OnboardingGoalPlanRequest(BaseModel):
     goal_title: str

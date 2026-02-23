@@ -10,12 +10,16 @@ import uuid
 from app.services.pinecone_service import PineconeService
 from app.services.embedding_service import EmbeddingService
 import asyncio
-import google.generativeai as genai
+from app.core.config import settings
 
 @pytest.fixture(scope="module")
 def pinecone_service():
     """Initializes the PineconeService for testing."""
-    return PineconeService()
+    return PineconeService(
+        api_key=settings.PINECONE_API_KEY,
+        environment="aws",
+        index_name=settings.PINECONE_INDEX_NAME,
+    )
 
 @pytest.mark.live
 async def test_upsert_and_query(pinecone_service: PineconeService):
@@ -23,12 +27,6 @@ async def test_upsert_and_query(pinecone_service: PineconeService):
     Tests the full lifecycle of upserting a document and querying it back.
     This is a live test and requires a connection to Pinecone.
     """
-    # Initialize genai within the async test function to use the correct event loop
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        pytest.fail("GEMINI_API_KEY environment variable is not set.")
-    genai.configure(api_key=api_key)
-    
     embedding_service = EmbeddingService()
 
     # 1. Define test data
