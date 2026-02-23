@@ -12,6 +12,7 @@ import type * as chat from "../chat.js";
 import type * as goalCreation from "../goalCreation.js";
 import type * as goals from "../goals.js";
 import type * as invitations from "../invitations.js";
+import type * as journal from "../journal.js";
 import type * as lib_invitationAcceptance from "../lib/invitationAcceptance.js";
 import type * as lib_invitationEmail from "../lib/invitationEmail.js";
 import type * as lib_inviteUrl from "../lib/inviteUrl.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   goalCreation: typeof goalCreation;
   goals: typeof goals;
   invitations: typeof invitations;
+  journal: typeof journal;
   "lib/invitationAcceptance": typeof lib_invitationAcceptance;
   "lib/invitationEmail": typeof lib_invitationEmail;
   "lib/inviteUrl": typeof lib_inviteUrl;

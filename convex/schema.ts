@@ -130,6 +130,87 @@ export default defineSchema({
     .index("by_sender", ["sender_id", "status"]),
 
   // ============================================
+  // JOURNAL + DUO WORKSPACE
+  // ============================================
+  journal_spaces: defineTable({
+    type: v.string(), // 'shared' | 'private'
+    name: v.string(),
+    partnership_id: v.optional(v.id("partnerships")),
+    owner_user_id: v.optional(v.id("users")),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_owner_type", ["owner_user_id", "type"])
+    .index("by_partnership_type", ["partnership_id", "type"]),
+
+  journal_pages: defineTable({
+    space_id: v.id("journal_spaces"),
+    title: v.string(),
+    icon: v.optional(v.string()),
+    is_archived: v.boolean(),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_space", ["space_id"])
+    .index("by_space_updated", ["space_id", "updated_at"]),
+
+  journal_blocks: defineTable({
+    page_id: v.id("journal_pages"),
+    type: v.string(), // 'paragraph' | 'heading' | 'todo' | 'toggle' | 'quote' | 'callout'
+    content: v.optional(v.string()),
+    checked: v.optional(v.boolean()),
+    position: v.number(),
+    meta_json: v.optional(v.string()),
+    created_by: v.id("users"),
+    updated_at: v.number(),
+  })
+    .index("by_page_position", ["page_id", "position"]),
+
+  journal_entries: defineTable({
+    space_id: v.id("journal_spaces"),
+    title: v.string(),
+    body: v.string(),
+    mood: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    entry_date: v.number(),
+    is_archived: v.boolean(),
+    shared_from_entry_id: v.optional(v.id("journal_entries")),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_space_date", ["space_id", "entry_date"])
+    .index("by_space_updated", ["space_id", "updated_at"])
+    .index("by_creator", ["created_by", "created_at"]),
+
+  journal_shares: defineTable({
+    source_entry_id: v.id("journal_entries"),
+    shared_entry_id: v.id("journal_entries"),
+    from_user_id: v.id("users"),
+    to_partnership_id: v.id("partnerships"),
+    shared_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_source_entry", ["source_entry_id"])
+    .index("by_partnership", ["to_partnership_id", "shared_at"]),
+
+  journal_search_index: defineTable({
+    entity_type: v.string(), // 'entry' | 'page'
+    entity_id: v.string(),
+    space_id: v.id("journal_spaces"),
+    searchable_text: v.string(),
+    tags: v.optional(v.array(v.string())),
+    author_id: v.id("users"),
+    entry_date: v.optional(v.number()),
+    updated_at: v.number(),
+  })
+    .index("by_space", ["space_id"])
+    .index("by_author", ["author_id", "updated_at"])
+    .index("by_space_date", ["space_id", "entry_date"]),
+
+  // ============================================
   // CHAT SYSTEM - Real-time messaging
   // ============================================
 

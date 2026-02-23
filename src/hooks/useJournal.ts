@@ -1,0 +1,97 @@
+"use client";
+
+import { useMemo } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+
+export type JournalSpaceType = "private" | "shared";
+
+export function useJournalHome(spaceType: JournalSpaceType) {
+  const data = useQuery((api as any).journal.getHome, { spaceType, limit: 50 }) as
+    | { space: any; entries: any[]; message: string | null }
+    | undefined;
+
+  return {
+    space: data?.space ?? null,
+    entries: data?.entries ?? [],
+    message: data?.message ?? null,
+    isLoading: data === undefined,
+  };
+}
+
+export function useEnsureJournalSpaces() {
+  const ensure = useMutation((api as any).journal.ensureSpaces);
+  return async () => ensure({});
+}
+
+export function useCreateJournalEntry() {
+  const mutation = useMutation((api as any).journal.createEntry);
+  return (payload: {
+    spaceType: JournalSpaceType;
+    title: string;
+    body: string;
+    mood?: string;
+    tags?: string[];
+  }) => mutation(payload);
+}
+
+export function useJournalPages(spaceType: JournalSpaceType) {
+  const data = useQuery((api as any).journal.listPages, { spaceType }) as any[] | undefined;
+  return {
+    pages: data ?? [],
+    isLoading: data === undefined,
+  };
+}
+
+export function useCreateJournalPage() {
+  const mutation = useMutation((api as any).journal.createPage);
+  return (payload: { spaceType: JournalSpaceType; title: string; icon?: string }) => mutation(payload);
+}
+
+export function useUpdateJournalEntry() {
+  const mutation = useMutation((api as any).journal.updateEntry);
+  return (payload: {
+    entryId: string;
+    title?: string;
+    body?: string;
+    mood?: string;
+    tags?: string[];
+  }) => mutation(payload as any);
+}
+
+export function useSharePrivateEntry() {
+  const mutation = useMutation((api as any).journal.sharePrivateEntry);
+  return (entryId: string) => mutation({ entryId } as any);
+}
+
+export function useJournalSearch(params: {
+  q: string;
+  spaceType?: "all" | JournalSpaceType;
+  tag?: string;
+  dateFrom?: number;
+  dateTo?: number;
+}) {
+  const canSearch = params.q.trim().length >= 2;
+  const data = useQuery(
+    (api as any).journal.search,
+    canSearch
+      ? {
+          q: params.q,
+          spaceType: params.spaceType ?? "all",
+          tag: params.tag || undefined,
+          dateFrom: params.dateFrom,
+          dateTo: params.dateTo,
+          limit: 50,
+        }
+      : "skip"
+  ) as { results: any[]; total: number } | undefined;
+
+  return useMemo(
+    () => ({
+      results: data?.results ?? [],
+      total: data?.total ?? 0,
+      isLoading: canSearch && data === undefined,
+    }),
+    [canSearch, data]
+  );
+}

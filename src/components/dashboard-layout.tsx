@@ -3,7 +3,7 @@
 import type React from "react"
 import { motion } from "framer-motion"
 import Image from 'next/image';
-import { Home, Target, Users, User, Circle, TrendingUp } from 'lucide-react'
+import { Home, Target, Users, User, Circle, TrendingUp, BookOpenText } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import NotificationSystem from "./notification-system"
@@ -21,6 +21,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { id: "home", label: "Home", icon: Home, path: "/" },
     { id: "goals", label: "Goals", icon: Target, path: "/goals" },
     { id: "progress", label: "Progress", icon: TrendingUp, path: "/progress" },
+    { id: "journal", label: "Journal", icon: BookOpenText, path: "/journal" },
     { id: "partner", label: "Partner", icon: Users, path: "/partner" },
     { id: "profile", label: "Profile", icon: User, path: "/profile" },
   ]

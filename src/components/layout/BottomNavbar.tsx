@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Home, Target, Users, User, TrendingUp } from 'lucide-react'
+import { Home, Target, Users, User, TrendingUp, BookOpenText } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
@@ -14,6 +14,7 @@ export default function BottomNavbar() {
     { id: "home", label: "Home", icon: Home, path: "/dashboard" },
     { id: "goals", label: "Goals", icon: Target, path: "/goals" },
     { id: "progress", label: "Progress", icon: TrendingUp, path: "/progress" },
+    { id: "journal", label: "Journal", icon: BookOpenText, path: "/journal" },
     { id: "partner", label: "Partner", icon: Users, path: "/partner" },
     { id: "profile", label: "Profile", icon: User, path: "/profile" },
   ]
