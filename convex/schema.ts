@@ -211,6 +211,63 @@ export default defineSchema({
     .index("by_space_date", ["space_id", "entry_date"]),
 
   // ============================================
+  // NOTIFICATIONS + DELIVERY
+  // ============================================
+  notifications: defineTable({
+    user_id: v.id("users"),
+    type: v.string(),
+    category: v.string(), // 'task' | 'partner' | 'progress' | 'system' | 'chat' | 'journal'
+    title: v.string(),
+    message: v.string(),
+    priority: v.string(), // 'low' | 'medium' | 'high'
+    actionable: v.boolean(),
+    read_at: v.optional(v.number()),
+    archived_at: v.optional(v.number()),
+    snoozed_until: v.optional(v.number()),
+    related_entity_type: v.optional(v.string()),
+    related_entity_id: v.optional(v.string()),
+    metadata_json: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user_created", ["user_id", "created_at"])
+    .index("by_user_read", ["user_id", "read_at"])
+    .index("by_user_archived", ["user_id", "archived_at"]),
+
+  notification_preferences: defineTable({
+    user_id: v.id("users"),
+    in_app_enabled: v.boolean(),
+    email_enabled: v.boolean(),
+    quiet_hours_enabled: v.boolean(),
+    quiet_hours_start: v.string(), // HH:mm
+    quiet_hours_end: v.string(), // HH:mm
+    task_notifications: v.boolean(),
+    partner_notifications: v.boolean(),
+    chat_notifications: v.boolean(),
+    journal_notifications: v.boolean(),
+    progress_notifications: v.boolean(),
+    system_notifications: v.boolean(),
+    sound_enabled: v.optional(v.boolean()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  }).index("by_user", ["user_id"]),
+
+  notification_deliveries: defineTable({
+    notification_id: v.optional(v.id("notifications")),
+    user_id: v.id("users"),
+    channel: v.string(), // 'in_app' | 'email'
+    status: v.string(), // 'queued' | 'sent' | 'failed' | 'skipped'
+    provider: v.optional(v.string()),
+    template_key: v.optional(v.string()),
+    error_message: v.optional(v.string()),
+    sent_at: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user_created", ["user_id", "created_at"])
+    .index("by_notification", ["notification_id"]),
+
+  // ============================================
   // CHAT SYSTEM - Real-time messaging
   // ============================================
 
@@ -230,6 +287,15 @@ export default defineSchema({
   })
     .index("by_conversation_user", ["conversation_id", "user_id"])
     .index("by_conversation_updated", ["conversation_id", "updated_at"]),
+
+  chat_active_views: defineTable({
+    conversation_id: v.id("conversations"),
+    user_id: v.id("users"),
+    is_active: v.boolean(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id", "updated_at"])
+    .index("by_conversation_user", ["conversation_id", "user_id"]),
 
   conversations: defineTable({
     partnership_id: v.id("partnerships"),

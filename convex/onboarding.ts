@@ -1,6 +1,6 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { getInternalApiHeaders, postGoalCreation, postGoalCreationRaw } from "./goalCreation";
+import { postGoalCreationRaw } from "./goalCreation";
 
 /**
  * Convex action to generate an onboarding plan by calling the FastAPI backend.
@@ -24,73 +24,6 @@ export const generatePlan = action({
         } catch (error: any) {
             console.error("[Convex Action] Failed to generate onboarding plan:", error.message);
             throw new Error(`Failed to generate onboarding plan: ${error.message}`);
-        }
-    },
-});
-
-export const getStrategicQuestions = action({
-    args: {
-        userId: v.string(),
-        wizardData: v.object({
-            goalDescription: v.string(),
-            motivation: v.string(),
-            availability: v.array(v.string()),
-            timeCommitment: v.string(),
-            accountabilityType: v.string(),
-            partnerName: v.optional(v.union(v.string(), v.null())),
-            targetDeadline: v.optional(v.union(v.string(), v.null())),
-            preferredCheckInStyle: v.optional(v.union(v.literal("quick_text"), v.literal("photo_recap"), v.literal("voice_note"))),
-        }),
-    },
-    handler: async (_ctx, args) => {
-        try {
-            return await postGoalCreation<any>(
-                "/api/v1/goal-creation/questions",
-                args as unknown as Record<string, unknown>,
-                { headers: getInternalApiHeaders() }
-            );
-        } catch (error: any) {
-            console.error("[Convex Action] Failed to fetch strategic questions:", error.message);
-            throw new Error(`Failed to fetch strategic questions: ${error.message}`);
-        }
-    },
-});
-
-export const createGoalPlan = action({
-    args: {
-        sessionId: v.string(),
-        userId: v.string(),
-        answers: v.record(v.string(), v.string()),
-    },
-    handler: async (_ctx, args) => {
-        try {
-            return await postGoalCreation<any>(
-                `/api/v1/goal-creation/${args.sessionId}/plan`,
-                {
-                    userId: args.userId,
-                    answers: args.answers,
-                },
-                { headers: getInternalApiHeaders() }
-            );
-        } catch (error: any) {
-            console.error("[Convex Action] Failed to create goal plan:", error.message);
-            throw new Error(`Failed to create goal plan: ${error.message}`);
-        }
-    },
-});
-
-export const evaluateGoalPlan = action({
-    args: {
-        plan: v.any(),
-    },
-    handler: async (_ctx, args) => {
-        try {
-            await postGoalCreation<void>("/api/v1/goal-creation/evaluate-plan", {
-                ...args.plan,
-            });
-        } catch (error: any) {
-            console.error("[Convex Action] Failed to evaluate goal plan:", error.message);
-            throw new Error(`Failed to evaluate goal plan: ${error.message}`);
         }
     },
 });

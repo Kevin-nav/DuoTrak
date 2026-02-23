@@ -93,7 +93,7 @@ export default function GoalsHome() {
   };
 
   const filteredGoals = useMemo(() => {
-    return goals.filter((goal) =>
+    return goals.filter((goal: Goal) =>
       goal.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (goal.category && goal.category.toLowerCase().includes(searchQuery.toLowerCase()))
     );
@@ -166,7 +166,7 @@ export default function GoalsHome() {
             className="space-y-4"
           >
             {filteredGoals.length > 0 ? (
-              filteredGoals.map((goal) => {
+              filteredGoals.map((goal: Goal) => {
                 const Icon = Target; // Placeholder
                 const progressPercentage = goal.total > 0 ? (goal.progress / goal.total) * 100 : 0;
 

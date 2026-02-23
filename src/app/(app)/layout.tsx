@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import TopNavbar from '@/components/layout/TopNavbar';
 import BottomNavbar from '@/components/layout/BottomNavbar';
+import NotificationToastListener from '@/components/NotificationToastListener';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { InvitationProvider } from '@/contexts/invitation-context';
 import { useUser } from '@/contexts/UserContext';
@@ -34,7 +35,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <RouteGuard>
       <InvitationProvider>
-        <div className="min-h-screen bg-off-white">
+        <div className="min-h-screen bg-landing-cream">
+          <NotificationToastListener />
           {!isFullscreenPartnerChat ? <TopNavbar /> : null}
           <main
             className={
@@ -59,7 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Link
                       href="/invite-partner"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-landing-espresso px-4 py-2.5 text-sm font-bold text-landing-cream hover:bg-landing-terracotta"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-landing-terracotta px-4 py-2.5 text-sm font-bold text-white hover:bg-landing-espresso"
                     >
                       <Users className="h-4 w-4" />
                       Invite Partner

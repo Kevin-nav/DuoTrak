@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export type JournalSpaceType = "private" | "shared";
 
 export function useJournalHome(spaceType: JournalSpaceType) {
-  const data = useQuery((api as any).journal.getHome, { spaceType, limit: 50 }) as
+  const data = useQuery((api as any).journal.getHome, { spaceType, limit: 1 }) as
     | { space: any; entries: any[]; message: string | null }
     | undefined;
 
@@ -16,6 +16,26 @@ export function useJournalHome(spaceType: JournalSpaceType) {
     entries: data?.entries ?? [],
     message: data?.message ?? null,
     isLoading: data === undefined,
+  };
+}
+
+export function useJournalEntries(spaceType: JournalSpaceType) {
+  const { results, status, loadMore } = usePaginatedQuery(
+    (api as any).journal.getEntriesPage,
+    { spaceType },
+    { initialNumItems: 12 }
+  ) as {
+    results: any[];
+    status: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
+    loadMore: (count: number) => void;
+  };
+
+  return {
+    entries: results ?? [],
+    loadMore,
+    hasMore: status === "CanLoadMore",
+    isLoading: status === "LoadingFirstPage",
+    isLoadingMore: status === "LoadingMore",
   };
 }
 

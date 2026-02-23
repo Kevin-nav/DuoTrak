@@ -26,8 +26,8 @@ export default function JournalEntriesList({
   return (
     <div className="space-y-3">
       {entries.map((entry) => (
-        <article key={entry._id} className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
+        <article key={entry._id} className="rounded-2xl border border-landing-clay bg-white p-3 shadow-sm sm:p-4">
+          <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:gap-3">
             <div className="min-w-0">
               <h3 className="truncate text-base font-bold text-landing-espresso">{entry.title}</h3>
               <p className="mt-1 text-xs text-landing-espresso-light">
@@ -59,7 +59,7 @@ export default function JournalEntriesList({
             <div className="mt-3 flex justify-end">
               <button
                 onClick={() => onSharePrivateEntry(entry._id)}
-                className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
+                className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream sm:w-auto"
               >
                 <Share2 className="h-3.5 w-3.5" />
                 Share with partner

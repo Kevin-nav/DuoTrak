@@ -39,30 +39,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     router.push(item.path)
   }
 
-  const handleMarkAsRead = (notificationId: string) => {
-    console.log("Mark as read:", notificationId)
-  }
-
-  const handleMarkAllAsRead = () => {
-    console.log("Mark all as read")
-  }
-
-  const handleNotificationAction = (notificationId: string, action: string) => {
-    console.log("Notification action:", notificationId, action)
-  }
-
-  const handleArchive = (notificationId: string) => {
-    console.log("Archive notification:", notificationId)
-  }
-
-  const handleSnooze = (notificationId: string, duration: string) => {
-    console.log("Snooze notification:", notificationId, duration)
-  }
-
-  const handleBulkAction = (notificationIds: string[], action: string) => {
-    console.log("Bulk action:", action, notificationIds)
-  }
-
   return (
     <div className="min-h-screen bg-[var(--theme-muted)] flex flex-col font-sans text-[var(--theme-foreground)]">
       {/* Top Navigation Bar */}
@@ -89,14 +65,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Right Side Icons */}
           <div className="flex items-center space-x-4">
-            <NotificationSystem
-              onMarkAsRead={handleMarkAsRead}
-              onMarkAllAsRead={handleMarkAllAsRead}
-              onNotificationAction={handleNotificationAction}
-              onArchive={handleArchive}
-              onSnooze={handleSnooze}
-              onBulkAction={handleBulkAction}
-            />
+            <NotificationSystem />
 
             <motion.button
               whileHover={{ scale: 1.05 }}

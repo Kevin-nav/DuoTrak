@@ -34,6 +34,17 @@ def _is_internal_request(request: Request) -> bool:
         return False
     return hmac.compare_digest(internal_api_key, settings.INTERNAL_API_SECRET)
 
+
+def _allow_dev_browser_goal_creation(request: Request) -> bool:
+    """
+    Development-only escape hatch for local browser-driven goal creation calls.
+    This is intentionally restricted to localhost origins and non-production env.
+    """
+    if str(getattr(settings, "ENVIRONMENT", "")).lower() not in {"development", "dev", "local"}:
+        return False
+    origin = (request.headers.get("origin") or "").lower()
+    return origin in {"http://localhost:3000", "http://127.0.0.1:3000"}
+
 async def get_optional_current_user_from_cookie(
     request: Request, db: AsyncSession = Depends(get_db)
 ) -> User | None:
@@ -178,12 +189,22 @@ async def get_strategic_questions(
     """
     try:
         is_internal = _is_internal_request(http_request)
-        if not is_internal and current_user is None:
-            raise HTTPException(status_code=401, detail="Not authenticated")
+        allow_dev_browser = _allow_dev_browser_goal_creation(http_request)
 
-        effective_user_id = request.user_id if is_internal else str(current_user.id)
-        if not is_internal and request.user_id != effective_user_id:
-            raise HTTPException(status_code=403, detail="User ID mismatch")
+        if is_internal:
+            effective_user_id = request.user_id
+        elif current_user is not None:
+            effective_user_id = str(current_user.id)
+            if request.user_id != effective_user_id:
+                raise HTTPException(status_code=403, detail="User ID mismatch")
+        elif allow_dev_browser:
+            effective_user_id = request.user_id
+            logger.warning(
+                "Using dev browser auth bypass for /goal-creation/questions (user_id=%s)",
+                effective_user_id,
+            )
+        else:
+            raise HTTPException(status_code=401, detail="Not authenticated")
 
         session_id = str(uuid.uuid4())
         user_context = await pinecone_service.get_user_context(effective_user_id)
@@ -252,12 +273,23 @@ async def create_goal_plan(
     """
     try:
         is_internal = _is_internal_request(http_request)
-        if not is_internal and current_user is None:
-            raise HTTPException(status_code=401, detail="Not authenticated")
+        allow_dev_browser = _allow_dev_browser_goal_creation(http_request)
 
-        effective_user_id = request.user_id if is_internal else str(current_user.id)
-        if not is_internal and request.user_id != effective_user_id:
-            raise HTTPException(status_code=403, detail="User ID mismatch")
+        if is_internal:
+            effective_user_id = request.user_id
+        elif current_user is not None:
+            effective_user_id = str(current_user.id)
+            if request.user_id != effective_user_id:
+                raise HTTPException(status_code=403, detail="User ID mismatch")
+        elif allow_dev_browser:
+            effective_user_id = request.user_id
+            logger.warning(
+                "Using dev browser auth bypass for /goal-creation/%s/plan (user_id=%s)",
+                session_id,
+                effective_user_id,
+            )
+        else:
+            raise HTTPException(status_code=401, detail="Not authenticated")
 
         plan_result = await duotrak_orchestrator.create_goal_plan_from_answers(
             session_id=session_id,

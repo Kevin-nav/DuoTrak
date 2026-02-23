@@ -30,17 +30,17 @@ export default function TypingIndicator({
                         className="w-6 h-6 rounded-full object-cover"
                     />
                 ) : (
-                    <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-[10px] font-semibold">
+                    <div className="w-6 h-6 bg-gradient-to-br from-landing-terracotta to-landing-espresso-light rounded-full flex items-center justify-center text-white text-[10px] font-semibold">
                         {partnerInitials || partnerName.charAt(0).toUpperCase()}
                     </div>
                 )}
             </div>
 
             {/* Typing bubble */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
+            <div className="bg-white border border-landing-clay rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
                 <div className="flex items-center gap-1">
                     <motion.div
-                        className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
+                        className="w-1.5 h-1.5 bg-landing-espresso-light rounded-full"
                         animate={{
                             scale: [1, 1.3, 1],
                             opacity: [0.5, 1, 0.5]
@@ -53,7 +53,7 @@ export default function TypingIndicator({
                         }}
                     />
                     <motion.div
-                        className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
+                        className="w-1.5 h-1.5 bg-landing-espresso-light rounded-full"
                         animate={{
                             scale: [1, 1.3, 1],
                             opacity: [0.5, 1, 0.5]
@@ -66,7 +66,7 @@ export default function TypingIndicator({
                         }}
                     />
                     <motion.div
-                        className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
+                        className="w-1.5 h-1.5 bg-landing-espresso-light rounded-full"
                         animate={{
                             scale: [1, 1.3, 1],
                             opacity: [0.5, 1, 0.5]

@@ -1,6 +1,173 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { api, internal } from "./_generated/api";
+import { uploadToR2 } from "./lib/r2";
+
+const ONLINE_WINDOW_MS = 70_000;
+const IMAGE_UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024;
+const VIDEO_UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024;
+
+function decodeBase64ToBytes(base64Data: string): Uint8Array {
+    if (typeof atob !== "function") {
+        throw new Error("Base64 decoder is unavailable in this runtime");
+    }
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function getAttachmentTypeFromMime(mimeType: string): "image" | "video" | "document" {
+    if (mimeType.startsWith("image/")) {
+        return "image";
+    }
+    if (mimeType.startsWith("video/")) {
+        return "video";
+    }
+    return "document";
+}
+
+function sanitizeFileName(fileName: string): string {
+    return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function normalizeLegacyAttachmentUrl(url: string): string {
+    const trimmed = url.trim().replace(/^['"]+|['"]+$/g, "");
+    const bucketName = (process.env.R2_BUCKET_NAME || "duotrak").toLowerCase();
+
+    try {
+        const parsed = new URL(trimmed);
+        const pathSegments = parsed.pathname.split("/").filter(Boolean);
+        if (pathSegments.length < 2) {
+            return trimmed;
+        }
+
+        // Legacy format:
+        // https://pub-<id>.r2.dev/<bucket>/<key>
+        // should become:
+        // https://pub-<id>.r2.dev/<key>
+        if (parsed.hostname.endsWith(".r2.dev") && pathSegments[0].toLowerCase() === bucketName) {
+            const key = pathSegments.slice(1).join("/");
+            return `${parsed.origin}/${key}`;
+        }
+
+        // Legacy backend format used API endpoint URLs, which are not browser-public:
+        // https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
+        // should become:
+        // https://pub-<account>.r2.dev/<key>
+        if (parsed.hostname.endsWith(".r2.cloudflarestorage.com") && pathSegments[0].toLowerCase() === bucketName) {
+            const accountId = parsed.hostname.split(".")[0];
+            const key = pathSegments.slice(1).join("/");
+            return `https://pub-${accountId}.r2.dev/${key}`;
+        }
+    } catch {
+        return trimmed;
+    }
+
+    return trimmed;
+}
+
+async function isUserOnline(
+    ctx: any,
+    userId: Id<"users">
+): Promise<boolean> {
+    const presence = await ctx.db
+        .query("user_presence")
+        .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+        .first();
+
+    if (!presence) {
+        return false;
+    }
+
+    return Date.now() - presence.last_heartbeat_at <= ONLINE_WINDOW_MS;
+}
+
+async function markIncomingMessagesAsDelivered(
+    ctx: any,
+    conversationId: Id<"conversations">,
+    recipientUserId: Id<"users">
+): Promise<number> {
+    const now = Date.now();
+    const pendingMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q: any) => q.eq("conversation_id", conversationId))
+        .filter((q: any) =>
+            q.and(
+                q.neq(q.field("sender_id"), recipientUserId),
+                q.eq(q.field("status"), "sent"),
+                q.neq(q.field("is_deleted"), true)
+            )
+        )
+        .collect();
+
+    await Promise.all(
+        pendingMessages.map((message: any) =>
+            ctx.db.patch(message._id, {
+                status: "delivered",
+                delivered_at: now,
+                updated_at: now,
+            })
+        )
+    );
+
+    return pendingMessages.length;
+}
+
+async function markConversationAsReadForUser(
+    ctx: any,
+    conversationId: Id<"conversations">,
+    currentUserId: Id<"users">
+): Promise<{ success: true; messagesMarkedRead: number }> {
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation) {
+        throw new Error("Conversation not found");
+    }
+
+    const partnership = await ctx.db.get(conversation.partnership_id);
+    if (!partnership) {
+        throw new Error("Partnership not found");
+    }
+
+    const now = Date.now();
+    const isUser1 = currentUserId === partnership.user1_id;
+
+    await ctx.db.patch(conversation._id, {
+        user1_unread_count: isUser1 ? 0 : conversation.user1_unread_count,
+        user2_unread_count: isUser1 ? conversation.user2_unread_count : 0,
+        user1_last_read_at: isUser1 ? now : conversation.user1_last_read_at,
+        user2_last_read_at: isUser1 ? conversation.user2_last_read_at : now,
+        updated_at: now,
+    });
+
+    const partnerId = isUser1 ? partnership.user2_id : partnership.user1_id;
+
+    const unreadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q: any) => q.eq("conversation_id", conversationId))
+        .filter((q: any) =>
+            q.and(
+                q.eq(q.field("sender_id"), partnerId),
+                q.neq(q.field("status"), "read")
+            )
+        )
+        .collect();
+
+    await Promise.all(
+        unreadMessages.map((msg: any) =>
+            ctx.db.patch(msg._id, {
+                status: "read",
+                read_at: now,
+                updated_at: now,
+            })
+        )
+    );
+
+    return { success: true, messagesMarkedRead: unreadMessages.length };
+}
 
 // ============================================
 // QUERIES
@@ -100,8 +267,16 @@ export const getMessages = query({
         const messagesWithSenders = await Promise.all(
             messages.map(async (message) => {
                 const sender = await ctx.db.get(message.sender_id);
+                const normalizedAttachments = message.attachments?.map((attachment: any) => ({
+                    ...attachment,
+                    url: normalizeLegacyAttachmentUrl(attachment.url),
+                    thumbnail_url: attachment.thumbnail_url
+                        ? normalizeLegacyAttachmentUrl(attachment.thumbnail_url)
+                        : attachment.thumbnail_url,
+                }));
                 return {
                     ...message,
+                    attachments: normalizedAttachments,
                     sender: sender ? {
                         id: sender._id,
                         name: sender.full_name || sender.nickname || "Unknown",
@@ -212,6 +387,9 @@ export const sendMessage = mutation({
         if (!partnership) {
             throw new Error("Partnership not found");
         }
+        const recipientUserId =
+            partnership.user1_id === currentUser._id ? partnership.user2_id : partnership.user1_id;
+        const recipientOnline = await isUserOnline(ctx, recipientUserId);
 
         // Build reply preview if replying
         let reply_preview = undefined;
@@ -240,7 +418,8 @@ export const sendMessage = mutation({
             attachments: args.attachments,
             reply_to_id: args.reply_to_id,
             reply_preview,
-            status: "sent",
+            status: recipientOnline ? "delivered" : "sent",
+            delivered_at: recipientOnline ? now : undefined,
             is_nudge: args.is_nudge,
             is_deleted: false,
             created_at: now,
@@ -263,6 +442,21 @@ export const sendMessage = mutation({
                 : conversation.user2_unread_count,
             updated_at: now,
         });
+
+        await ctx.scheduler.runAfter(
+            0,
+            (internal as any).notifications.dispatchEvent,
+            {
+                eventType: args.is_nudge ? "partner_nudge" : "new_message",
+                recipientUserId,
+                actorUserId: currentUser._id,
+                context: JSON.stringify({
+                    conversationId: String(conversation._id),
+                    preview: args.content.substring(0, 140),
+                    messageId: String(messageId),
+                }),
+            }
+        );
 
         return messageId;
     },
@@ -291,56 +485,32 @@ export const markAsRead = mutation({
             throw new Error("User not found");
         }
 
-        // Get conversation
-        const conversation = await ctx.db.get(args.conversation_id);
-        if (!conversation) {
-            throw new Error("Conversation not found");
-        }
-
-        // Get partnership
-        const partnership = await ctx.db.get(conversation.partnership_id);
-        if (!partnership) {
-            throw new Error("Partnership not found");
-        }
-
-        const now = Date.now();
-        const isUser1 = currentUser._id === partnership.user1_id;
-
-        // Reset unread count and update last read time
-        await ctx.db.patch(conversation._id, {
-            user1_unread_count: isUser1 ? 0 : conversation.user1_unread_count,
-            user2_unread_count: isUser1 ? conversation.user2_unread_count : 0,
-            user1_last_read_at: isUser1 ? now : conversation.user1_last_read_at,
-            user2_last_read_at: isUser1 ? conversation.user2_last_read_at : now,
-            updated_at: now,
-        });
-
-        // Update message statuses to 'read' for messages sent by partner
-        const partnerId = isUser1 ? partnership.user2_id : partnership.user1_id;
-
-        const unreadMessages = await ctx.db
-            .query("messages")
-            .withIndex("by_conversation", (q) => q.eq("conversation_id", args.conversation_id))
-            .filter((q) =>
-                q.and(
-                    q.eq(q.field("sender_id"), partnerId),
-                    q.neq(q.field("status"), "read")
-                )
-            )
-            .collect();
-
-        // Update each message to read
-        await Promise.all(
-            unreadMessages.map((msg) =>
-                ctx.db.patch(msg._id, {
-                    status: "read",
-                    read_at: now,
-                    updated_at: now,
-                })
-            )
+        const result = await markConversationAsReadForUser(
+            ctx,
+            args.conversation_id,
+            currentUser._id
         );
 
-        return { success: true, messagesMarkedRead: unreadMessages.length };
+        await ctx.scheduler.runAfter(
+            0,
+            (internal as any).notifications.clearChatNotificationsForConversation,
+            {
+                userId: currentUser._id,
+                conversationId: String(args.conversation_id),
+            }
+        );
+
+        return result;
+    },
+});
+
+export const markConversationReadForUser = mutation({
+    args: {
+        conversation_id: v.id("conversations"),
+        user_id: v.id("users"),
+    },
+    handler: async (ctx, args) => {
+        return await markConversationAsReadForUser(ctx, args.conversation_id, args.user_id);
     },
 });
 
@@ -581,14 +751,89 @@ export const heartbeat = mutation({
                 last_heartbeat_at: now,
                 updated_at: now,
             });
-            return existingPresence._id;
+        } else {
+            await ctx.db.insert("user_presence", {
+                user_id: currentUser._id,
+                last_heartbeat_at: now,
+                updated_at: now,
+            });
         }
 
-        return await ctx.db.insert("user_presence", {
-            user_id: currentUser._id,
-            last_heartbeat_at: now,
-            updated_at: now,
-        });
+        const [partnershipsAsUser1, partnershipsAsUser2] = await Promise.all([
+            ctx.db
+                .query("partnerships")
+                .withIndex("by_user1", (q) => q.eq("user1_id", currentUser._id))
+                .filter((q) => q.eq(q.field("status"), "active"))
+                .collect(),
+            ctx.db
+                .query("partnerships")
+                .withIndex("by_user2", (q) => q.eq("user2_id", currentUser._id))
+                .filter((q) => q.eq(q.field("status"), "active"))
+                .collect(),
+        ]);
+
+        const partnerships = [...partnershipsAsUser1, ...partnershipsAsUser2];
+        const conversations = await Promise.all(
+            partnerships.map((partnership) =>
+                ctx.db
+                    .query("conversations")
+                    .withIndex("by_partnership", (q) => q.eq("partnership_id", partnership._id))
+                    .first()
+            )
+        );
+
+        await Promise.all(
+            conversations
+                .filter((conversation): conversation is NonNullable<typeof conversation> => !!conversation)
+                .map((conversation) =>
+                    markIncomingMessagesAsDelivered(ctx, conversation._id, currentUser._id)
+                )
+        );
+
+        return { success: true };
+    },
+});
+
+/**
+ * Upload a chat attachment and return a permanent R2 URL.
+ */
+export const uploadAttachment = action({
+    args: {
+        file_name: v.string(),
+        content_type: v.string(),
+        base64_data: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Unauthorized");
+        }
+
+        const currentUser = await ctx.runQuery(api.users.current, {});
+        if (!currentUser?.id) {
+            throw new Error("User not found");
+        }
+
+        const fileBytes = decodeBase64ToBytes(args.base64_data);
+        const attachmentType = getAttachmentTypeFromMime(args.content_type);
+        if (attachmentType === "image" && fileBytes.byteLength > IMAGE_UPLOAD_LIMIT_BYTES) {
+            throw new Error("Image exceeds 10MB limit");
+        }
+        if (attachmentType === "video" && fileBytes.byteLength > VIDEO_UPLOAD_LIMIT_BYTES) {
+            throw new Error("Video exceeds 50MB limit");
+        }
+
+        const safeName = sanitizeFileName(args.file_name);
+        const key = `chat/${currentUser.id}/${Date.now()}-${safeName}`;
+        const url = await uploadToR2(key, fileBytes, args.content_type);
+
+        return {
+            type: attachmentType,
+            url,
+            name: args.file_name,
+            size: fileBytes.byteLength,
+            mime_type: args.content_type,
+        };
     },
 });
 
@@ -724,6 +969,73 @@ export const setTypingStatus = mutation({
             is_typing: args.is_typing,
             updated_at: now,
         });
+    },
+});
+
+export const setActiveConversationView = mutation({
+    args: {
+        conversation_id: v.id("conversations"),
+        is_active: v.boolean(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Unauthorized");
+        }
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q: any) => q.eq("firebase_uid", identity.subject))
+            .first();
+
+        if (!currentUser) {
+            throw new Error("User not found");
+        }
+
+        const now = Date.now();
+        const existing = await ctx.db
+            .query("chat_active_views")
+            .withIndex("by_conversation_user", (q: any) =>
+                q.eq("conversation_id", args.conversation_id).eq("user_id", currentUser._id)
+            )
+            .first();
+
+        if (existing) {
+            await ctx.db.patch(existing._id, {
+                is_active: args.is_active,
+                updated_at: now,
+            });
+            return existing._id;
+        }
+
+        return await ctx.db.insert("chat_active_views", {
+            conversation_id: args.conversation_id,
+            user_id: currentUser._id,
+            is_active: args.is_active,
+            updated_at: now,
+        });
+    },
+});
+
+export const isUserActivelyViewingConversation = internalQuery({
+    args: {
+        user_id: v.id("users"),
+        conversation_id: v.id("conversations"),
+    },
+    handler: async (ctx, args) => {
+        const view = await ctx.db
+            .query("chat_active_views")
+            .withIndex("by_conversation_user", (q: any) =>
+                q.eq("conversation_id", args.conversation_id).eq("user_id", args.user_id)
+            )
+            .first();
+
+        if (!view || !view.is_active) {
+            return false;
+        }
+
+        // Consider active if heartbeat is fresh within 20s.
+        return Date.now() - view.updated_at <= 20_000;
     },
 });
 

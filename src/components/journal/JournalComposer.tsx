@@ -55,7 +55,7 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
       initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
+      className="rounded-2xl border border-landing-clay bg-white p-3 shadow-sm sm:p-4"
     >
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-bold text-landing-espresso">
@@ -101,7 +101,7 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
           type="submit"
           disabled={isSaving}
           whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-landing-espresso px-3 py-2 text-sm font-semibold text-landing-cream disabled:opacity-70"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-landing-espresso px-3 py-2 text-sm font-semibold text-landing-cream disabled:opacity-70 sm:w-auto"
         >
           <Save className="h-4 w-4" />
           {isSaving ? "Saving..." : "Save Entry"}

@@ -48,7 +48,7 @@ export default function JournalPagesPanel({
         </h2>
       </div>
 
-      <form onSubmit={onSubmit} className="mb-3 flex gap-2">
+      <form onSubmit={onSubmit} className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -59,7 +59,7 @@ export default function JournalPagesPanel({
           type="submit"
           disabled={isSaving}
           whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-          className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2.5 py-2 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream disabled:opacity-70"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-landing-clay px-2.5 py-2 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream disabled:opacity-70 sm:w-auto"
         >
           <PlusSquare className="h-3.5 w-3.5" />
           {isSaving ? "Adding..." : "Add"}
@@ -77,7 +77,7 @@ export default function JournalPagesPanel({
               onClick={() => onOpenPage(page._id)}
               whileHover={reduceMotion ? undefined : { y: -1 }}
               whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-              className="rounded-lg border border-landing-clay bg-landing-cream px-3 py-2 text-sm text-landing-espresso"
+              className="w-full rounded-lg border border-landing-clay bg-landing-cream px-3 py-2 text-left text-sm text-landing-espresso"
             >
               {page.icon ? `${page.icon} ` : ""}
               {page.title}

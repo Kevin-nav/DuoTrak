@@ -3,12 +3,11 @@
 import { useConvexAuth, useMutation } from "convex/react";
 import { useEffect } from "react";
 import { api } from "../../convex/_generated/api";
-import { useAuth } from "@/app/ConvexClientProvider"; // Import the useAuth hook from the provider file or where it is defined
 
 export function UserSync() {
   const { isAuthenticated } = useConvexAuth();
   const storeUser = useMutation(api.users.store);
-  const { fetchAccessToken } = useAuth();
+  const heartbeat = useMutation((api as any).chat.heartbeat);
 
   useEffect(() => {
     async function sync() {
@@ -35,6 +34,34 @@ export function UserSync() {
 
     sync();
   }, [isAuthenticated, storeUser]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const sendHeartbeat = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+      heartbeat({}).catch((error: unknown) => {
+        console.error("Failed to send app heartbeat:", error);
+      });
+    };
+
+    sendHeartbeat();
+    const intervalId = window.setInterval(sendHeartbeat, 30_000);
+    window.addEventListener("focus", sendHeartbeat);
+    window.addEventListener("online", sendHeartbeat);
+    document.addEventListener("visibilitychange", sendHeartbeat);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", sendHeartbeat);
+      window.removeEventListener("online", sendHeartbeat);
+      document.removeEventListener("visibilitychange", sendHeartbeat);
+    };
+  }, [isAuthenticated, heartbeat]);
 
   return null;
 }

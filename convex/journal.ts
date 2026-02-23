@@ -1,6 +1,8 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 type SpaceType = "shared" | "private";
 
@@ -159,6 +161,57 @@ export const getHome = query({
       space,
       entries: entriesWithAuthors,
       message: null,
+    };
+  },
+});
+
+export const getEntriesPage = query({
+  args: {
+    spaceType: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const normalizedType = (args.spaceType === "shared" ? "shared" : "private") as SpaceType;
+
+    let space: any = null;
+    if (normalizedType === "private") {
+      space = await getOrCreatePrivateSpace(ctx, user._id);
+    } else {
+      space = await getOrCreateSharedSpace(ctx, user._id);
+      if (!space) {
+        return {
+          page: [],
+          isDone: true,
+          continueCursor: "",
+        };
+      }
+    }
+
+    const allowed = await canAccessSpace(ctx, user._id, space);
+    if (!allowed) {
+      throw new Error("Forbidden");
+    }
+
+    const paginated = await ctx.db
+      .query("journal_entries")
+      .withIndex("by_space_updated", (q: any) => q.eq("space_id", space._id))
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    const page = await Promise.all(
+      paginated.page.map(async (entry: any) => {
+        const author = (await ctx.db.get(entry.created_by)) as any;
+        return {
+          ...entry,
+          author_name: author?.full_name || author?.nickname || author?.email || "Unknown",
+        };
+      })
+    );
+
+    return {
+      ...paginated,
+      page,
     };
   },
 });
@@ -465,6 +518,23 @@ export const sharePrivateEntry = mutation({
       entry_date: sourceEntry.entry_date,
       updated_at: now,
     });
+
+    const partnerUserId =
+      partnership.user1_id === user._id ? partnership.user2_id : partnership.user1_id;
+
+    await ctx.scheduler.runAfter(
+      0,
+      (internal as any).notifications.dispatchEvent,
+      {
+        eventType: "journal_entry_shared",
+        recipientUserId: partnerUserId,
+        actorUserId: user._id,
+        context: JSON.stringify({
+          entryId: String(sharedEntryId),
+          title: sourceEntry.title,
+        }),
+      }
+    );
 
     return sharedEntryId;
   },

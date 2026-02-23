@@ -6,15 +6,15 @@
 
 :root {
   /* Light Theme - Beige/Warm Minimalist */
-  --theme-background: #F8F7F4;
-  --theme-foreground: #45413C;
-  --theme-muted: #F2EFE9;
-  --theme-muted-foreground: #918C88;
-  --theme-border: #DCD6CF;
-  --theme-primary: #8F7A6E;
+  --theme-background: #FFFCF7;
+  --theme-foreground: #4E4640;
+  --theme-muted: #F8F2EA;
+  --theme-muted-foreground: #8B8178;
+  --theme-border: #E7DDD0;
+  --theme-primary: #B8A693;
   --theme-primary-foreground: #FAFAFA;
-  --theme-secondary: #EBE9E4;
-  --theme-accent: #F0EBE6;
+  --theme-secondary: #F5EEE4;
+  --theme-accent: #F8F2EA;
   --theme-destructive: #EF4444;
   --theme-destructive-foreground: #FAFAFA;
 }
@@ -115,25 +115,25 @@ html {
 @layer base {
   :root {
     /* Light Mode HSL Values */
-    --background: 40 20% 97%;      /* #F8F7F4 */
-    --foreground: 30 8% 25%;       /* #45413C */
+    --background: 35 65% 98%;      /* #FFFCF7 */
+    --foreground: 28 10% 28%;      /* #4E4640 */
     --card: 0 0% 100%;             /* #FFFFFF */
-    --card-foreground: 30 8% 25%;  /* #45413C */
+    --card-foreground: 28 10% 28%; /* #4E4640 */
     --popover: 0 0% 100%;          /* #FFFFFF */
-    --popover-foreground: 30 8% 25%; /* #45413C */
-    --primary: 32 25% 45%;         /* #8F7A6E */
+    --popover-foreground: 28 10% 28%; /* #4E4640 */
+    --primary: 31 26% 65%;         /* #B8A693 */
     --primary-foreground: 0 0% 98%;/* #FAFAFA */
-    --secondary: 36 15% 90%;       /* #EBE9E4 */
-    --secondary-foreground: 30 8% 25%; /* #45413C */
-    --muted: 36 15% 92%;           /* #F2EFE9 */
-    --muted-foreground: 30 5% 55%; /* #918C88 */
-    --accent: 36 20% 94%;          /* #F0EBE6 */
-    --accent-foreground: 30 8% 20%;/* #403C38 */
+    --secondary: 35 45% 93%;       /* #F5EEE4 */
+    --secondary-foreground: 28 10% 28%; /* #4E4640 */
+    --muted: 35 45% 95%;           /* #F8F2EA */
+    --muted-foreground: 28 8% 51%; /* #8B8178 */
+    --accent: 35 45% 95%;          /* #F8F2EA */
+    --accent-foreground: 28 10% 30%;/* #544B44 */
     --destructive: 0 50% 50%;      /* #EF4444 */
     --destructive-foreground: 0 0% 98%; /* #FAFAFA */
-    --border: 36 15% 85%;          /* #DCD6CF */
-    --input: 36 15% 85%;           /* #DCD6CF */
-    --ring: 32 25% 45%;            /* #8F7A6E */
+    --border: 33 28% 86%;          /* #E7DDD0 */
+    --input: 33 28% 86%;           /* #E7DDD0 */
+    --ring: 31 26% 65%;            /* #B8A693 */
     
     /* Charts - Earthy Tones */
     --chart-1: 32 25% 45%;   /* Taupe */

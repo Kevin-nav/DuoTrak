@@ -58,11 +58,16 @@ export const createGoalPlan = async (sessionId: string, requestData: AnswersSubm
 const isDirectPythonFallbackEnabled = () => process.env.NEXT_PUBLIC_AI_DIRECT_PYTHON_FALLBACK === "true";
 
 const shouldFallbackToDirectApi = (error: unknown): boolean => {
-  const message = error instanceof Error ? error.message : String(error || "");
+  const message = (error instanceof Error ? error.message : String(error || "")).toLowerCase();
   return (
-    message.includes("INTERNAL_API_SECRET is required for Convex -> backend calls") ||
-    message.includes("Failed to fetch strategic questions: INTERNAL_API_SECRET is required") ||
-    message.includes("Failed to create goal plan: INTERNAL_API_SECRET is required")
+    message.includes("internal_api_secret is required for convex -> backend calls") ||
+    message.includes("failed to fetch strategic questions: internal_api_secret is required") ||
+    message.includes("failed to create goal plan: internal_api_secret is required") ||
+    message.includes("request to http://localhost:8000") && message.includes("forbidden") ||
+    message.includes("request to https://") && message.includes("forbidden") ||
+    message.includes("network error") ||
+    message.includes("fetch failed") ||
+    message.includes("econnrefused")
   );
 };
 

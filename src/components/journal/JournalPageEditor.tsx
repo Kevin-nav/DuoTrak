@@ -228,26 +228,28 @@ export default function JournalPageEditor() {
           initial={reduceMotion ? undefined : { opacity: 0, y: -6 }}
           animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: easing }}
-          className="sticky top-20 z-20 rounded-2xl border border-landing-clay bg-white/95 p-4 shadow-sm backdrop-blur-sm"
+          className="mb-3 rounded-2xl border border-landing-clay bg-white/95 p-3 shadow-sm sm:mb-4 sm:p-4"
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[auto_1fr_auto] sm:gap-3">
             <motion.button
               whileTap={reduceMotion ? undefined : { scale: 0.98 }}
               onClick={() => router.push("/journal")}
-              className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
+              className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream sm:px-2.5"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </motion.button>
-            <h1 className="truncate text-lg font-bold text-landing-espresso">{page?.title || "Journal Page"}</h1>
             <motion.button
               whileTap={reduceMotion ? undefined : { scale: 0.98 }}
               onClick={save}
-              className="inline-flex items-center gap-1 rounded-lg bg-landing-espresso px-3 py-1.5 text-xs font-semibold text-landing-cream"
+              className="justify-self-end inline-flex items-center gap-1 rounded-lg bg-landing-espresso px-2.5 py-1.5 text-xs font-semibold text-landing-cream sm:px-3"
             >
               <Save className="h-3.5 w-3.5" />
               Save
             </motion.button>
+            <h1 className="order-3 col-span-2 text-center text-base font-bold text-landing-espresso sm:order-none sm:col-span-1 sm:truncate sm:text-lg">
+              {page?.title || "Journal Page"}
+            </h1>
           </div>
         </motion.section>
 
@@ -276,11 +278,11 @@ export default function JournalPageEditor() {
                   whileDrag={reduceMotion ? undefined : { scale: 1.01, boxShadow: "0 14px 30px rgba(0,0,0,0.12)" }}
                   layout
                 >
-                  <motion.div layout className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <motion.div layout className="mb-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                       <button
                         type="button"
-                        className="rounded-md border border-landing-clay px-1.5 py-1 text-xs text-landing-espresso-light hover:bg-white touch-none"
+                        className="rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white touch-none sm:text-xs"
                         title="Drag to reorder"
                       >
                         <GripVertical className="h-3.5 w-3.5" />
@@ -288,7 +290,7 @@ export default function JournalPageEditor() {
                       <select
                         value={block.type}
                         onChange={(e) => updateBlock(index, { type: e.target.value as BlockInput["type"] })}
-                        className="rounded-md border border-landing-clay px-2 py-1 text-xs text-landing-espresso"
+                        className="min-w-0 flex-1 rounded-md border border-landing-clay px-2 py-1 text-[11px] text-landing-espresso sm:min-w-[9rem] sm:flex-none sm:text-xs"
                       >
                         <option value="paragraph">Paragraph</option>
                         <option value="heading">Heading</option>
@@ -297,12 +299,12 @@ export default function JournalPageEditor() {
                         <option value="callout">Callout</option>
                       </select>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:items-center sm:justify-end sm:gap-1.5">
                       <button
                         type="button"
                         onClick={() => moveBlock(index, index - 1)}
                         disabled={index === 0}
-                        className="rounded-md border border-landing-clay px-2 py-1 text-xs text-landing-espresso-light hover:bg-white disabled:opacity-50"
+                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white disabled:opacity-50 sm:px-2 sm:text-xs"
                       >
                         Up
                       </button>
@@ -310,14 +312,14 @@ export default function JournalPageEditor() {
                         type="button"
                         onClick={() => moveBlock(index, index + 1)}
                         disabled={index === draftBlocks.length - 1}
-                        className="rounded-md border border-landing-clay px-2 py-1 text-xs text-landing-espresso-light hover:bg-white disabled:opacity-50"
+                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white disabled:opacity-50 sm:px-2 sm:text-xs"
                       >
                         Down
                       </button>
                       <button
                         type="button"
                         onClick={() => removeBlock(index)}
-                        className="rounded-md border border-landing-clay px-2 py-1 text-xs text-landing-espresso-light hover:bg-white"
+                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white sm:px-2 sm:text-xs"
                       >
                         Remove
                       </button>

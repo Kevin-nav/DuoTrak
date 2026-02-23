@@ -112,15 +112,15 @@ export default function MessageBubble({
     const getStatusIcon = () => {
         switch (message.status) {
             case "sending":
-                return <Clock className="h-3 w-3 text-gray-400" />;
+                return <Clock className="h-3 w-3 text-landing-espresso-light" />;
             case "sent":
-                return <Check className="h-3 w-3 text-gray-400" />;
+                return <Check className="h-3 w-3 text-landing-espresso-light" />;
             case "delivered":
-                return <CheckCheck className="h-3 w-3 text-gray-400" />;
+                return <CheckCheck className="h-3 w-3 text-landing-espresso" />;
             case "read":
-                return <CheckCheck className="h-3 w-3 text-blue-400" />;
+                return <CheckCheck className="h-3 w-3 text-landing-sage" />;
             case "failed":
-                return <AlertCircle className="h-3 w-3 text-red-400" />;
+                return <AlertCircle className="h-3 w-3 text-red-600" />;
             default:
                 return null;
         }
@@ -144,8 +144,8 @@ export default function MessageBubble({
     };
 
     const bubbleClasses = isOwn
-        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
-        : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700";
+        ? "bg-gradient-to-br from-landing-terracotta to-[#D7A88B] text-white"
+        : "bg-white text-landing-espresso border border-landing-clay";
 
     return (
         <>
@@ -170,8 +170,8 @@ export default function MessageBubble({
                         className="absolute left-0 flex items-center justify-center w-10 h-10"
                         style={{ opacity: replyIconOpacity, scale: replyIconScale }}
                     >
-                        <div className="bg-gray-200 dark:bg-gray-700 rounded-full p-2">
-                            <Reply className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                        <div className="bg-landing-sand rounded-full p-2">
+                            <Reply className="h-4 w-4 text-landing-espresso-light" />
                         </div>
                     </motion.div>
                 )}
@@ -186,7 +186,7 @@ export default function MessageBubble({
                                 className="w-8 h-8 rounded-full object-cover"
                             />
                         ) : (
-                            <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                            <div className="w-8 h-8 bg-gradient-to-br from-landing-terracotta to-landing-espresso-light rounded-full flex items-center justify-center text-white text-xs font-semibold">
                                 {partnerInitials || partnerName.charAt(0).toUpperCase()}
                             </div>
                         )}
@@ -209,14 +209,14 @@ export default function MessageBubble({
                                 }
                             }}
                             className={`px-3 py-2 mb-1 rounded-t-2xl text-xs ${isOwn
-                                    ? "bg-blue-600 border-l-2 border-blue-300"
-                                    : "bg-gray-50 dark:bg-gray-700/50 border-l-2 border-gray-400"
+                                    ? "bg-[#CEA287] border-l-2 border-landing-sand"
+                                    : "bg-landing-cream border-l-2 border-landing-clay"
                                 } ${message.reply_to_id && onJumpToRepliedMessage ? "cursor-pointer hover:opacity-90" : ""}`}
                         >
-                            <span className={`font-medium ${isOwn ? "text-blue-200" : "text-gray-600 dark:text-gray-300"}`}>
+                            <span className={`font-medium ${isOwn ? "text-white/90" : "text-landing-espresso-light"}`}>
                                 {message.reply_preview.sender_name}
                             </span>
-                            <p className={`truncate ${isOwn ? "text-blue-100" : "text-gray-500 dark:text-gray-400"}`}>
+                            <p className={`truncate ${isOwn ? "text-white/85" : "text-landing-espresso-light/80"}`}>
                                 {message.reply_preview.content}
                             </p>
                         </button>
@@ -226,7 +226,7 @@ export default function MessageBubble({
                     <div
                         className={`relative px-4 py-2.5 shadow-sm ${bubbleClasses} ${message.reply_preview ? "rounded-b-2xl" : "rounded-2xl"
                             } ${isOwn && isLastInGroup ? "rounded-br-sm" : ""} ${!isOwn && isLastInGroup ? "rounded-bl-sm" : ""
-                            } ${isHighlighted ? "ring-2 ring-amber-400 dark:ring-amber-300" : ""}`}
+                            } ${isHighlighted ? "ring-2 ring-landing-gold" : ""}`}
                         onClick={handleDoubleTap}
                         onTouchStart={handleLongPressStart}
                         onTouchEnd={handleLongPressEnd}
@@ -243,7 +243,7 @@ export default function MessageBubble({
                     >
                         {/* Nudge indicator */}
                         {message.is_nudge && (
-                            <div className={`flex items-center gap-1 mb-1 text-xs ${isOwn ? "text-blue-200" : "text-gray-500 dark:text-gray-400"}`}>
+                            <div className={`flex items-center gap-1 mb-1 text-xs ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`}>
                                 <Hand className="h-3 w-3" />
                                 <span className="font-medium">Nudge</span>
                             </div>
@@ -251,7 +251,7 @@ export default function MessageBubble({
 
                         {/* Deleted message */}
                         {message.is_deleted ? (
-                            <p className={`text-sm italic ${isOwn ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}>
+                            <p className={`text-sm italic ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`}>
                                 {isOwn ? "You deleted this message" : "This message was deleted"}
                             </p>
                         ) : (
@@ -280,38 +280,36 @@ export default function MessageBubble({
 
                                                 {/* Video */}
                                                 {attachment.type === "video" && (
-                                                    <div className="relative rounded-lg overflow-hidden">
-                                                        <img
-                                                            src={attachment.thumbnail_url || "/placeholder-video.jpg"}
-                                                            alt={attachment.name || "Video"}
-                                                            className="w-full"
+                                                    <div className="rounded-lg overflow-hidden bg-black/60 border border-black/10">
+                                                        <video
+                                                            src={attachment.url}
+                                                            poster={attachment.thumbnail_url}
+                                                            controls
+                                                            preload="metadata"
+                                                            playsInline
+                                                            className="w-full max-h-[360px]"
                                                         />
-                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
-                                                                <Play className="h-6 w-6 text-gray-800 ml-1" />
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 )}
 
                                                 {/* Voice message */}
                                                 {attachment.type === "voice" && (
-                                                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isOwn ? "bg-blue-600" : "bg-gray-100 dark:bg-gray-700"}`}>
+                                                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isOwn ? "bg-landing-espresso-light" : "bg-landing-cream"}`}>
                                                         <button
                                                             onClick={() => setIsPlaying(!isPlaying)}
-                                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${isOwn ? "bg-blue-400" : "bg-gray-200 dark:bg-gray-600"}`}
+                                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${isOwn ? "bg-landing-terracotta" : "bg-landing-sand"}`}
                                                         >
                                                             {isPlaying ? (
-                                                                <Pause className={`h-5 w-5 ${isOwn ? "text-white" : "text-gray-700 dark:text-gray-200"}`} />
+                                                                <Pause className={`h-5 w-5 ${isOwn ? "text-white" : "text-landing-espresso"}`} />
                                                             ) : (
-                                                                <Play className={`h-5 w-5 ml-0.5 ${isOwn ? "text-white" : "text-gray-700 dark:text-gray-200"}`} />
+                                                                <Play className={`h-5 w-5 ml-0.5 ${isOwn ? "text-white" : "text-landing-espresso"}`} />
                                                             )}
                                                         </button>
                                                         <div className="flex-1">
-                                                            <div className="h-1 bg-gray-300 dark:bg-gray-500 rounded-full">
+                                                            <div className="h-1 bg-landing-clay rounded-full">
                                                                 <div className="h-full w-1/3 bg-current rounded-full" />
                                                             </div>
-                                                            <span className={`text-xs mt-1 ${isOwn ? "text-blue-200" : "text-gray-500"}`}>
+                                                            <span className={`text-xs mt-1 ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`}>
                                                                 {formatDuration(attachment.duration)}
                                                             </span>
                                                         </div>
@@ -320,18 +318,18 @@ export default function MessageBubble({
 
                                                 {/* Document */}
                                                 {attachment.type === "document" && (
-                                                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isOwn ? "bg-blue-600" : "bg-gray-100 dark:bg-gray-700"}`}>
-                                                        <FileText className={`h-8 w-8 ${isOwn ? "text-blue-200" : "text-gray-500 dark:text-gray-400"}`} />
+                                                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isOwn ? "bg-landing-espresso-light" : "bg-landing-cream"}`}>
+                                                        <FileText className={`h-8 w-8 ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`} />
                                                         <div className="flex-1 min-w-0">
-                                                            <p className={`text-sm font-medium truncate ${isOwn ? "text-white" : "text-gray-900 dark:text-white"}`}>
+                                                            <p className={`text-sm font-medium truncate ${isOwn ? "text-white" : "text-landing-espresso"}`}>
                                                                 {attachment.name || "Document"}
                                                             </p>
-                                                            <p className={`text-xs ${isOwn ? "text-blue-200" : "text-gray-500 dark:text-gray-400"}`}>
+                                                            <p className={`text-xs ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`}>
                                                                 {formatFileSize(attachment.size)}
                                                             </p>
                                                         </div>
                                                         <button className={`p-2 hover:bg-white/10 rounded-full transition-colors`}>
-                                                            <Download className={`h-4 w-4 ${isOwn ? "text-white" : "text-gray-600 dark:text-gray-300"}`} />
+                                                            <Download className={`h-4 w-4 ${isOwn ? "text-white" : "text-landing-espresso-light"}`} />
                                                         </button>
                                                     </div>
                                                 )}
@@ -344,7 +342,7 @@ export default function MessageBubble({
 
                         {/* Timestamp and status */}
                         <div className={`flex items-center gap-1.5 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-                            <span className={`text-[10px] ${isOwn ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}>
+                            <span className={`text-[10px] ${isOwn ? "text-white/80" : "text-landing-espresso-light"}`}>
                                 {format(new Date(message.created_at), "p")}
                             </span>
                             {isOwn && !message.is_deleted && getStatusIcon()}
@@ -357,8 +355,8 @@ export default function MessageBubble({
                             >
                                 <div
                                     className={`absolute ${isOwn ? "right-0" : "left-0"} bottom-0 w-4 h-4 ${isOwn
-                                            ? "bg-blue-600"
-                                            : "bg-white dark:bg-gray-800"
+                                            ? "bg-[#D7A88B]"
+                                            : "bg-white"
                                         }`}
                                     style={{
                                         clipPath: isOwn
@@ -385,12 +383,12 @@ export default function MessageBubble({
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    className="flex items-center gap-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-1.5 py-0.5 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                    className="flex items-center gap-0.5 bg-white border border-landing-clay rounded-full px-1.5 py-0.5 shadow-sm hover:bg-landing-cream transition-colors"
                                     onClick={() => onReaction(emoji)}
                                 >
                                     <span className="text-sm">{emoji}</span>
                                     {count > 1 && (
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">{count}</span>
+                                        <span className="text-xs text-landing-espresso-light">{count}</span>
                                     )}
                                 </motion.button>
                             ))}
@@ -422,7 +420,7 @@ export default function MessageBubble({
                 {/* Own avatar (optional, usually hidden) */}
                 {isOwn && showAvatar && false && (
                     <div className="flex-shrink-0 w-8 h-8">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                        <div className="w-8 h-8 bg-gradient-to-br from-landing-terracotta to-landing-espresso-light rounded-full flex items-center justify-center text-white text-xs font-semibold">
                             You
                         </div>
                     </div>

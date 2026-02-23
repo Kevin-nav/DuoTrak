@@ -12,7 +12,6 @@ import QuickWelcomeStep from './QuickWelcomeStep';
 import GoalSelectionStep from './GoalSelectionStep';
 import FirstTaskStep from './FirstTaskStep';
 import IntelligentGoalCreationStep from './IntelligentGoalCreationStep';
-import { GoalCreate } from '@/schemas/goal';
 import { Check, ArrowLeft, ArrowRight, Sparkles, Zap } from 'lucide-react';
 import FlowShell from '@/components/flow/FlowShell';
 import FlowActionBar from '@/components/flow/FlowActionBar';
@@ -147,7 +146,7 @@ export default function InviteeOnboardingFlow() {
   };
 
   const handleFinish = () => {
-    const { selectedGoal, generatedPlan } = onboardingData;
+    const { selectedGoal, generatedPlan, firstTask } = onboardingData;
     const goalToUse = selectedGoal;
 
     if (!goalToUse || !generatedPlan) {
@@ -155,20 +154,31 @@ export default function InviteeOnboardingFlow() {
       return;
     }
 
-    const goalData: GoalCreate = {
+    if (!firstTask.title.trim() || !firstTask.description.trim()) {
+      toast.error('Please complete your first task details.');
+      return;
+    }
+
+    const goalData = {
       name: goalToUse.title,
       category: generatedPlan.goalType,
       icon: null,
       color: null,
-      isHabit: goalToUse.frequency === 'daily' || goalToUse.frequency === 'weekly',
-      tasks: generatedPlan.tasks.map((task: any) => ({
-        name: task.taskName,
-        description: task.description,
-        repeatFrequency: task.repeatFrequency,
-      })),
+      is_habit: goalToUse.frequency === 'daily' || goalToUse.frequency === 'weekly',
     };
 
-    createGoal({ goal: goalData });
+    const taskData = {
+      name: firstTask.title.trim(),
+      description: firstTask.description.trim(),
+      due_date: firstTask.scheduledTime ? new Date(firstTask.scheduledTime).toISOString() : null,
+      repeat_frequency: goalToUse.frequency || 'daily',
+      verification_mode: firstTask.requiresVerification ? 'photo' : 'time-window',
+      verification_mode_reason: firstTask.requiresVerification
+        ? 'Photo verification required by user preference.'
+        : 'No photo required; task can be checked in by time window.',
+    };
+
+    createGoal({ goal: goalData, task: taskData });
   };
 
   const handleSkip = () => {

@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, isToday, isYesterday, isSameDay } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import {
     ArrowDown,
     Loader2,
@@ -264,7 +264,7 @@ export default function ChatInterface({
     // No conversation partner provided - demo/empty state
     if (!partnerId && !partnershipId) {
         return (
-            <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
+            <div className="flex flex-col h-full bg-gradient-to-b from-landing-cream to-landing-sand/35">
                 <ChatHeader
                     partnerName={partnerName}
                     partnerAvatar={partnerAvatar}
@@ -275,13 +275,13 @@ export default function ChatInterface({
                 />
                 <div className="flex-1 flex items-center justify-center p-8">
                     <div className="text-center max-w-md">
-                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 bg-landing-sand rounded-full flex items-center justify-center mx-auto mb-4">
                             <span className="text-3xl">💬</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        <h3 className="text-lg font-semibold text-landing-espresso mb-2">
                             Start chatting with {partnerName}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                        <p className="text-sm text-landing-espresso-light mb-6">
                             Send your first message to start your accountability journey together!
                         </p>
                     </div>
@@ -305,7 +305,7 @@ export default function ChatInterface({
     // Loading state
     if (isLoading) {
         return (
-            <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950">
+            <div className="flex flex-col h-full bg-gradient-to-b from-landing-cream to-landing-sand/35">
                 <ChatHeader
                     partnerName={partnerName}
                     partnerAvatar={partnerAvatar}
@@ -316,8 +316,8 @@ export default function ChatInterface({
                 />
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-3" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Loading messages...</p>
+                        <Loader2 className="h-8 w-8 animate-spin text-landing-terracotta mx-auto mb-3" />
+                        <p className="text-sm text-landing-espresso-light">Loading messages...</p>
                     </div>
                 </div>
             </div>
@@ -326,7 +326,7 @@ export default function ChatInterface({
 
     return (
         <div
-            className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950"
+            className="flex flex-col h-full bg-gradient-to-b from-landing-cream to-landing-sand/35"
         >
             {/* Header */}
             <ChatHeader
@@ -346,9 +346,9 @@ export default function ChatInterface({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800"
+                        className="bg-landing-gold/15 border-b border-landing-clay"
                     >
-                        <div className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 dark:text-amber-300">
+                        <div className="flex items-center gap-2 px-4 py-2 text-sm text-landing-espresso">
                             <WifiOff className="h-4 w-4 flex-shrink-0" />
                             <span>You're offline. Messages will send when you reconnect.</span>
                         </div>
@@ -365,13 +365,13 @@ export default function ChatInterface({
                 {/* Empty state */}
                 {messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center px-8">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center mb-4">
+                        <div className="w-20 h-20 bg-gradient-to-br from-landing-sand to-landing-clay rounded-full flex items-center justify-center mb-4">
                             <span className="text-3xl">👋</span>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        <h3 className="text-lg font-semibold text-landing-espresso mb-2">
                             Start a conversation
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                        <p className="text-sm text-landing-espresso-light max-w-xs">
                             Say hi to {partnerName}! Your messages will appear here.
                         </p>
                     </div>
@@ -385,7 +385,7 @@ export default function ChatInterface({
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-full shadow-sm border border-gray-200/50 dark:border-gray-700/50"
+                                className="bg-landing-cream/90 backdrop-blur-sm text-xs font-medium text-landing-espresso-light px-3 py-1.5 rounded-full shadow-sm border border-landing-clay/70"
                             >
                                 {getDateLabel(group.date)}
                             </motion.div>
@@ -421,14 +421,14 @@ export default function ChatInterface({
                                         className="flex justify-end mb-1"
                                     >
                                         <div className="max-w-[80%] sm:max-w-[70%]">
-                                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
+                                            <div className="bg-gradient-to-br from-landing-terracotta to-[#D7A88B] text-white rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
                                                 <p className="text-sm leading-relaxed">{optMsg.content}</p>
                                                 <div className="flex items-center justify-end gap-1 mt-1">
-                                                    <span className="text-xs text-blue-100">
+                                                    <span className="text-xs text-landing-sand">
                                                         {format(new Date(optMsg.created_at), "p")}
                                                     </span>
                                                     {optMsg.status === "sending" && (
-                                                        <Loader2 className="h-3 w-3 animate-spin text-blue-200" />
+                                                        <Loader2 className="h-3 w-3 animate-spin text-landing-sand" />
                                                     )}
                                                     {optMsg.status === "failed" && (
                                                         <button
@@ -498,11 +498,11 @@ export default function ChatInterface({
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         onClick={scrollToBottom}
-                        className="absolute bottom-24 right-4 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors z-20"
+                        className="absolute bottom-24 right-4 w-10 h-10 bg-white rounded-full shadow-lg border border-landing-clay flex items-center justify-center hover:bg-landing-cream transition-colors z-20"
                     >
-                        <ArrowDown className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                        <ArrowDown className="h-5 w-5 text-landing-espresso-light" />
                         {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 bg-landing-terracotta text-white text-xs font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
                                 {unreadCount > 99 ? "99+" : unreadCount}
                             </span>
                         )}

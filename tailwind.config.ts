@@ -44,18 +44,25 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
         // Custom Beige Theme Colors
-        "warm-white": "#F8F7F4",
-        "warm-grey": "#45413C",
-        "taupe": "#8F7A6E",
-        "taupe-light": "#BEA692",
-        "stone": "#DCD6CF",
-        "sand": "#EBE9E4",
-        "espresso": "#22201D",
-        "soft-white": "#FAFAFA",
+        "warm-white": "#FFFCF7",
+        "warm-grey": "#4E4640",
+        "taupe": "#B8A693",
+        "taupe-light": "#CFBFAF",
+        "stone": "#E7DDD0",
+        "sand": "#F5EEE4",
+        "espresso": "#4E4640",
+        "soft-white": "#FFFFFF",
+        // Legacy semantic aliases used across app pages/components
+        "off-white": "#FFFCF7",
+        "charcoal": "#4E4640",
+        "stone-gray": "#8B8178",
+        "cool-gray": "#E7DDD0",
+        "pearl-gray": "#F8F2EA",
+        "error-red": "#DC2626",
         // Semantic overrides
         "primary-blue": "hsl(var(--primary))", // Fallback for backwards compat
-        "primary-blue-hover": "hsl(32, 25%, 40%)",
-        "accent-light-blue": "hsl(36, 20%, 94%)", // Re-mapped to warm accent
+        "primary-blue-hover": "hsl(31, 24%, 57%)",
+        "accent-light-blue": "hsl(35, 45%, 95%)", // Re-mapped to neutral warm accent
 
         // Mascot Colors - Updated to Earthy Tones
         "poko-green": "#74A868",    // Earthy Sage Green
@@ -64,15 +71,15 @@ const config: Config = {
         "celebration-purple": "#A894C2", // Muted Lavender
         "accent-blue": "#7DA0BC",   // Muted Blue
 
-        // Landing Page Warm Beige Theme
-        "landing-cream": "#FAF7F2",
-        "landing-sand": "#E8E0D6",
-        "landing-clay": "#D4C8BB",
-        "landing-espresso": "#2C2520",
-        "landing-espresso-light": "#5C4F47",
-        "landing-terracotta": "#C4704B",
-        "landing-sage": "#7A8B6F",
-        "landing-gold": "#C49A3C",
+        // Shared Beige Theme (lighter, less brown-heavy)
+        "landing-cream": "#FFFCF7",
+        "landing-sand": "#F5EEE4",
+        "landing-clay": "#E7DDD0",
+        "landing-espresso": "#4E4640",
+        "landing-espresso-light": "#7A7067",
+        "landing-terracotta": "#D19A78",
+        "landing-sage": "#8AA083",
+        "landing-gold": "#D5B469",
       },
       borderRadius: {
         lg: "var(--radius)",

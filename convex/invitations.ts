@@ -132,10 +132,24 @@ export const markAsViewed = mutation({
       .first();
 
     if (invitation && !invitation.viewed_at) {
+      const viewedAt = Date.now();
       await ctx.db.patch(invitation._id, {
-        viewed_at: Date.now(),
-        updated_at: Date.now(),
+        viewed_at: viewedAt,
+        updated_at: viewedAt,
       });
+
+      await ctx.scheduler.runAfter(
+        0,
+        (internal as any).notifications.dispatchEvent,
+        {
+          eventType: "invitation_viewed",
+          recipientUserId: invitation.sender_id,
+          context: JSON.stringify({
+            receiverEmail: invitation.receiver_email,
+            viewedAt,
+          }),
+        }
+      );
     }
   },
 });
@@ -439,6 +453,20 @@ export const accept = mutation({
       updated_at: Date.now(),
     });
 
+    await ctx.scheduler.runAfter(
+      0,
+      (internal as any).notifications.dispatchEvent,
+      {
+        eventType: "invitation_accepted",
+        recipientUserId: sender._id,
+        actorUserId: receiver._id,
+        context: JSON.stringify({
+          invitationId: String(invitation._id),
+          partnershipId: String(partnershipId),
+        }),
+      }
+    );
+
     return partnershipId;
   },
 });
@@ -462,6 +490,7 @@ export const getEmailPayload = internalQuery({
     return {
       emailType: args.emailType,
       invitationId: invitation._id,
+      senderId: invitation.sender_id,
       receiverEmail: invitation.receiver_email,
       receiverName: invitation.receiver_name,
       senderName: sender.full_name ?? sender.email.split("@")[0] ?? "Your partner",
@@ -520,6 +549,16 @@ export const sendEmail = internalAction({
         status: "failed",
         error: missingKeyError,
       });
+      if (args.emailType === "invite") {
+        await ctx.runAction((internal as any).notifications.dispatchEvent, {
+          eventType: "invite_email_failed",
+          recipientUserId: payload.senderId,
+          context: JSON.stringify({
+            errorMessage: missingKeyError,
+            invitationId: String(args.invitationId),
+          }),
+        });
+      }
       return { ok: false, error: missingKeyError };
     }
 
@@ -581,6 +620,16 @@ export const sendEmail = internalAction({
         status: "failed",
         error: message,
       });
+      if (args.emailType === "invite") {
+        await ctx.runAction((internal as any).notifications.dispatchEvent, {
+          eventType: "invite_email_failed",
+          recipientUserId: payload.senderId,
+          context: JSON.stringify({
+            errorMessage: message,
+            invitationId: String(args.invitationId),
+          }),
+        });
+      }
       return { ok: false, error: message };
     }
   },

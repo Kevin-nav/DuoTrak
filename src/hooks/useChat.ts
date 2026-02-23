@@ -125,13 +125,52 @@ export function useChat(options: UseChatOptions) {
     const deleteMessageMutation = useMutation(api.chat.deleteMessage);
     const getOrCreateConversationMutation = useMutation(api.chat.getOrCreateConversation);
     const setTypingStatusMutation = useMutation((api as any).chat.setTypingStatus);
+    const setActiveConversationViewMutation = useMutation((api as any).chat.setActiveConversationView);
+
+    const messagesLength = messages?.length ?? 0;
 
     // Auto mark as read when messages change
     useEffect(() => {
-        if (autoMarkAsRead && conversation?._id && messages && messages.length > 0) {
+        if (autoMarkAsRead && conversation?._id && messagesLength > 0) {
             markAsReadMutation({ conversation_id: conversation._id }).catch(console.error);
         }
-    }, [autoMarkAsRead, conversation?._id, messages?.length, markAsReadMutation]);
+    }, [autoMarkAsRead, conversation?._id, messagesLength, markAsReadMutation]);
+
+    // Signal active conversation view to suppress duplicate chat notifications while viewing chat.
+    useEffect(() => {
+        if (!conversation?._id) return;
+
+        let cancelled = false;
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+
+        const heartbeat = async () => {
+            if (cancelled) return;
+            try {
+                await setActiveConversationViewMutation({
+                    conversation_id: conversation._id,
+                    is_active: true,
+                });
+            } catch (error) {
+                console.error("Failed to set active conversation view:", error);
+            }
+        };
+
+        void heartbeat();
+        intervalId = setInterval(() => {
+            void heartbeat();
+        }, 10_000);
+
+        return () => {
+            cancelled = true;
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            void setActiveConversationViewMutation({
+                conversation_id: conversation._id,
+                is_active: false,
+            }).catch(() => null);
+        };
+    }, [conversation?._id, setActiveConversationViewMutation]);
 
     const setTypingStatus = useCallback(
         async (nextIsTyping: boolean) => {

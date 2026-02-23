@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Expand, Minimize2, ArrowLeft, Phone, Video } from "lucide-react";
+import { Expand, Minimize2, ArrowLeft } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { ChatInterface } from "@/components/chat";
 import { useMutation, useQuery } from "convex/react";
@@ -84,7 +84,7 @@ export default function PartnerChatSurface({
 
   if (mode === "embedded") {
     return (
-      <section className="overflow-hidden rounded-2xl border border-landing-clay bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-landing-clay bg-landing-cream shadow-sm">
         <div className="flex items-center justify-between border-b border-landing-clay px-4 py-3">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-landing-espresso-light">Conversation</h2>
@@ -124,7 +124,7 @@ export default function PartnerChatSurface({
 
   return (
     <section className="flex h-[100dvh] flex-col bg-landing-cream">
-      <header className="border-b border-landing-clay bg-white/95 px-3 py-3 sm:px-4">
+      <header className="border-b border-landing-clay bg-landing-cream/95 px-3 py-3 sm:px-4">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
@@ -138,11 +138,11 @@ export default function PartnerChatSurface({
               <img
                 src={partnerAvatar || "/placeholder.svg"}
                 alt={partnerName}
-                className="h-9 w-9 rounded-full border border-landing-clay object-cover sm:h-10 sm:w-10"
+                className="h-9 w-9 rounded-full border border-landing-clay object-cover sm:h-10 sm:w-10 bg-white"
               />
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${
-                  derivedIsPartnerOnline ? "bg-landing-sage" : "bg-gray-400"
+                  derivedIsPartnerOnline ? "bg-landing-sage" : "bg-landing-espresso-light/60"
                 }`}
               />
             </div>
@@ -153,14 +153,6 @@ export default function PartnerChatSurface({
           </div>
 
           <div className="hidden items-center gap-2 sm:flex">
-            <button className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream">
-              <Phone className="h-3.5 w-3.5" />
-              Call
-            </button>
-            <button className="inline-flex items-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream">
-              <Video className="h-3.5 w-3.5" />
-              Video
-            </button>
             {onCloseOverlay ? (
               <button
                 onClick={onCloseOverlay}

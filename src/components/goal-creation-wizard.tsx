@@ -101,9 +101,9 @@ export default function GoalCreationWizard() {
   });
 
   const createGoal = useConvexMutation(api.goals.create);
-  const getStrategicQuestionsAction = useAction(api.onboarding.getStrategicQuestions);
-  const createGoalPlanAction = useAction(api.onboarding.createGoalPlan);
-  const evaluateGoalPlanAction = useAction(api.onboarding.evaluateGoalPlan);
+  const getStrategicQuestionsAction = useAction(api.goalCreation.getStrategicQuestions);
+  const createGoalPlanAction = useAction(api.goalCreation.createGoalPlan);
+  const evaluateGoalPlanAction = useAction(api.goalCreation.evaluateGoalPlan);
   const [isCreatingGoal, setIsCreatingGoal] = useState(false);
 
   const createGoalMutation = {
