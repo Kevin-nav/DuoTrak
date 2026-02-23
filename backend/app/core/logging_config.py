@@ -1,5 +1,6 @@
 import logging
 import sys
+import json
 from logging.handlers import TimedRotatingFileHandler
 
 # --- Constants ---
@@ -53,3 +54,11 @@ def setup_logging():
         root_logger.addHandler(file_handler)
 
     logging.info("Logging configured successfully.")
+
+
+def emit_goal_operation_event(event_name: str, **fields):
+    """
+    Emit structured goal-operation telemetry as a single JSON log line.
+    """
+    event = {"event_name": event_name, **fields}
+    logging.getLogger("goal_operation").info("goal_operation_event %s", json.dumps(event, default=str))

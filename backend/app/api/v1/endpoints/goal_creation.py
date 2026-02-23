@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.logging_config import emit_goal_operation_event
 from app.schemas.agent_crew import GoalWizardRequest, QuestionsResponse, AnswersSubmissionRequest, GoalPlanResponse, OnboardingPlanRequest, OnboardingPlanResponse, OnboardingPlanTask
 from app.services.gemini_config import GeminiModelConfig
 from app.services.pinecone_service import PineconeService
@@ -76,6 +77,11 @@ async def evaluate_plan_endpoint(
     This does not block the client and is used for logging and quality assurance.
     """
     logger.info("Received request to evaluate plan in background.")
+    emit_goal_operation_event(
+        "goal_plan_evaluation_requested",
+        plan_title=plan.title,
+        milestone_count=len(plan.milestones),
+    )
     background_tasks.add_task(run_evaluation_in_background, plan)
     return {"message": "Evaluation has been triggered in the background."}
 
@@ -194,6 +200,13 @@ async def get_strategic_questions(
             wizard_data=request.wizard_data.dict(),
             user_context=user_context,
         )
+        emit_goal_operation_event(
+            "goal_questions_generated",
+            session_id=session_id,
+            user_id=effective_user_id,
+            question_count=len(questions_result.get("questions", [])),
+            latency_ms=questions_result.get("execution_time_ms", 0),
+        )
         
         return QuestionsResponse(
             session_id=session_id,
@@ -261,6 +274,30 @@ async def create_goal_plan(
         # For now, we return it directly.
         
         adapted_result = adapt_goal_plan_response(session_id=session_id, raw_result=plan_result)
+        schedule_impact = adapted_result.get("goal_plan", {}).get("schedule_impact", {})
+        overload_percent = schedule_impact.get("overload_percent", 0)
+        conflict_flags = schedule_impact.get("conflict_flags", []) or []
+        fit_band = schedule_impact.get("fit_band", "unknown")
+
+        emit_goal_operation_event(
+            "goal_plan_generated",
+            session_id=session_id,
+            user_id=effective_user_id,
+            personalization_score=adapted_result.get("personalization_score", 0),
+            latency_ms=adapted_result.get("execution_metadata", {}).get("plan_generation_time_ms", 0),
+            overload_percent=overload_percent,
+            conflict_count=len(conflict_flags),
+            fit_band=fit_band,
+        )
+        if overload_percent > 0 or len(conflict_flags) > 0:
+            emit_goal_operation_event(
+                "goal_plan_overload_warning",
+                session_id=session_id,
+                user_id=effective_user_id,
+                overload_percent=overload_percent,
+                conflict_count=len(conflict_flags),
+                fit_band=fit_band,
+            )
         return GoalPlanResponse.model_validate(adapted_result)
     except ValueError as e:
         logger.warning(f"V3 Plan creation value error for session {session_id}: {e}")
