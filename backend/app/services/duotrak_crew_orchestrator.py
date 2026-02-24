@@ -13,10 +13,18 @@ from app.services.gemini_config import GeminiModelConfig
 from app.schemas.agent_crew import DuotrakGoalPlan
 from app.services.goal_creation_session_store import GoalCreationSessionStore
 from app.core.redis_config import redis_client
+from app.core.config import settings
 from app.personalization.outcome_profile_store import OutcomeProfileStore
 from app.personalization.context_engine import context_engine
 
 logger = logging.getLogger(__name__)
+
+
+def _allow_goal_session_memory_fallback() -> bool:
+    env = str(getattr(settings, "ENVIRONMENT", "")).strip().lower()
+    explicit = bool(getattr(settings, "GOAL_CREATION_ALLOW_IN_MEMORY_SESSION_FALLBACK", False))
+    return explicit or env in {"development", "dev", "local"}
+
 
 class UserHistoryTool(BaseTool):
     name: str = "User History Lookup"
@@ -50,6 +58,7 @@ class DuotrakCrewOrchestrator:
         self.session_store = session_store or GoalCreationSessionStore(
             redis_client=redis_client,
             default_ttl_seconds=session_ttl_seconds,
+            allow_in_memory_fallback=_allow_goal_session_memory_fallback(),
         )
         self.session_ttl_seconds = session_ttl_seconds
         self.outcome_profile_store = OutcomeProfileStore(pinecone_service)
@@ -81,7 +90,7 @@ class DuotrakCrewOrchestrator:
             
             profiling_task = Task(
                 description=f"""
-                Analyze the user's wizard input and their historical context to create a concise behavioral profile.
+                Analyze the user's wizard input and historical context to produce a compact profile.
 
                 **Wizard Input:**
                 {json.dumps(wizard_data, indent=2)}
@@ -89,24 +98,60 @@ class DuotrakCrewOrchestrator:
                 **Historical Context:**
                 {json.dumps(enhanced_context, indent=2)}
 
-                **IMPORTANT INSTRUCTION:**
+                **IMPORTANT INSTRUCTION**
                 First, check if the `historical_goals` list in the Historical Context is empty.
-                - If it IS EMPTY, treat this as a NEW USER. Interpret the `learning_confidence` as a neutral starting point, not a sign of low confidence. Your analysis should focus on their stated goal and motivation.
+                - If it IS EMPTY, treat this as a NEW USER. Interpret `learning_confidence` as neutral baseline.
                 - If it IS NOT EMPTY, analyze their past performance and confidence to identify patterns.
+
+                Output STRICT JSON only:
+                {{
+                  "archetype": "2-4 words",
+                  "key_motivators": ["short phrase", "short phrase"],
+                  "risk_factors": ["short phrase", "short phrase"],
+                  "confidence_level": 0.0
+                }}
+                Keep values concise. No paragraphs.
                 """,
-                expected_output="A concise user behavioral profile including archetype, key motivators, and potential risks.",
+                expected_output="Strict JSON profile with concise fields and no prose.",
                 agent=profiler
             )
             
             question_task = Task(
-                description="Based on the user profile, generate exactly 3 strategic questions with suggested answers to optimize goal planning.",
-                expected_output="A JSON object containing a 'questions' list, where each item has 'question', 'question_key', 'context', and 'suggested_answers'.",
+                description="""
+                Based on the user profile, generate exactly 3 strategic questions.
+                Rules:
+                - Keep each question short and direct (<= 16 words).
+                - Keep each context short (<= 12 words).
+                - suggested_answers are examples only, not required user choices.
+                - Include 3-4 suggested answers per question, each <= 8 words.
+                - Avoid long paragraphs and avoid duplicate themes.
+
+                Output STRICT JSON only:
+                {
+                  "questions": [
+                    {
+                      "question": "Short question text?",
+                      "question_key": "snake_case_key",
+                      "context": "Short reason",
+                      "suggested_answers": ["Example", "Example", "Example"],
+                      "allow_custom_answer": true
+                    }
+                  ]
+                }
+                """,
+                expected_output="Strict JSON with exactly 3 concise questions and concise suggestion options.",
                 agent=questioner,
                 context=[profiling_task]
             )
             
-            crew = Crew(agents=[profiler, questioner], tasks=[profiling_task, question_task], process=Process.sequential)
-            result = await asyncio.to_thread(crew.kickoff)
+            crew = Crew(
+                agents=[profiler, questioner],
+                tasks=[profiling_task, question_task],
+                process=Process.sequential,
+                verbose=False,
+            )
+            timeout_seconds = int(getattr(settings, "GOAL_QUESTIONS_TIMEOUT_SECONDS", 30))
+            await asyncio.wait_for(asyncio.to_thread(crew.kickoff), timeout=timeout_seconds)
             
             execution_time_ms = (time.time() - start_time) * 1000
             
@@ -127,11 +172,28 @@ class DuotrakCrewOrchestrator:
             
             parsed_profile = self._safe_json_loads(profile_output)
             parsed_questions = self._safe_json_loads(questions_output)
+            normalized_questions = self._normalize_questions(
+                parsed_questions.get("questions", []),
+                wizard_data=wizard_data,
+                user_context=enhanced_context,
+            )
 
             return {
                 "user_profile_summary": parsed_profile if parsed_profile else self._create_fallback_profile(wizard_data),
-                "questions": parsed_questions.get("questions", self._create_fallback_questions(wizard_data, enhanced_context)),
+                "questions": normalized_questions,
                 "execution_time_ms": execution_time_ms
+            }
+        except asyncio.TimeoutError:
+            execution_time_ms = (time.time() - start_time) * 1000
+            logger.warning(
+                "Strategic question generation timed out after %ss for user_id=%s; returning fallback questions.",
+                int(getattr(settings, "GOAL_QUESTIONS_TIMEOUT_SECONDS", 30)),
+                user_id,
+            )
+            return {
+                "user_profile_summary": self._create_fallback_profile(wizard_data),
+                "questions": self._create_fallback_questions(wizard_data, user_context),
+                "execution_time_ms": execution_time_ms,
             }
         except Exception as e:
             logger.error(f"Error generating questions: {e}")
@@ -244,8 +306,8 @@ class DuotrakCrewOrchestrator:
             }
 
     def _create_question_generation_agents(self):
-        profiler = Agent(role='User Profiling Specialist', goal='Analyze user data to create actionable behavioral profiles.', backstory='Expert in rapid user assessment.', llm=self.gemini_config.get_model_for_agent('user_profiling_specialist'), verbose=True)
-        questioner = Agent(role='Strategic Question Designer', goal='Create insightful questions to maximize goal plan quality.', backstory='Master question designer.', llm=self.gemini_config.get_model_for_agent('strategic_question_designer'), verbose=True)
+        profiler = Agent(role='User Profiling Specialist', goal='Analyze user data to create actionable behavioral profiles.', backstory='Expert in rapid user assessment.', llm=self.gemini_config.get_model_for_agent('user_profiling_specialist'), verbose=False)
+        questioner = Agent(role='Strategic Question Designer', goal='Create insightful questions to maximize goal plan quality.', backstory='Master question designer.', llm=self.gemini_config.get_model_for_agent('strategic_question_designer'), verbose=False)
         return profiler, questioner
 
     def _create_goal_planning_agents(self):
@@ -270,7 +332,102 @@ class DuotrakCrewOrchestrator:
         return {"archetype": "Steady Climber", "key_motivators": ["Personal improvement"], "risk_factors": ["Time management"], "confidence_level": 0.7}
 
     def _create_fallback_questions(self, wizard_data: Dict[str, Any], user_context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return [{"question": "What's the biggest obstacle you anticipate?", "question_key": "biggest_obstacle", "context": "Helps create proactive solutions.", "suggested_answers": ["Finding time", "Staying motivated"]}]
+        goal = (wizard_data or {}).get("goal_description", "this goal")
+        return [
+            {
+                "question": f"What is your most realistic daily slot for {goal}?",
+                "question_key": "daily_time_slot",
+                "context": "Locks your routine early.",
+                "suggested_answers": ["Before work", "Lunch break", "Evening block", "Weekend morning"],
+                "allow_custom_answer": True,
+            },
+            {
+                "question": "What usually blocks you from staying consistent?",
+                "question_key": "consistency_blocker",
+                "context": "Prepares fallback actions.",
+                "suggested_answers": ["Low energy", "Busy schedule", "Forgetfulness", "Low motivation"],
+                "allow_custom_answer": True,
+            },
+            {
+                "question": "How should your partner best support check-ins?",
+                "question_key": "partner_support_style",
+                "context": "Aligns accountability style.",
+                "suggested_answers": ["Quick reminders", "Photo proof prompts", "Weekly recap", "Encouragement only"],
+                "allow_custom_answer": True,
+            },
+        ]
+
+    def _normalize_questions(
+        self,
+        raw_questions: Any,
+        wizard_data: Dict[str, Any],
+        user_context: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        if not isinstance(raw_questions, list):
+            return self._create_fallback_questions(wizard_data, user_context)
+
+        def _truncate(text: str, max_words: int) -> str:
+            parts = (text or "").strip().split()
+            if not parts:
+                return ""
+            if len(parts) <= max_words:
+                return " ".join(parts)
+            return " ".join(parts[:max_words]).rstrip(".,;:") + "..."
+
+        def _snake_case(text: str, fallback: str) -> str:
+            base = "".join(ch.lower() if ch.isalnum() else "_" for ch in (text or ""))
+            parts = [p for p in base.split("_") if p]
+            if not parts:
+                return fallback
+            return "_".join(parts[:4])
+
+        normalized: List[Dict[str, Any]] = []
+        for idx, item in enumerate(raw_questions[:3]):
+            if not isinstance(item, dict):
+                continue
+            question = _truncate(str(item.get("question", "")).strip(), 16)
+            context = _truncate(str(item.get("context", "")).strip(), 12)
+            if not question:
+                continue
+
+            raw_suggestions = item.get("suggested_answers", [])
+            suggestions: List[str] = []
+            if isinstance(raw_suggestions, list):
+                for s in raw_suggestions[:4]:
+                    if not isinstance(s, str):
+                        continue
+                    short = _truncate(s.strip(), 8)
+                    if short:
+                        suggestions.append(short)
+
+            if len(suggestions) < 3:
+                fallback = self._create_fallback_questions(wizard_data, user_context)
+                suggestions = fallback[min(idx, len(fallback) - 1)]["suggested_answers"]
+
+            normalized.append(
+                {
+                    "question": question,
+                    "question_key": _snake_case(
+                        str(item.get("question_key", "")).strip(),
+                        f"question_{idx + 1}",
+                    ),
+                    "context": context or "Helps personalize your plan.",
+                    "suggested_answers": suggestions[:4],
+                    "allow_custom_answer": True,
+                }
+            )
+
+        if len(normalized) < 3:
+            fallback = self._create_fallback_questions(wizard_data, user_context)
+            for q in fallback:
+                if len(normalized) >= 3:
+                    break
+                existing = {n["question_key"] for n in normalized}
+                if q["question_key"] in existing:
+                    continue
+                normalized.append(q)
+
+        return normalized[:3]
 
     def _create_fallback_plan(self, context: Dict[str, Any]) -> Dict[str, Any]:
         return {

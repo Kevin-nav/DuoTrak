@@ -24,16 +24,13 @@ export default function ProfileSetupStep({ data, updateData, onValidationChange,
   const [fullName, setFullName] = useState(data.profile.fullName || userDetails?.full_name || '');
   const [nickname, setNickname] = useState(data.profile.nickname || '');
   const [bio, setBio] = useState(data.profile.bio || userDetails?.bio || '');
-  const [timezone, setTimezone] = useState(data.profile.timezone || userDetails?.timezone || 'UTC');
+  const [detectedTimezone, setDetectedTimezone] = useState(userDetails?.timezone || 'UTC');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Auto-detect and set timezone if it's the default value
-    if (timezone === 'UTC') {
-      const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (detectedTimezone) {
-        setTimezone(detectedTimezone);
-      }
+    const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (browserTimezone) {
+      setDetectedTimezone(browserTimezone);
     }
   }, []); // Run only once on mount
 
@@ -43,13 +40,13 @@ export default function ProfileSetupStep({ data, updateData, onValidationChange,
   }, [fullName, onValidationChange]);
 
   useEffect(() => {
-    updateData({ profile: { fullName, nickname, bio, timezone } });
-  }, [fullName, nickname, bio, timezone, updateData]);
+    updateData({ profile: { fullName, nickname, bio } });
+  }, [fullName, nickname, bio, updateData]);
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
-      await updateUser({ full_name: fullName, nickname, bio, timezone });
+      await updateUser({ full_name: fullName, nickname, bio, timezone: detectedTimezone });
       toast.success('Profile saved!');
       onComplete();
     } catch (error: any) {
@@ -94,15 +91,6 @@ export default function ProfileSetupStep({ data, updateData, onValidationChange,
             rows={3}
             className="resize-none"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 text-left">Timezone</label>
-          <Input
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value)}
-            placeholder="e.g., UTC, America/New_York"
-          />
-          <p className="text-xs text-gray-500 mt-1 text-left">This helps with task scheduling and notifications.</p>
         </div>
       </div>
 

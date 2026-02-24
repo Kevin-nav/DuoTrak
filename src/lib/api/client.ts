@@ -206,8 +206,8 @@ export class ApiClient {
     return this.patch('/api/v1/users/me/complete-onboarding');
   }
 
-  async createOnboardingGoal(goal: any, task: any): Promise<any> {
-    return this.post('/api/v1/goals/onboarding', { goal, task });
+  async createOnboardingGoal(goal: any, task: any, additionalTasks?: any[]): Promise<any> {
+    return this.post('/api/v1/goals/onboarding', { goal, task, additional_tasks: additionalTasks });
   }
 }
 

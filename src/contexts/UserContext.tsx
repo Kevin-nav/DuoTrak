@@ -41,6 +41,13 @@ export interface UserDetails {
     partner_full_name: string | null;
     partner_nickname: string | null;
     partner_profile_picture_url?: string | null;
+    partner_email?: string | null;
+    partner_bio?: string | null;
+    partner_timezone?: string | null;
+    partner_current_streak?: number | null;
+    partner_longest_streak?: number | null;
+    partner_total_tasks_completed?: number | null;
+    partner_goals_conquered?: number | null;
     nickname: string | null;
     sent_invitation: any | null;
     received_invitation: any | null;
@@ -103,8 +110,10 @@ function checkMockMode(): boolean {
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [isMasterAccess, setIsMasterAccess] = useState(false);
     const [isMockMode, setIsMockMode] = useState(false);
+    const [lastTimezoneSynced, setLastTimezoneSynced] = useState<string | null>(null);
 
     // Convex Mutations
+    const updateUserMutation = useMutation(api.users.update);
     const sendInvitationMutation = useMutation(api.invitations.create);
     const withdrawInvitationMutation = useMutation(api.invitations.withdraw);
     const nudgePartnerMutation = useMutation(api.invitations.nudge);
@@ -146,6 +155,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         partner_full_name: convexUser.partner_full_name ?? null,
         partner_nickname: convexUser.partner_nickname ?? null,
         partner_profile_picture_url: convexUser.partner_profile_picture_url ?? null,
+        partner_email: convexUser.partner_email ?? null,
+        partner_bio: convexUser.partner_bio ?? null,
+        partner_timezone: convexUser.partner_timezone ?? null,
+        partner_current_streak: convexUser.partner_current_streak ?? 0,
+        partner_longest_streak: convexUser.partner_longest_streak ?? 0,
+        partner_total_tasks_completed: convexUser.partner_total_tasks_completed ?? 0,
+        partner_goals_conquered: convexUser.partner_goals_conquered ?? 0,
         nickname: convexUser.nickname ?? null,
         // Default missing fields
         notifications_enabled: convexUser.notifications_enabled ?? true,
@@ -157,6 +173,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } : (convexUser === null ? null : undefined); // null means loaded & not found (or not auth), undefined means loading
 
     const isLoading = convexUser === undefined;
+
+    useEffect(() => {
+        if (!userDetails || typeof window === "undefined") return;
+
+        let detectedTimezone: string | null = null;
+        try {
+            detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+        } catch {
+            detectedTimezone = null;
+        }
+        if (!detectedTimezone) return;
+
+        if (lastTimezoneSynced === detectedTimezone) return;
+
+        const storedTimezone = userDetails.timezone || "UTC";
+        if (storedTimezone === detectedTimezone) {
+            setLastTimezoneSynced(detectedTimezone);
+            return;
+        }
+
+        updateUserMutation({ timezone: detectedTimezone })
+            .then(() => {
+                setLastTimezoneSynced(detectedTimezone);
+            })
+            .catch((error) => {
+                console.error("Auto timezone sync failed:", error);
+            });
+    }, [userDetails, updateUserMutation, lastTimezoneSynced]);
 
     const signOut = async () => {
         if (isMasterAccess) {

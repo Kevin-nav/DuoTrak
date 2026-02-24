@@ -13,9 +13,14 @@ def create_orchestrator(
     session_store: Optional[GoalCreationSessionStore] = None,
 ):
     ttl = int(getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900))
+    environment = str(getattr(settings, "ENVIRONMENT", "")).strip().lower()
+    allow_in_memory_fallback = bool(
+        getattr(settings, "GOAL_CREATION_ALLOW_IN_MEMORY_SESSION_FALLBACK", False)
+    ) or environment in {"development", "dev", "local"}
     resolved_store = session_store or GoalCreationSessionStore(
         redis_client=redis_client,
         default_ttl_seconds=ttl,
+        allow_in_memory_fallback=allow_in_memory_fallback,
     )
 
     selected = str(getattr(settings, "AI_ORCHESTRATOR", "crewai")).strip().lower()

@@ -12,9 +12,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/api/client';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 export default function FirstGoalWizard() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { mutate: completeOnboarding, isPending } = useMutation({
     mutationFn: () => apiClient.completePartneredOnboarding(),
@@ -22,7 +25,6 @@ export default function FirstGoalWizard() {
       toast.success('Onboarding complete!', {
         description: "You can now explore your dashboard.",
       });
-      // Refetch user data to update status and close the wizard
       queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
     },
     onError: (error) => {
@@ -37,9 +39,9 @@ export default function FirstGoalWizard() {
   };
 
   const handleCreateGoal = () => {
-    // For now, creating a goal will also complete the onboarding.
-    // In the future, this would open a goal creation form.
+    // Complete onboarding first, then navigate to the goal creation wizard
     completeOnboarding();
+    router.push('/goals/new');
   };
 
   return (
@@ -48,21 +50,31 @@ export default function FirstGoalWizard() {
         <DialogHeader>
           <DialogTitle className="text-2xl">Welcome to your partnership!</DialogTitle>
           <DialogDescription>
-            You and your partner are ready to start achieving your goals together. Create your first shared goal now.
+            You and your partner are ready to start achieving your goals together. Create your first goal now — it only takes a minute.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          {/* Placeholder for a future goal creation form */}
-          <p className="text-center text-stone-gray">
-            (A simplified goal creation form will go here)
-          </p>
+        <div className="py-4 space-y-3">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
+            <Sparkles className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-900">AI-powered goal planning</p>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Choose from templates or describe your goal — we&apos;ll create a personalized plan with daily tasks.
+              </p>
+            </div>
+          </div>
         </div>
         <DialogFooter className="sm:justify-between">
           <Button variant="ghost" onClick={handleSkip} disabled={isPending}>
             Skip for now
           </Button>
           <Button onClick={handleCreateGoal} disabled={isPending}>
-            {isPending ? 'Saving...' : 'Create First Goal'}
+            {isPending ? 'Saving...' : (
+              <>
+                Create First Goal
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

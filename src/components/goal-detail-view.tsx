@@ -1,12 +1,16 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Camera, Clock, CheckCircle, Upload, X } from "lucide-react"
+import { ArrowLeft, Clock, CheckCircle, Upload, X } from "lucide-react"
 import { useState } from "react"
 import MouseGlowEffect from "./mouse-glow-effect"
 
 import { DomainGoal } from "../../packages/domain/src/goals";
 import { useRouter } from "next/navigation";
+import { getGoalProgressModel, inferGoalArchetype } from "@/lib/goals/progress-metrics";
+import { useUpdateGoal } from "@/hooks/useGoals";
+import { validateArchetypeProfile } from "@/lib/goals/archetype-validators";
+import { useToast } from "@/hooks/use-toast";
 
 interface GoalDetailViewProps {
   goal: DomainGoal;
@@ -14,15 +18,39 @@ interface GoalDetailViewProps {
 
 export default function GoalDetailView({ goal }: GoalDetailViewProps) {
   const router = useRouter();
+  const updateGoal = useUpdateGoal(goal.id);
+  const { toast } = useToast();
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
-  const [selectedTask, setSelectedTask] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  const handleMarkComplete = (taskId: string) => {
+  const archetype = inferGoalArchetype(goal);
+  const progressModel = getGoalProgressModel(goal);
+  const initialProfile = (() => {
+    try {
+      return goal.goalProfileJson ? JSON.parse(goal.goalProfileJson) : {};
+    } catch {
+      return {};
+    }
+  })();
+  const [profileDraft, setProfileDraft] = useState<Record<string, string>>({
+    currency: String(initialProfile.currency || "USD"),
+    targetAmount: String(initialProfile.targetAmount || ""),
+    currentAmount: String(initialProfile.currentAmount || ""),
+    weeklyContribution: String(initialProfile.weeklyContribution || ""),
+    targetLongRunKm: String(initialProfile.targetLongRunKm || ""),
+    currentLongRunKm: String(initialProfile.currentLongRunKm || ""),
+    totalWeeks: String(initialProfile.totalWeeks || ""),
+    completedWeeks: String(initialProfile.completedWeeks || ""),
+    targetStreak: String(initialProfile.targetStreak || ""),
+    currentStreak: String(initialProfile.currentStreak || ""),
+    dailyTarget: String(initialProfile.dailyTarget || ""),
+  });
+
+  const handleMarkComplete = () => {
     // Default to visual accountability type for now
     const accountabilityType = "visual";  // TODO: Get from goal metadata when available
     if (accountabilityType === "visual") {
-      setSelectedTask(taskId)
       setShowPhotoUpload(true)
     } else {
       // Time-bound completion
@@ -32,7 +60,6 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
 
   const handlePhotoUpload = () => {
     setShowPhotoUpload(false)
-    setSelectedTask(null)
     triggerCelebration()
   }
 
@@ -41,7 +68,59 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
     setTimeout(() => setShowCelebration(false), 2000)
   }
 
-  const progressPercentage = goal.total > 0 ? (goal.progress / goal.total) * 100 : 0;
+  const progressPercentage = progressModel.percent;
+
+  const saveProfile = () => {
+    const toNumber = (value: string) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    let payload: Record<string, unknown> = {};
+    if (archetype === "savings") {
+      payload = {
+        currency: profileDraft.currency || "USD",
+        targetAmount: toNumber(profileDraft.targetAmount),
+        currentAmount: toNumber(profileDraft.currentAmount),
+        weeklyContribution: toNumber(profileDraft.weeklyContribution),
+      };
+    } else if (archetype === "marathon") {
+      payload = {
+        targetLongRunKm: toNumber(profileDraft.targetLongRunKm),
+        currentLongRunKm: toNumber(profileDraft.currentLongRunKm),
+        totalWeeks: toNumber(profileDraft.totalWeeks),
+        completedWeeks: toNumber(profileDraft.completedWeeks),
+      };
+    } else if (archetype === "daily_habit") {
+      payload = {
+        targetStreak: toNumber(profileDraft.targetStreak),
+        currentStreak: toNumber(profileDraft.currentStreak),
+        dailyTarget: toNumber(profileDraft.dailyTarget),
+      };
+    }
+
+    const validation = validateArchetypeProfile(archetype, payload);
+    if (!validation.ok) {
+      toast({
+        title: "Invalid goal settings",
+        description: validation.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingProfile(true);
+    updateGoal.mutate(
+      {
+        goal_archetype: archetype,
+        goal_profile_json: JSON.stringify(payload),
+      },
+      {
+        onSuccess: () => setIsSavingProfile(false),
+        onError: () => setIsSavingProfile(false),
+      },
+    );
+  };
 
   return (
     <div className="min-h-screen bg-pearl-gray dark:bg-gray-900 pt-16 pb-20">
@@ -64,9 +143,9 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
           className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700 mb-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-charcoal dark:text-gray-100">Overall Progress</h2>
+            <h2 className="text-lg font-semibold text-charcoal dark:text-gray-100">{progressModel.title}</h2>
             <span className="text-sm font-medium text-stone-gray dark:text-gray-400">
-              {goal.progress}/{goal.total} completed
+              {progressModel.summary}
             </span>
           </div>
 
@@ -87,11 +166,62 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-stone-gray dark:text-gray-400">
-              {goal.isHabit ? "Habit Building" : "Project Goal"}
+              {progressModel.helper}
             </span>
             <span className="text-primary-blue font-medium">{Math.round(progressPercentage)}% complete</span>
           </div>
+          {archetype === "daily_habit" && typeof (progressModel as any).streakPercent === "number" && (
+            <div className="mt-3">
+              <p className="text-xs text-stone-gray dark:text-gray-400 mb-1">Streak progress</p>
+              <div className="h-2 rounded-full bg-cool-gray dark:bg-gray-700 overflow-hidden">
+                <div className="h-full rounded-full bg-green-500" style={{ width: `${(progressModel as any).streakPercent}%` }} />
+              </div>
+            </div>
+          )}
         </motion.div>
+
+        {(archetype === "savings" || archetype === "marathon" || archetype === "daily_habit") && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700 mb-6"
+          >
+            <h3 className="text-base font-semibold text-charcoal dark:text-gray-100 mb-3">Goal-specific settings</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {archetype === "savings" && (
+                <>
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" placeholder="Currency (USD)" value={profileDraft.currency} onChange={(e) => setProfileDraft((prev) => ({ ...prev, currency: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Target amount" value={profileDraft.targetAmount} onChange={(e) => setProfileDraft((prev) => ({ ...prev, targetAmount: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Current amount" value={profileDraft.currentAmount} onChange={(e) => setProfileDraft((prev) => ({ ...prev, currentAmount: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Weekly contribution" value={profileDraft.weeklyContribution} onChange={(e) => setProfileDraft((prev) => ({ ...prev, weeklyContribution: e.target.value }))} />
+                </>
+              )}
+              {archetype === "marathon" && (
+                <>
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Current long run km" value={profileDraft.currentLongRunKm} onChange={(e) => setProfileDraft((prev) => ({ ...prev, currentLongRunKm: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Target long run km" value={profileDraft.targetLongRunKm} onChange={(e) => setProfileDraft((prev) => ({ ...prev, targetLongRunKm: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Total weeks" value={profileDraft.totalWeeks} onChange={(e) => setProfileDraft((prev) => ({ ...prev, totalWeeks: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Completed weeks" value={profileDraft.completedWeeks} onChange={(e) => setProfileDraft((prev) => ({ ...prev, completedWeeks: e.target.value }))} />
+                </>
+              )}
+              {archetype === "daily_habit" && (
+                <>
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Target streak" value={profileDraft.targetStreak} onChange={(e) => setProfileDraft((prev) => ({ ...prev, targetStreak: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Current streak" value={profileDraft.currentStreak} onChange={(e) => setProfileDraft((prev) => ({ ...prev, currentStreak: e.target.value }))} />
+                  <input className="rounded-lg border border-cool-gray px-3 py-2" type="number" placeholder="Daily target completions" value={profileDraft.dailyTarget} onChange={(e) => setProfileDraft((prev) => ({ ...prev, dailyTarget: e.target.value }))} />
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={saveProfile}
+              disabled={isSavingProfile}
+              className="mt-4 rounded-lg bg-primary-blue px-4 py-2 text-sm font-medium text-white hover:bg-primary-blue-hover disabled:opacity-60"
+            >
+              {isSavingProfile ? "Saving..." : "Save settings"}
+            </button>
+          </motion.div>
+        )}
 
         {/* Tasks List */}
         <motion.div
@@ -141,7 +271,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => handleMarkComplete(task.id)}
+                      onClick={handleMarkComplete}
                       className="flex items-center space-x-2 bg-primary-blue hover:bg-primary-blue-hover text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
                     >
                       <Clock className="w-4 h-4" />

@@ -1,23 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "convex/react";
 import { format } from "date-fns";
 import {
   CalendarDays,
   Clock3,
   ImageIcon,
+  Mail,
   MessageCircle,
   PartyPopper,
   Send,
   Target,
   Timer,
+  UserCircle2,
   WifiOff,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import DashboardLayout from "./dashboard-layout";
 import PartnerChatSurface from "@/components/partner/PartnerChatSurface";
 import { useUser } from "@/contexts/UserContext";
+import { api } from "../../convex/_generated/api";
 
 interface Task {
   id: string;
@@ -77,6 +81,12 @@ const statusStyles: Record<Task["status"], { label: string; className: string }>
   completed: { label: "Completed", className: "bg-landing-sage/20 text-landing-espresso" },
   skipped: { label: "Skipped", className: "bg-red-100 text-red-700" },
   "awaiting-verification": { label: "Awaiting verification", className: "bg-landing-gold/25 text-landing-espresso" },
+};
+
+const tabPanelMotion = {
+  initial: { opacity: 0, y: 10, filter: "blur(4px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+  exit: { opacity: 0, y: -8, filter: "blur(3px)" },
 };
 
 export default function PartnerView({
@@ -156,6 +166,29 @@ export default function PartnerView({
   const [activeTab, setActiveTab] = useState<(typeof tabItems)[number]["id"]>("day");
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isFullscreenOverlayOpen, setIsFullscreenOverlayOpen] = useState(false);
+  const partnerConversation = useQuery(
+    api.chat.getConversationByPartnerId,
+    userDetails?.partner_id ? { partner_id: userDetails.partner_id } : "skip"
+  );
+  const liveUnreadCount = useQuery(
+    api.chat.getUnreadCount,
+    partnerConversation?._id ? { conversation_id: partnerConversation._id } : "skip"
+  );
+  const unreadMessagesCount = typeof liveUnreadCount === "number" ? liveUnreadCount : unreadMessages;
+
+  const formatPartnerLocalTime = (timezone?: string | null) => {
+    if (!timezone) return "Local time unavailable";
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: timezone,
+      }).format(new Date());
+    } catch {
+      return "Local time unavailable";
+    }
+  };
 
   const completionSummary = useMemo(() => {
     const completed = tasks.filter((task) => task.status === "completed").length;
@@ -174,6 +207,8 @@ export default function PartnerView({
     ...partner,
     username: userDetails?.partner_nickname || userDetails?.partner_full_name || partner.username,
     profilePicture: userDetails?.partner_profile_picture_url || partner.profilePicture,
+    timezone: userDetails?.partner_timezone || partner.timezone,
+    localTime: formatPartnerLocalTime(userDetails?.partner_timezone || partner.timezone),
     initials:
       (userDetails?.partner_nickname || userDetails?.partner_full_name || partner.username)
         .split(" ")
@@ -203,6 +238,20 @@ export default function PartnerView({
           <WifiOff className="mx-auto mb-3 h-8 w-8 text-red-600" />
           <h2 className="text-lg font-bold text-red-700">Could not load partner page</h2>
           <p className="mt-2 text-sm text-red-700/80">Please refresh and try again.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!userDetails?.partner_id) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-2xl border border-landing-clay bg-white p-6 text-center">
+          <UserCircle2 className="mx-auto mb-3 h-8 w-8 text-landing-espresso-light" />
+          <h2 className="text-lg font-bold text-landing-espresso">No partner connected yet</h2>
+          <p className="mt-2 text-sm text-landing-espresso-light">
+            Connect with a partner to see their profile and activity here.
+          </p>
         </div>
       </DashboardLayout>
     );
@@ -262,6 +311,39 @@ export default function PartnerView({
           </div>
         </section>
 
+        <section className="rounded-2xl border border-landing-clay bg-white/95 p-4 shadow-sm">
+          <h2 className="text-base font-bold text-landing-espresso sm:text-lg">About Partner</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-landing-clay bg-landing-cream p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-landing-espresso-light">Name</p>
+              <p className="mt-1 text-sm font-semibold text-landing-espresso">{resolvedPartner.username}</p>
+            </div>
+            <div className="rounded-xl border border-landing-clay bg-landing-cream p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-landing-espresso-light">Email</p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-landing-espresso">
+                <Mail className="h-3.5 w-3.5 text-landing-espresso-light" />
+                {userDetails.partner_email || "Not shared"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-landing-clay bg-landing-cream p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-landing-espresso-light">Timezone</p>
+              <p className="mt-1 text-sm font-semibold text-landing-espresso">{resolvedPartner.timezone || "Not set"}</p>
+            </div>
+            <div className="rounded-xl border border-landing-clay bg-landing-cream p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-landing-espresso-light">Stats</p>
+              <p className="mt-1 text-sm text-landing-espresso">
+                {userDetails.partner_current_streak ?? 0} day streak · {userDetails.partner_goals_conquered ?? 0} goals
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl border border-landing-clay bg-landing-cream p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-landing-espresso-light">Bio</p>
+            <p className="mt-1 text-sm text-landing-espresso-light">
+              {userDetails.partner_bio || "No bio added yet."}
+            </p>
+          </div>
+        </section>
+
         <section className="rounded-2xl border border-landing-clay bg-white/95 p-2 shadow-sm">
           <div className="grid grid-cols-3 gap-2">
             {tabItems.map((tab) => {
@@ -271,19 +353,26 @@ export default function PartnerView({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-xl px-2 py-2 text-xs font-semibold transition sm:text-sm ${
+                  className={`relative rounded-xl px-2 py-2 text-xs font-semibold transition sm:text-sm ${
                     isActive
-                      ? "bg-landing-espresso text-landing-cream"
+                      ? "text-landing-cream"
                       : "text-landing-espresso-light hover:bg-landing-cream"
                   }`}
                 >
-                  <span className="flex items-center justify-center gap-1.5">
+                  {isActive ? (
+                    <motion.span
+                      layoutId="partner-tab-pill"
+                      className="absolute inset-0 rounded-xl bg-landing-espresso"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    />
+                  ) : null}
+                  <span className="relative z-10 flex items-center justify-center gap-1.5">
                     <Icon className="h-4 w-4" />
                     <span className="sm:hidden">{tab.mobileLabel}</span>
                     <span className="hidden sm:inline">{tab.label}</span>
-                    {tab.id === "chat" && unreadMessages > 0 ? (
+                    {tab.id === "chat" && unreadMessagesCount > 0 ? (
                       <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        {unreadMessages}
+                        {unreadMessagesCount}
                       </span>
                     ) : null}
                   </span>
@@ -293,114 +382,141 @@ export default function PartnerView({
           </div>
         </section>
 
-        {activeTab === "day" ? (
-          <section className="space-y-3">
-            <article className="rounded-2xl border border-landing-clay bg-white/95 p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-landing-espresso sm:text-lg">Today Summary</h2>
-                <span className="text-sm font-semibold text-landing-espresso-light">
-                  {completionSummary.completed}/{completionSummary.total}
-                </span>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-landing-sand">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-landing-terracotta to-landing-sage"
-                  style={{ width: `${completionSummary.percent}%` }}
-                />
-              </div>
-              <p className="mt-2 text-sm text-landing-espresso-light">{completionSummary.percent}% tasks completed today</p>
-            </article>
-
-            {tasks.map((task) => (
-              <motion.article
-                key={task.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="text-base font-bold text-landing-espresso">{task.description}</h3>
-                    <div className="mt-1 flex items-center gap-1.5 text-sm text-landing-espresso-light">
-                      <Timer className="h-4 w-4" />
-                      {task.scheduledTime || "No time set"}
-                    </div>
-                  </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[task.status].className}`}>
-                    {statusStyles[task.status].label}
+        <AnimatePresence mode="wait" initial={false}>
+          {activeTab === "day" ? (
+            <motion.section
+              key="tab-day"
+              className="space-y-3"
+              variants={tabPanelMotion}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <article className="rounded-2xl border border-landing-clay bg-white/95 p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-landing-espresso sm:text-lg">Today Summary</h2>
+                  <span className="text-sm font-semibold text-landing-espresso-light">
+                    {completionSummary.completed}/{completionSummary.total}
                   </span>
                 </div>
-
-                {task.progress ? (
-                  <div className="mt-3">
-                    <div className="mb-1 flex items-center justify-between text-sm text-landing-espresso-light">
-                      <span>Progress</span>
-                      <span>
-                        {task.progress.current}/{task.progress.total} {task.progress.unit}
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-landing-sand">
-                      <div
-                        className="h-full rounded-full bg-landing-terracotta"
-                        style={{ width: `${(task.progress.current / task.progress.total) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                {task.attachments?.photos?.[0] ? (
-                  <button
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
-                    onClick={() => setExpandedImage(task.attachments?.photos?.[0] || null)}
-                  >
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    View proof image
-                  </button>
-                ) : null}
-              </motion.article>
-            ))}
-          </section>
-        ) : null}
-
-        {activeTab === "activity" ? (
-          <section className="space-y-3">
-            {activities.map((activity) => (
-              <article key={activity.id} className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-sm font-bold text-landing-espresso sm:text-base">{activity.summary}</h3>
-                  <span className="text-xs text-landing-espresso-light">{format(activity.timestamp, "p")}</span>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-landing-sand">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-landing-terracotta to-landing-sage"
+                    style={{ width: `${completionSummary.percent}%` }}
+                  />
                 </div>
-                <p className="mt-1 text-xs text-landing-espresso-light">{format(activity.timestamp, "MMM d, yyyy")}</p>
-                {activity.details?.notes ? (
-                  <p className="mt-3 rounded-lg bg-landing-cream px-3 py-2 text-sm text-landing-espresso-light">{activity.details.notes}</p>
-                ) : null}
-                {activity.details?.photo ? (
-                  <button
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
-                    onClick={() => setExpandedImage(activity.details?.photo || null)}
-                  >
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    View attachment
-                  </button>
-                ) : null}
+                <p className="mt-2 text-sm text-landing-espresso-light">{completionSummary.percent}% tasks completed today</p>
               </article>
-            ))}
-          </section>
-        ) : null}
 
-        {activeTab === "chat" ? (
-          <PartnerChatSurface
-            mode="embedded"
-            partnerId={userDetails?.partner_id ?? undefined}
-            partnershipId={userDetails?.partnership_id ?? undefined}
-            partnerName={resolvedPartner.username}
-            partnerAvatar={resolvedPartner.profilePicture}
-            partnerInitials={resolvedPartner.initials}
-            isPartnerOnline={isOnline}
-            partnerLastSeen={resolvedPartner.lastActive}
-            onOpenFullscreen={() => setIsFullscreenOverlayOpen(true)}
-          />
-        ) : null}
+              {tasks.map((task) => (
+                <motion.article
+                  key={task.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-landing-espresso">{task.description}</h3>
+                      <div className="mt-1 flex items-center gap-1.5 text-sm text-landing-espresso-light">
+                        <Timer className="h-4 w-4" />
+                        {task.scheduledTime || "No time set"}
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[task.status].className}`}>
+                      {statusStyles[task.status].label}
+                    </span>
+                  </div>
+
+                  {task.progress ? (
+                    <div className="mt-3">
+                      <div className="mb-1 flex items-center justify-between text-sm text-landing-espresso-light">
+                        <span>Progress</span>
+                        <span>
+                          {task.progress.current}/{task.progress.total} {task.progress.unit}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-landing-sand">
+                        <div
+                          className="h-full rounded-full bg-landing-terracotta"
+                          style={{ width: `${(task.progress.current / task.progress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {task.attachments?.photos?.[0] ? (
+                    <button
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
+                      onClick={() => setExpandedImage(task.attachments?.photos?.[0] || null)}
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      View proof image
+                    </button>
+                  ) : null}
+                </motion.article>
+              ))}
+            </motion.section>
+          ) : null}
+
+          {activeTab === "activity" ? (
+            <motion.section
+              key="tab-activity"
+              className="space-y-3"
+              variants={tabPanelMotion}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              {activities.map((activity) => (
+                <article key={activity.id} className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-sm font-bold text-landing-espresso sm:text-base">{activity.summary}</h3>
+                    <span className="text-xs text-landing-espresso-light">{format(activity.timestamp, "p")}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-landing-espresso-light">{format(activity.timestamp, "MMM d, yyyy")}</p>
+                  {activity.details?.notes ? (
+                    <p className="mt-3 rounded-lg bg-landing-cream px-3 py-2 text-sm text-landing-espresso-light">{activity.details.notes}</p>
+                  ) : null}
+                  {activity.details?.photo ? (
+                    <button
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
+                      onClick={() => setExpandedImage(activity.details?.photo || null)}
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      View attachment
+                    </button>
+                  ) : null}
+                </article>
+              ))}
+            </motion.section>
+          ) : null}
+
+          {activeTab === "chat" ? (
+            <motion.div
+              key="tab-chat"
+              variants={tabPanelMotion}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <PartnerChatSurface
+                mode="embedded"
+                partnerId={userDetails?.partner_id ?? undefined}
+                partnershipId={userDetails?.partnership_id ?? undefined}
+                partnerName={resolvedPartner.username}
+                partnerAvatar={resolvedPartner.profilePicture}
+                partnerInitials={resolvedPartner.initials}
+                isPartnerOnline={isOnline}
+                partnerLastSeen={resolvedPartner.lastActive}
+                onOpenFullscreen={() => setIsFullscreenOverlayOpen(true)}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       {expandedImage ? (

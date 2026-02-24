@@ -44,35 +44,105 @@ export default defineSchema({
 
   goals: defineTable({
     name: v.string(),
-    description: v.optional(v.string()), // Added description
-    motivation: v.optional(v.string()), // Added motivation
+    description: v.optional(v.string()),
+    motivation: v.optional(v.string()),
     category: v.optional(v.string()),
     icon: v.optional(v.string()),
     color: v.optional(v.string()),
     is_habit: v.boolean(),
+    goal_type: v.optional(v.union(v.literal("habit"), v.literal("target-date"), v.literal("milestone"))),
+    end_date: v.optional(v.number()),
+    template_source_id: v.optional(v.string()),
+    template_source_slug: v.optional(v.string()),
+    template_source_version: v.optional(v.number()),
+    template_source_title: v.optional(v.string()),
+    goal_archetype: v.optional(v.union(v.literal("savings"), v.literal("marathon"), v.literal("daily_habit"), v.literal("general"))),
+    goal_profile_json: v.optional(v.string()),
     is_archived: v.boolean(),
-    availability: v.optional(v.array(v.string())), // Added availability
-    time_commitment: v.optional(v.string()), // Added time_commitment
-    accountability_type: v.optional(v.string()), // Added accountability_type
+    availability: v.optional(v.array(v.string())),
+    time_commitment: v.optional(v.string()),
+    accountability_type: v.optional(v.string()),
     user_id: v.id("users"),
+
+    // ── Shared Goal Linking ──
+    shared_goal_group_id: v.optional(v.string()),
+    shared_goal_mode: v.optional(v.union(
+      v.literal("independent"),
+      v.literal("together"),
+    )),
+    shared_goal_creator_id: v.optional(v.id("users")),
+    partnership_id: v.optional(v.id("partnerships")),
+
+    // ── Structured Cadence ──
+    cadence_json: v.optional(v.string()),
+
+    // ── AI Plan Metadata ──
+    ai_plan_json: v.optional(v.string()),
+    planning_mode: v.optional(v.union(v.literal("ai"), v.literal("manual"))),
 
     updated_at: v.number(),
   })
-    .index("by_user", ["user_id"]),
+    .index("by_user", ["user_id"])
+    .index("by_shared_group", ["shared_goal_group_id"]),
+
+  goal_templates: defineTable({
+    slug: v.string(),
+    title: v.string(),
+    description: v.string(),
+    category: v.string(),
+    archetype: v.optional(v.union(v.literal("savings"), v.literal("marathon"), v.literal("daily_habit"), v.literal("general"))),
+    goal_type: v.union(v.literal("habit"), v.literal("target-date"), v.literal("milestone")),
+    default_accountability_type: v.union(v.literal("visual_proof"), v.literal("time_bound_action")),
+    default_check_in_style: v.union(v.literal("quick_text"), v.literal("photo_recap"), v.literal("voice_note")),
+    recommended_proof_mode: v.union(v.literal("photo"), v.literal("voice"), v.literal("time-window"), v.literal("hybrid")),
+    motivation_suggestions: v.array(v.string()),
+    profile_defaults_json: v.optional(v.string()),
+    is_active: v.boolean(),
+    is_published: v.boolean(),
+    template_version: v.number(),
+    sort_order: v.number(),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_published_sort", ["is_published", "sort_order"])
+    .index("by_category_published", ["category", "is_published"])
+    .index("by_goal_type_published", ["goal_type", "is_published"]),
+
+  goal_template_tasks: defineTable({
+    template_id: v.id("goal_templates"),
+    position: v.number(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    repeat_frequency: v.optional(v.string()),
+    verification_mode: v.optional(v.string()),
+    time_window_start: v.optional(v.string()),
+    time_window_end: v.optional(v.string()),
+    time_window_duration_minutes: v.optional(v.number()),
+    requires_partner_review: v.boolean(),
+    auto_approval_policy: v.optional(v.string()),
+    auto_approval_timeout_hours: v.optional(v.number()),
+    auto_approval_min_confidence: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_template_position", ["template_id", "position"]),
 
   tasks: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
     status: v.string(), // 'pending', 'completed', etc.
     repeat_frequency: v.optional(v.string()),
-    due_date: v.optional(v.number()), // Timestamp
-    time_window: v.optional(v.string()), // Added time_window
-    accountability_type: v.optional(v.string()), // Added accountability_type override
+    due_date: v.optional(v.number()),
+    time_window: v.optional(v.string()),
+    accountability_type: v.optional(v.string()),
     verification_mode: v.optional(v.string()),
     verification_mode_reason: v.optional(v.string()),
     verification_confidence: v.optional(v.number()),
     time_window_start: v.optional(v.string()),
     time_window_end: v.optional(v.string()),
+    time_window_duration_minutes: v.optional(v.number()),
+    requires_partner_review: v.optional(v.boolean()),
     auto_approval_policy: v.optional(v.string()),
     auto_approval_timeout_hours: v.optional(v.number()),
     auto_approval_min_confidence: v.optional(v.number()),
@@ -84,9 +154,46 @@ export default defineSchema({
     verification_rejection_reason: v.optional(v.string()),
     goal_id: v.id("goals"),
 
+    // ── Recurring Task Blueprint ──
+    is_template_task: v.optional(v.boolean()),
+    template_task_id: v.optional(v.id("tasks")),
+    instance_date: v.optional(v.number()),
+
+    // ── Structured Cadence ──
+    cadence_type: v.optional(v.union(
+      v.literal("daily"), v.literal("weekly"), v.literal("custom"),
+    )),
+    cadence_days: v.optional(v.array(v.string())),
+    cadence_duration_weeks: v.optional(v.number()),
+
+    // ── Progressive Difficulty ──
+    difficulty_level: v.optional(v.number()),
+    minimum_viable_action: v.optional(v.string()),
+
     updated_at: v.number(),
   })
-    .index("by_goal", ["goal_id"]),
+    .index("by_goal", ["goal_id"])
+    .index("by_goal_date", ["goal_id", "instance_date"])
+    .index("by_template", ["template_task_id"]),
+
+  task_instances: defineTable({
+    task_id: v.id("tasks"),
+    goal_id: v.id("goals"),
+    user_id: v.id("users"),
+    instance_date: v.number(),
+    status: v.string(), // pending | completed | missed | skipped
+    completed_at: v.optional(v.number()),
+    verification_submitted_at: v.optional(v.number()),
+    verification_evidence_url: v.optional(v.string()),
+    verification_outcome: v.optional(v.string()),
+    verification_reviewer_type: v.optional(v.string()),
+    verification_rejection_reason: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user_date", ["user_id", "instance_date"])
+    .index("by_task_date", ["task_id", "instance_date"])
+    .index("by_goal_date", ["goal_id", "instance_date"]),
 
   partnerships: defineTable({
     user1_id: v.id("users"),

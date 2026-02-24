@@ -10,12 +10,33 @@ class GoalWizardData(BaseModel):
     availability: List[str] = Field(..., description="When they're available to work on it")
     time_commitment: str = Field(..., description="Weekly time commitment")
     accountability_type: str = Field(..., description="Preferred accountability style")
+    goal_type: Optional[Literal["habit", "target-date", "milestone"]] = Field(
+        None,
+        description="Goal type for planning behavior",
+    )
+    timezone: Optional[str] = Field(None, description="Detected IANA timezone")
+    goal_template_id: Optional[str] = Field(None, description="Selected template identifier")
+    goal_template_title: Optional[str] = Field(None, description="Selected template title")
+    goal_template_tasks: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="Selected template tasks used as personalization baseline",
+    )
     partner_name: Optional[str] = Field(None, description="Partner's name if provided")
     partner_relationship: Optional[str] = Field(None, description="Relationship to partner")
     target_deadline: Optional[str] = Field(None, description="Target completion date if user has one")
     preferred_check_in_style: Optional[str] = Field(
         "quick_text",
         description="Preferred partner check-in style: quick_text, photo_recap, voice_note",
+    )
+    # Shared goal fields
+    is_shared_goal: Optional[bool] = Field(None, description="Whether user wants a shared goal")
+    shared_goal_mode: Optional[Literal["independent", "together"]] = Field(
+        None, description="Shared goal mode"
+    )
+    partner_timezone: Optional[str] = Field(None, description="Partner's IANA timezone")
+    # Template enhancement mode
+    template_enhancement_mode: Optional[bool] = Field(
+        None, description="Whether AI should enhance a template rather than generate from scratch"
     )
 
 class GoalWizardRequest(BaseModel):
@@ -64,12 +85,21 @@ class DuotrakTask(BaseModel):
     verification_confidence: float = Field(..., ge=0, le=1, description="Confidence in verification mode recommendation")
     time_window_start: Optional[str] = Field(None, description="Start of allowed completion window (HH:MM)")
     time_window_end: Optional[str] = Field(None, description="End of allowed completion window (HH:MM)")
+    time_window_duration_minutes: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Time-window duration in minutes when end is not provided",
+    )
     partner_required: bool = Field(True, description="Whether partner approval is required")
     auto_approval_policy: Literal["time_window_only", "none"] = Field("time_window_only", description="Auto-approval policy")
     auto_approval_timeout_hours: int = Field(24, ge=1, description="Timeout before eligible auto-approval")
     auto_approval_min_confidence: float = Field(0.85, ge=0, le=1, description="Minimum confidence for eligible auto-approval")
     partner_involvement: Dict[str, str] = Field(default_factory=dict, description="Daily flexible partner touchpoint guidance")
     proof_guidance: Dict[str, List[str]] = Field(default_factory=dict, description="Advisory picture proof guidance")
+    # Structured cadence
+    cadence: Optional[Dict[str, Any]] = Field(None, description="Structured cadence: {type, days, duration_weeks}")
+    difficulty_level: Optional[int] = Field(None, ge=1, le=5, description="Progressive difficulty 1-5")
+    minimum_viable_action: Optional[str] = Field(None, description="Smallest possible version of this task")
 
 
 class DuotrakMilestone(BaseModel):
@@ -85,6 +115,10 @@ class PartnerAccountability(BaseModel):
 
 class DuotrakGoalPlan(BaseModel):
     """Canonical goal plan contract shared with frontend."""
+    goal_type: Optional[Literal["habit", "target-date", "milestone"]] = Field(
+        None,
+        description="Goal type for plan framing",
+    )
     title: str = Field(..., description="Engaging goal title")
     description: str = Field(..., description="Detailed plan description")
     milestones: List[DuotrakMilestone] = Field(..., description="Milestone breakdown")
@@ -94,6 +128,19 @@ class DuotrakGoalPlan(BaseModel):
     schedule_impact: Dict[str, Any] = Field(..., description="Deterministic schedule verification summary")
     decision_trace: List[str] = Field(default_factory=list, max_length=3, description="Concise user-facing reasons for recommendation")
     partner_accountability: PartnerAccountability
+    # Goal-type-specific configs
+    habit_config: Optional[Dict[str, Any]] = Field(None, description="Habit-specific config (streak milestones, ramp-up, anchor)")
+    milestone_config: Optional[Dict[str, Any]] = Field(None, description="Milestone-specific config (checkpoints, critical path)")
+    target_date_config: Optional[Dict[str, Any]] = Field(None, description="Target-date config (phases, periodization, rest)")
+    # Day-one readiness
+    first_day_actions: Optional[List[str]] = Field(None, description="Concrete actions for today")
+    this_week_preview: Optional[str] = Field(None, description="Natural language preview of the first week")
+    # Shared goal awareness
+    shared_goal_mode: Optional[Literal["independent", "together"]] = Field(None, description="Shared goal mode")
+    partner_timezone_adjustment: Optional[str] = Field(None, description="Timezone adjustment note")
+    # Template attribution
+    template_source_title: Optional[str] = Field(None, description="Original template title if enhanced")
+    template_enhanced: Optional[bool] = Field(None, description="Whether this plan was AI-enhanced from a template")
 
 class GoalPlanResponse(BaseModel):
     """Final goal plan response after processing answers."""

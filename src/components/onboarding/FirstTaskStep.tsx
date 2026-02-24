@@ -32,6 +32,13 @@ const TASK_SUGGESTIONS = [
   "Gather necessary tools or materials",
 ];
 
+const formatDateTimeLocalValue = (date: Date): string => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
+    date.getMinutes(),
+  )}`;
+};
+
 export default function FirstTaskStep({ data, updateData, onValidationChange }: FirstTaskStepProps) {
   const [taskTitle, setTaskTitle] = useState(data.firstTask?.title || "");
   const [taskDescription, setTaskDescription] = useState(data.firstTask?.description || "");
@@ -43,7 +50,7 @@ export default function FirstTaskStep({ data, updateData, onValidationChange }: 
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
-    return tomorrow.toISOString().slice(0, 16);
+    return formatDateTimeLocalValue(tomorrow);
   };
 
   useEffect(() => {
@@ -139,7 +146,7 @@ export default function FirstTaskStep({ data, updateData, onValidationChange }: 
             type="datetime-local"
             value={scheduledTime}
             onChange={(e) => setScheduledTime(e.target.value)}
-            min={new Date().toISOString().slice(0, 16)}
+            min={formatDateTimeLocalValue(new Date())}
           />
           <p className="text-xs text-gray-500 mt-1">Choose a realistic time when you can focus on this task</p>
         </div>

@@ -1,15 +1,13 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Settings, Mail, Edit3, Globe, Bell, BellOff } from "lucide-react"
+import { Settings, Mail, Edit3, Bell, BellOff } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import MouseGlowEffect from "./mouse-glow-effect"
-import TimezoneDisplay from "./timezone-display"
 import { useUser } from "@/contexts/UserContext"
 import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
@@ -17,14 +15,12 @@ import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail, 
 
 interface AccountSettingsProps {
   email: string
-  timezone: string
   notificationsEnabled: boolean
 }
 
-export default function AccountSettings({ email, timezone, notificationsEnabled }: AccountSettingsProps) {
+export default function AccountSettings({ email, notificationsEnabled }: AccountSettingsProps) {
   const { userDetails, refetchUserDetails } = useUser()
   const [currentEmail, setCurrentEmail] = useState(email)
-  const [currentTimezone, setCurrentTimezone] = useState(timezone)
   const [currentNotifications, setCurrentNotifications] = useState(notificationsEnabled)
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
@@ -37,21 +33,8 @@ export default function AccountSettings({ email, timezone, notificationsEnabled 
   useEffect(() => {
     setCurrentEmail(email)
     setNewEmail(email)
-    setCurrentTimezone(timezone)
     setCurrentNotifications(notificationsEnabled)
-  }, [email, timezone, notificationsEnabled])
-
-  const timezones = [
-    { value: "America/New_York", label: "Eastern Time (ET)" },
-    { value: "America/Chicago", label: "Central Time (CT)" },
-    { value: "America/Denver", label: "Mountain Time (MT)" },
-    { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
-    { value: "Europe/London", label: "Greenwich Mean Time (GMT)" },
-    { value: "Europe/Paris", label: "Central European Time (CET)" },
-    { value: "Asia/Tokyo", label: "Japan Standard Time (JST)" },
-    { value: "Australia/Sydney", label: "Sydney (AET)" },
-    { value: "Australia/Sydney", label: "Newcastle (AET)" },
-  ]
+  }, [email, notificationsEnabled])
 
   const handleEmailSave = async () => {
     const auth = getAuth()
@@ -143,27 +126,6 @@ export default function AccountSettings({ email, timezone, notificationsEnabled 
         errorMessage = "Invalid current password."
       } else if (error.code === "auth/weak-password") {
         errorMessage = "The new password is too weak. Please choose a stronger password."
-      }
-      toast.error(errorMessage)
-    }
-  }
-
-  const handleTimezoneChange = async (value: string) => {
-    try {
-      await apiFetch("/api/v1/users/me", {
-        method: "PUT",
-        body: JSON.stringify({ timezone: value }),
-      })
-      setCurrentTimezone(value)
-      refetchUserDetails() // Refresh user data in context
-      toast.success("Timezone updated successfully!")
-    } catch (error: any) {
-      console.error("Failed to update timezone:", error)
-      let errorMessage = "Failed to update timezone."
-      if (error.response && error.response.status) {
-        errorMessage = `Failed to update timezone: Server responded with status ${error.response.status}.`
-      } else if (error.message) {
-        errorMessage = `Failed to update timezone: ${error.message}.`
       }
       toast.error(errorMessage)
     }
@@ -338,31 +300,10 @@ export default function AccountSettings({ email, timezone, notificationsEnabled 
           </div>
         </div>
 
-        {/* Time & Notifications Section */}
+        {/* Notifications Section */}
         <div>
-          <h4 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-4">Time & Notifications</h4>
+          <h4 className="text-lg font-semibold text-charcoal dark:text-gray-100 mb-4">Notifications</h4>
           <div className="space-y-4">
-            {/* Timezone Setting */}
-            <MouseGlowEffect glowColor="#19A1E5" intensity="low">
-              <div className="flex items-center justify-between p-4 bg-pearl-gray dark:bg-gray-700 rounded-xl border border-cool-gray dark:border-gray-600 hover:border-primary-blue dark:hover:border-primary-blue transition-colors">
-                <div className="flex items-center space-x-3">
-                  <TimezoneDisplay timezone={currentTimezone} />
-                </div>
-                <Select value={currentTimezone} onValueChange={handleTimezoneChange}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timezones.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </MouseGlowEffect>
-
             {/* General Notifications Toggle */}
             <MouseGlowEffect glowColor="#19A1E5" intensity="low">
               <div className="flex items-center justify-between p-4 bg-pearl-gray dark:bg-gray-700 rounded-xl border border-cool-gray dark:border-gray-600 hover:border-primary-blue dark:hover:border-primary-blue transition-colors">

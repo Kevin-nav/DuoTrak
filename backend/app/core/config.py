@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     SESSION_COOKIE_NAME: str = "__session"
     INTERNAL_API_SECRET: str  # Required for internal API communication with Next.js
     GOAL_CREATION_SESSION_TTL_SECONDS: int = 900
+    GOAL_CREATION_ALLOW_IN_MEMORY_SESSION_FALLBACK: bool = False
+    GOAL_QUESTIONS_TIMEOUT_SECONDS: int = 30
     AI_ORCHESTRATOR: str = "crewai"
     AI_SHADOW_MODE: bool = False
     AI_SHADOW_ORCHESTRATOR: str = "langgraph"

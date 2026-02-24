@@ -24,6 +24,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 from app.services.gemini_service import gemini_service
 
+
+def _allow_goal_session_memory_fallback() -> bool:
+    env = str(getattr(settings, "ENVIRONMENT", "")).strip().lower()
+    explicit = bool(getattr(settings, "GOAL_CREATION_ALLOW_IN_MEMORY_SESSION_FALLBACK", False))
+    return explicit or env in {"development", "dev", "local"}
+
+
 def _is_internal_request(request: Request) -> bool:
     internal_api_key = request.headers.get("X-Internal-API-Key")
     if not internal_api_key:
@@ -98,6 +105,7 @@ duotrak_orchestrator = create_orchestrator(
     session_store=GoalCreationSessionStore(
         redis_client=redis_client,
         default_ttl_seconds=getattr(settings, "GOAL_CREATION_SESSION_TTL_SECONDS", 900),
+        allow_in_memory_fallback=_allow_goal_session_memory_fallback(),
     ),
 )
 
@@ -127,6 +135,7 @@ def _resolve_shadow_orchestrator():
             redis_client=redis_client,
             default_ttl_seconds=shadow_settings.GOAL_CREATION_SESSION_TTL_SECONDS,
             key_prefix=f"goal_creation_session_shadow_{shadow_name}",
+            allow_in_memory_fallback=_allow_goal_session_memory_fallback(),
         ),
     )
 

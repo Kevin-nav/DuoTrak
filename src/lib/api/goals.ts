@@ -80,6 +80,20 @@ type GoalCreationActionBoundary = {
       availability: string[];
       timeCommitment: string;
       accountabilityType: string;
+      goalType?: "habit" | "target-date" | "milestone";
+      timezone?: string;
+      goalTemplateId?: string;
+      goalTemplateTitle?: string;
+      goalTemplateTasks?: Array<{
+        name: string;
+        description?: string;
+        repeatFrequency?: string;
+        verificationMode?: string;
+        timeWindowStart?: string;
+        timeWindowEnd?: string;
+        timeWindowDurationMinutes?: number;
+        requiresPartnerReview?: boolean;
+      }>;
       partnerName?: string | null;
       targetDeadline?: string | null;
       preferredCheckInStyle?: "quick_text" | "photo_recap" | "voice_note";
@@ -106,6 +120,20 @@ export const getStrategicQuestionsViaBoundary = async (
         availability: requestData.wizard_data.availability,
         timeCommitment: requestData.wizard_data.time_commitment,
         accountabilityType: requestData.wizard_data.accountability_type,
+        goalType: requestData.wizard_data.goal_type,
+        timezone: requestData.wizard_data.timezone,
+        goalTemplateId: requestData.wizard_data.goal_template_id,
+        goalTemplateTitle: requestData.wizard_data.goal_template_title,
+        goalTemplateTasks: requestData.wizard_data.goal_template_tasks?.map((task: any) => ({
+          name: task.name,
+          description: task.description,
+          repeatFrequency: task.repeat_frequency ?? task.repeatFrequency,
+          verificationMode: task.verification_mode ?? task.verificationMode,
+          timeWindowStart: task.time_window_start ?? task.timeWindowStart,
+          timeWindowEnd: task.time_window_end ?? task.timeWindowEnd,
+          timeWindowDurationMinutes: task.time_window_duration_minutes ?? task.timeWindowDurationMinutes,
+          requiresPartnerReview: task.requires_partner_review ?? task.requiresPartnerReview,
+        })),
         partnerName: requestData.wizard_data.partner_name ?? null,
         targetDeadline: requestData.wizard_data.target_deadline ?? null,
         preferredCheckInStyle: requestData.wizard_data.preferred_check_in_style,

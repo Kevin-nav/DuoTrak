@@ -11,6 +11,7 @@
 import type * as chat from "../chat.js";
 import type * as crons from "../crons.js";
 import type * as goalCreation from "../goalCreation.js";
+import type * as goalTemplates from "../goalTemplates.js";
 import type * as goals from "../goals.js";
 import type * as invitations from "../invitations.js";
 import type * as journal from "../journal.js";
@@ -21,6 +22,8 @@ import type * as lib_notificationEmail from "../lib/notificationEmail.js";
 import type * as lib_r2 from "../lib/r2.js";
 import type * as notifications from "../notifications.js";
 import type * as onboarding from "../onboarding.js";
+import type * as taskInstances from "../taskInstances.js";
+import type * as taskScheduler from "../taskScheduler.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -34,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   crons: typeof crons;
   goalCreation: typeof goalCreation;
+  goalTemplates: typeof goalTemplates;
   goals: typeof goals;
   invitations: typeof invitations;
   journal: typeof journal;
@@ -44,6 +48,8 @@ declare const fullApi: ApiFromModules<{
   "lib/r2": typeof lib_r2;
   notifications: typeof notifications;
   onboarding: typeof onboarding;
+  taskInstances: typeof taskInstances;
+  taskScheduler: typeof taskScheduler;
   tasks: typeof tasks;
   users: typeof users;
 }>;

@@ -28,8 +28,8 @@ export default function InviterOnboardingFlow() {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>({
-    profile: { fullName: '', bio: '', timezone: 'UTC' },
-    preferences: { notifications: true, notificationTime: 'morning', theme: 'system', privacy: 'partner-only' },
+    profile: { fullName: '', bio: '' },
+    preferences: { notifications: true, notificationTime: 'morning', privacy: 'partner-only' },
   });
 
   useEffect(() => {
@@ -48,7 +48,6 @@ export default function InviterOnboardingFlow() {
         profile: {
           fullName: userDetails.full_name || '',
           bio: userDetails.bio || '',
-          timezone: userDetails.timezone || 'UTC',
         },
       }));
     }

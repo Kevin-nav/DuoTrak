@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import TopNavbar from '@/components/layout/TopNavbar';
 import BottomNavbar from '@/components/layout/BottomNavbar';
+import FloatingChatButton from '@/components/layout/FloatingChatButton';
 import NotificationToastListener from '@/components/NotificationToastListener';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { InvitationProvider } from '@/contexts/invitation-context';
@@ -46,6 +47,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             }
           >
             {children}
+            <FloatingChatButton partnerId={userDetails?.partner_id ?? null} />
 
             {shouldShowPartnerOverlay ? (
               <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/35 p-4 pt-24 backdrop-blur-[2px] sm:pt-28">

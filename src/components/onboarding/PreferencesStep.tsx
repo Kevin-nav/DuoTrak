@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Moon, Sun, Shield, Clock, Palette, CheckCircle } from 'lucide-react';
+import { Bell, Shield, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -25,7 +25,6 @@ export default function PreferencesStep({ data, updateData, onValidationChange, 
   const updateUser = useMutation(api.users.update);
   const [notificationsEnabled, setNotificationsEnabled] = useState(data.preferences.notifications || userDetails?.notifications_enabled || true);
   const [notificationTime, setNotificationTime] = useState(data.preferences.notificationTime || 'morning');
-  const [theme, setTheme] = useState(data.preferences.theme || 'system');
   const [privacy, setPrivacy] = useState(data.preferences.privacy || 'partner-only');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -34,8 +33,8 @@ export default function PreferencesStep({ data, updateData, onValidationChange, 
   }, [onValidationChange]);
 
   useEffect(() => {
-    updateData({ preferences: { notifications: notificationsEnabled, notificationTime, theme, privacy } });
-  }, [notificationsEnabled, notificationTime, theme, privacy, updateData]);
+    updateData({ preferences: { notifications: notificationsEnabled, notificationTime, privacy } });
+  }, [notificationsEnabled, notificationTime, privacy, updateData]);
 
   const handleSavePreferences = async () => {
     setIsSaving(true);
@@ -43,7 +42,6 @@ export default function PreferencesStep({ data, updateData, onValidationChange, 
       await updateUser({
         notifications_enabled: notificationsEnabled,
         notification_time: notificationTime,
-        theme: theme,
         privacy_setting: privacy,
       });
       toast.success('Preferences saved!');
@@ -67,9 +65,9 @@ export default function PreferencesStep({ data, updateData, onValidationChange, 
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center"
+          className="w-16 h-16 bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)] rounded-full mx-auto mb-4 flex items-center justify-center"
         >
-          <Palette className="w-8 h-8 text-white" />
+          <Bell className="w-8 h-8 text-white" />
         </motion.div>
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Customize Your Experience</h2>
         <p className="text-gray-600 max-w-md mx-auto">
@@ -127,56 +125,6 @@ export default function PreferencesStep({ data, updateData, onValidationChange, 
                 </div>
               </motion.div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Theme */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Sun className="w-5 h-5 text-yellow-500" />
-              <span>Appearance</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <p className="text-sm text-gray-600">Choose your preferred theme</p>
-              <div className="grid grid-cols-3 gap-3">
-                {[{
-                  id: "light",
-                  name: "Light",
-                  icon: Sun
-                },
-                {
-                  id: "dark",
-                  name: "Dark",
-                  icon: Moon
-                },
-                {
-                  id: "system",
-                  name: "System",
-                  icon: Clock
-                },
-                ].map((t) => {
-                  const Icon = t.icon;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setTheme(t.id)}
-                      disabled={isSaving}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        theme === t.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 mx-auto mb-1" />
-                      <p className="text-xs font-medium">{t.name}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </CardContent>
         </Card>
 

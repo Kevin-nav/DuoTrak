@@ -195,21 +195,29 @@
 }
 
 /* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b8a693 #f8f2ea;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--theme-muted);
+  background: #f8f2ea;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--theme-primary);
-  border-radius: 4px;
+  background: #b8a693;
+  border-radius: 9999px;
+  border: 2px solid #f8f2ea;
+  min-height: 28px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-secondary);
+  background: #a58f7a;
 }
 
 /* Animation utilities */

@@ -65,7 +65,15 @@ export default function IntelligentGoalCreationStep({ onPlanGenerated }: Intelli
     onboardingPlanMutation.mutate(request, {
       onSuccess: (data) => {
         toast.success("Your personalized plan is ready!");
-        onPlanGenerated(data);
+        onPlanGenerated({
+          ...data,
+          selectedGoal: {
+            title: selectedGoal.title,
+            description: selectedGoal.description,
+            category: data?.goalType || "general",
+            frequency: "daily",
+          },
+        });
       },
       onError: (error) => {
         toast.error("Could not generate a plan. Please try again.", {

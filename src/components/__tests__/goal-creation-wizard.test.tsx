@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api/client";
 const pushMock = jest.fn();
 const toastMock = jest.fn();
 const useActionMock = jest.fn();
+const useQueryMock = jest.fn();
 const createGoalMock = jest.fn().mockResolvedValue(undefined);
 let actionHookCallIndex = 0;
 
@@ -94,10 +95,20 @@ jest.mock("@/contexts/UserContext", () => ({
   useUser: () => ({ userDetails: { id: "user-1" } }),
 }));
 
-jest.mock("convex/react", () => ({
-  useMutation: () => createGoalMock,
-  useAction: (...args: unknown[]) => useActionMock(...args),
-}));
+jest.mock("convex/react", () => {
+  let mutationCallIndex = 0;
+  return {
+    useMutation: () => {
+      // useGoalCreationFlow calls: create, createWithInstances, createSharedGoal, seedGoalTemplates
+      const mocks = [createGoalMock, createGoalMock, createGoalMock, jest.fn().mockResolvedValue(undefined)];
+      const selected = mocks[mutationCallIndex % mocks.length];
+      mutationCallIndex += 1;
+      return selected;
+    },
+    useAction: (...args: unknown[]) => useActionMock(...args),
+    useQuery: (...args: unknown[]) => useQueryMock(...args),
+  };
+});
 
 jest.mock("framer-motion", () => {
   const ReactLocal = require("react");
@@ -142,6 +153,18 @@ describe("GoalCreationWizard", () => {
       actionHookCallIndex += 1;
       return selected;
     });
+    useQueryMock.mockReturnValue([
+      {
+        _id: "template-1",
+        title: "Wake Up at 7:00 AM",
+        description: "Build a strict morning habit.",
+        goal_type: "habit",
+        default_accountability_type: "time_bound_action",
+        default_check_in_style: "quick_text",
+        motivation_suggestions: ["Build discipline"],
+        tasks: [],
+      },
+    ]);
   });
 
   it("submits goal planning via convex action instead of direct api client", async () => {
@@ -158,35 +181,45 @@ describe("GoalCreationWizard", () => {
       </QueryClientProvider>
     );
 
+    fireEvent.click(screen.getByTestId("start-with-template"));
+    fireEvent.click(await screen.findByTestId("goal-suggestion-card"));
     fireEvent.change(
-      screen.getByPlaceholderText(/run a 5k/i),
+      await screen.findByPlaceholderText(/run a 5k/i),
       { target: { value: "Run a 5k" } }
     );
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByPlaceholderText(/improve my health/i);
-    fireEvent.change(
-      screen.getByPlaceholderText(/improve my health/i),
-      { target: { value: "Get healthier" } }
-    );
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("Mornings (6-9 AM)");
-    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("15-30 mins daily");
-    fireEvent.click(screen.getByText("15-30 mins daily"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText(/visual proof/i);
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue with ai/i }));
 
     await waitFor(() => {
       expect(getQuestionsActionMock).toHaveBeenCalledTimes(1);
     });
 
     expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("starts AI template improvement flow directly from screen C secondary action", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GoalCreationWizard />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(screen.getByTestId("start-with-template"));
+    const templateCard = await screen.findByTestId("goal-suggestion-card");
+    fireEvent.click(templateCard);
+    fireEvent.change(await screen.findByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /continue with ai/i }));
+
+    await waitFor(() => {
+      expect(getQuestionsActionMock).toHaveBeenCalledTimes(1);
+    });
+    expect(await screen.findByText(/what gets in your way most often/i)).toBeInTheDocument();
   });
 
   it("renders AI verification mode guidance in review step", async () => {
@@ -203,23 +236,10 @@ describe("GoalCreationWizard", () => {
       </QueryClientProvider>
     );
 
-    fireEvent.change(screen.getByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByPlaceholderText(/improve my health/i);
-    fireEvent.change(screen.getByPlaceholderText(/improve my health/i), { target: { value: "Get healthier" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("Mornings (6-9 AM)");
-    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("15-30 mins daily");
-    fireEvent.click(screen.getByText("15-30 mins daily"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText(/visual proof/i);
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByTestId("start-with-template"));
+    fireEvent.click(await screen.findByTestId("goal-suggestion-card"));
+    fireEvent.change(await screen.findByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /continue with ai/i }));
 
     await screen.findByText(/what gets in your way most often/i);
     fireEvent.click(screen.getByLabelText("Time"));
@@ -245,23 +265,10 @@ describe("GoalCreationWizard", () => {
       </QueryClientProvider>
     );
 
-    fireEvent.change(screen.getByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByPlaceholderText(/improve my health/i);
-    fireEvent.change(screen.getByPlaceholderText(/improve my health/i), { target: { value: "Get healthier" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("Mornings (6-9 AM)");
-    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("15-30 mins daily");
-    fireEvent.click(screen.getByText("15-30 mins daily"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText(/visual proof/i);
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByTestId("start-with-template"));
+    fireEvent.click(await screen.findByTestId("goal-suggestion-card"));
+    fireEvent.change(await screen.findByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /continue with ai/i }));
 
     await screen.findByText(/what gets in your way most often/i);
     fireEvent.click(screen.getByLabelText("Time"));
@@ -307,23 +314,10 @@ describe("GoalCreationWizard", () => {
       </QueryClientProvider>
     );
 
-    fireEvent.change(screen.getByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByPlaceholderText(/improve my health/i);
-    fireEvent.change(screen.getByPlaceholderText(/improve my health/i), { target: { value: "Get healthier" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("Mornings (6-9 AM)");
-    fireEvent.click(screen.getByText("Mornings (6-9 AM)"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText("15-30 mins daily");
-    fireEvent.click(screen.getByText("15-30 mins daily"));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await screen.findByText(/visual proof/i);
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByTestId("start-with-template"));
+    fireEvent.click(await screen.findByTestId("goal-suggestion-card"));
+    fireEvent.change(await screen.findByPlaceholderText(/run a 5k/i), { target: { value: "Run a 5k" } });
+    fireEvent.click(screen.getByRole("button", { name: /continue with ai/i }));
 
     await waitFor(() => {
       expect(apiClient.post).toHaveBeenCalledWith(

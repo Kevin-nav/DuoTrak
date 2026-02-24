@@ -76,6 +76,13 @@ export const current = query({
       partner_full_name: null as string | null,
       partner_nickname: null as string | null,
       partner_profile_picture_url: null as string | null,
+      partner_email: null as string | null,
+      partner_bio: null as string | null,
+      partner_timezone: null as string | null,
+      partner_current_streak: null as number | null,
+      partner_longest_streak: null as number | null,
+      partner_total_tasks_completed: null as number | null,
+      partner_goals_conquered: null as number | null,
       sent_invitation: null as any,
       received_invitation: null as any,
       badges: [] as any[], // Placeholder for now
@@ -87,6 +94,13 @@ export const current = query({
       if (partner) {
         partnerDetails.partner_id = partner._id;
         partnerDetails.partner_full_name = partner.full_name || null;
+        partnerDetails.partner_email = partner.email || null;
+        partnerDetails.partner_bio = partner.bio || null;
+        partnerDetails.partner_timezone = partner.timezone || null;
+        partnerDetails.partner_current_streak = partner.current_streak ?? null;
+        partnerDetails.partner_longest_streak = partner.longest_streak ?? null;
+        partnerDetails.partner_total_tasks_completed = partner.total_tasks_completed ?? null;
+        partnerDetails.partner_goals_conquered = partner.goals_conquered ?? null;
         const partnerVariants = partner.profile_picture_variants;
         partnerDetails.partner_profile_picture_url =
           partnerVariants?.md || partnerVariants?.sm || partner.profile_picture_url || null;

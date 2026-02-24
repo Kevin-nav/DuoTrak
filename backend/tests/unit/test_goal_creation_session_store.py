@@ -1,6 +1,8 @@
 import pytest
+import asyncio
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from app.services.goal_creation_session_store import GoalCreationSessionStore
 from app.personalization.outcome_profile_store import OutcomeProfileStore
@@ -20,6 +22,35 @@ class FakeRedis:
         self.data.pop(key, None)
 
 
+class FailingRedis:
+    async def setex(self, key, _ttl_seconds, value):
+        _ = key, value
+        raise RedisConnectionError("dns resolution failed")
+
+    async def get(self, key):
+        _ = key
+        raise RedisConnectionError("dns resolution failed")
+
+    async def delete(self, key):
+        _ = key
+        raise RedisConnectionError("dns resolution failed")
+
+
+class WriteOkReadFailRedis:
+    def __init__(self):
+        self.data = {}
+
+    async def setex(self, key, _ttl_seconds, value):
+        self.data[key] = value
+
+    async def get(self, key):
+        _ = key
+        raise RedisConnectionError("dns resolution failed")
+
+    async def delete(self, key):
+        self.data.pop(key, None)
+
+
 @pytest.mark.asyncio
 async def test_session_survives_new_orchestrator_instance():
     redis_client = FakeRedis()
@@ -29,6 +60,58 @@ async def test_session_survives_new_orchestrator_instance():
 
     store2 = GoalCreationSessionStore(redis_client)
     data = await store2.get("s1")
+    assert data is not None
+    assert data["user_id"] == "u1"
+
+
+@pytest.mark.asyncio
+async def test_session_store_falls_back_to_memory_when_redis_unavailable():
+    store = GoalCreationSessionStore(
+        redis_client=FailingRedis(),
+        allow_in_memory_fallback=True,
+    )
+
+    await store.put("s1", {"user_id": "u1"}, ttl_seconds=60)
+    data = await store.get("s1")
+
+    assert data is not None
+    assert data["user_id"] == "u1"
+
+
+@pytest.mark.asyncio
+async def test_session_store_without_fallback_raises_on_redis_failure():
+    store = GoalCreationSessionStore(
+        redis_client=FailingRedis(),
+        allow_in_memory_fallback=False,
+    )
+
+    with pytest.raises(RedisConnectionError):
+        await store.put("s1", {"user_id": "u1"}, ttl_seconds=60)
+
+
+@pytest.mark.asyncio
+async def test_memory_fallback_respects_ttl():
+    store = GoalCreationSessionStore(
+        redis_client=FailingRedis(),
+        allow_in_memory_fallback=True,
+    )
+
+    await store.put("s1", {"user_id": "u1"}, ttl_seconds=1)
+    await asyncio.sleep(1.05)
+
+    assert await store.get("s1") is None
+
+
+@pytest.mark.asyncio
+async def test_session_store_uses_fallback_when_read_fails_after_successful_write():
+    store = GoalCreationSessionStore(
+        redis_client=WriteOkReadFailRedis(),
+        allow_in_memory_fallback=True,
+    )
+
+    await store.put("s1", {"user_id": "u1"}, ttl_seconds=60)
+    data = await store.get("s1")
+
     assert data is not None
     assert data["user_id"] == "u1"
 

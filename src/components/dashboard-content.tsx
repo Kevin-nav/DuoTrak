@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
 import { Flame, Loader2 } from 'lucide-react';
+import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import QuickActions from './quick-actions';
 import DuoStreakHero from './duo-streak-hero';
 import MouseGlowEffect from './mouse-glow-effect';
@@ -54,6 +56,80 @@ export default function DashboardContent({
     }
   }, [userDetails, router]);
 
+  // ── Real task instance data ──
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
+  const rawInstances = useConvexQuery(api.taskInstances.listForDate, { date: todayStart });
+  const markComplete = useConvexMutation(api.taskInstances.markComplete);
+  const submitVerification = useConvexMutation(api.taskInstances.submitVerification);
+
+  // Map Convex instances to the Task interface expected by TodaysTasks
+  const taskItems = useMemo(() => {
+    if (!rawInstances) return undefined;
+    return rawInstances.map((inst: any) => {
+      const timeWindow =
+        inst.task_time_window_start && inst.task_time_window_end
+          ? `${inst.task_time_window_start} - ${inst.task_time_window_end}`
+          : undefined;
+
+      const verificationMode = inst.task_verification_mode;
+      const accountabilityType: "visual" | "time-bound" =
+        verificationMode === "time-window" ? "time-bound" : "visual";
+
+      const status = (() => {
+        switch (inst.status) {
+          case "completed": return "completed" as const;
+          case "pending-verification": return "pending-verification" as const;
+          case "missed": return "failed" as const;
+          case "skipped": return "failed" as const;
+          case "rejected": return "rejected" as const;
+          default: return "pending" as const;
+        }
+      })();
+
+      return {
+        id: inst._id,
+        name: inst.task_name,
+        goalName: inst.goal_name,
+        goalArchetype: inst.goal_archetype,
+        goalProfileJson: inst.goal_profile_json,
+        goalType: inst.is_shared ? ("shared" as const) : ("personal" as const),
+        accountabilityType,
+        status,
+        timeWindow,
+        canComplete: status === "pending" || status === "rejected",
+      };
+    });
+  }, [rawInstances]);
+
+  const handleTaskComplete = async (taskId: string) => {
+    try {
+      await markComplete({ instance_id: taskId as any });
+    } catch (error) {
+      console.error("Failed to mark task complete:", error);
+    }
+  };
+
+  const handleTaskVerificationSubmit = async (taskId: string, _imageFile?: File) => {
+    try {
+      await submitVerification({ instance_id: taskId as any });
+    } catch (error) {
+      console.error("Failed to submit verification:", error);
+    }
+  };
+
+  const handleVerify = (itemId: string) => {
+    console.log("Verified item:", itemId);
+  };
+
+  const handleReject = (itemId: string, reason: string) => {
+    console.log("Rejected item:", itemId, "Reason:", reason);
+  };
+
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -79,22 +155,6 @@ export default function DashboardContent({
         ease: "easeOut" as const,
       },
     },
-  };
-
-  const handleTaskComplete = (taskId: string) => {
-    console.log("Task completed:", taskId);
-  };
-
-  const handleTaskVerificationSubmit = (taskId: string, imageFile?: File) => {
-    console.log("Task verification submitted:", taskId, imageFile);
-  };
-
-  const handleVerify = (itemId: string) => {
-    console.log("Verified item:", itemId);
-  };
-
-  const handleReject = (itemId: string, reason: string) => {
-    console.log("Rejected item:", itemId, "Reason:", reason);
   };
 
   return (
@@ -146,7 +206,11 @@ export default function DashboardContent({
       )}
 
       <motion.section variants={itemVariants}>
-        <TodaysTasks onTaskComplete={handleTaskComplete} onTaskVerificationSubmit={handleTaskVerificationSubmit} />
+        <TodaysTasks
+          tasks={taskItems}
+          onTaskComplete={handleTaskComplete}
+          onTaskVerificationSubmit={handleTaskVerificationSubmit}
+        />
       </motion.section>
 
       <motion.section variants={itemVariants}>

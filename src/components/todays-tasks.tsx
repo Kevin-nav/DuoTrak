@@ -10,6 +10,8 @@ interface Task {
   id: string
   name: string
   goalName: string
+  goalArchetype?: "savings" | "marathon" | "daily_habit" | "general"
+  goalProfileJson?: string
   goalType: "personal" | "shared"
   accountabilityType: "visual" | "time-bound"
   status: "pending" | "completed" | "pending-verification" | "verified" | "failed" | "rejected"
@@ -31,6 +33,8 @@ export default function TodaysTasks({
       id: "1",
       name: "Morning Meditation",
       goalName: "Mindfulness Journey",
+      goalArchetype: "daily_habit",
+      goalProfileJson: JSON.stringify({ currentStreak: 8, targetStreak: 21 }),
       goalType: "personal",
       accountabilityType: "visual",
       status: "pending",
@@ -40,6 +44,8 @@ export default function TodaysTasks({
       id: "2",
       name: "Partner Workout",
       goalName: "Fitness Duo",
+      goalArchetype: "marathon",
+      goalProfileJson: JSON.stringify({ completedWeeks: 5, totalWeeks: 16 }),
       goalType: "shared",
       accountabilityType: "visual",
       status: "pending-verification",
@@ -49,6 +55,8 @@ export default function TodaysTasks({
       id: "3",
       name: "Wake up at 7 AM",
       goalName: "Morning Routine",
+      goalArchetype: "daily_habit",
+      goalProfileJson: JSON.stringify({ currentStreak: 2, targetStreak: 30 }),
       goalType: "personal",
       accountabilityType: "time-bound",
       status: "failed",
@@ -59,6 +67,7 @@ export default function TodaysTasks({
       id: "4",
       name: "Evening Reading",
       goalName: "Learning Goals",
+      goalArchetype: "general",
       goalType: "shared",
       accountabilityType: "visual",
       status: "rejected",
@@ -69,6 +78,8 @@ export default function TodaysTasks({
       id: "5",
       name: "Healthy Lunch",
       goalName: "Nutrition Goals",
+      goalArchetype: "savings",
+      goalProfileJson: JSON.stringify({ currentAmount: 420, targetAmount: 1000, currency: "USD" }),
       goalType: "shared",
       accountabilityType: "visual",
       status: "verified",
@@ -106,6 +117,44 @@ export default function TodaysTasks({
     setShowVerificationModal(false)
     setSelectedTask(null)
   }
+
+  const parseGoalProfile = (task: Task): Record<string, unknown> => {
+    if (!task.goalProfileJson) return {};
+    try {
+      return JSON.parse(task.goalProfileJson) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  };
+
+  const getArchetypeActionLabel = (task: Task): string => {
+    if (task.status === "rejected") return "Resubmit";
+    if (task.goalArchetype === "savings") return "Log Deposit";
+    if (task.goalArchetype === "marathon") return "Log Run";
+    if (task.goalArchetype === "daily_habit") return "Check In";
+    return getStatusText(task);
+  };
+
+  const getArchetypeHint = (task: Task): string | null => {
+    const profile = parseGoalProfile(task);
+    if (task.goalArchetype === "savings") {
+      const current = Number(profile.currentAmount || 0);
+      const target = Number(profile.targetAmount || 0);
+      const currency = String(profile.currency || "USD");
+      return `${currency} ${current.toLocaleString()} / ${target.toLocaleString()}`;
+    }
+    if (task.goalArchetype === "marathon") {
+      const completed = Number(profile.completedWeeks || 0);
+      const total = Number(profile.totalWeeks || 0);
+      return `Week progress ${completed}/${total}`;
+    }
+    if (task.goalArchetype === "daily_habit") {
+      const streak = Number(profile.currentStreak || 0);
+      const target = Number(profile.targetStreak || 0);
+      return `Streak ${streak}/${target}`;
+    }
+    return null;
+  };
 
   const getStatusIcon = (task: Task) => {
     switch (task.status) {
@@ -258,6 +307,9 @@ export default function TodaysTasks({
                       </div>
                     </div>
                     <p className="text-sm text-stone-gray dark:text-gray-400">{task.goalName}</p>
+                    {getArchetypeHint(task) && (
+                      <p className="text-xs font-medium text-primary-blue mt-1">{getArchetypeHint(task)}</p>
+                    )}
                     {task.timeWindow && (
                       <p className="text-xs text-stone-gray dark:text-gray-400 mt-1">Time window: {task.timeWindow}</p>
                     )}
@@ -277,7 +329,7 @@ export default function TodaysTasks({
                       whileTap={{ scale: 0.95 }}
                       className="px-3 py-1.5 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg font-medium transition-colors text-sm"
                     >
-                      {task.status === "rejected" ? "Resubmit" : getStatusText(task)}
+                      {getArchetypeActionLabel(task)}
                     </motion.button>
                   ) : (
                     <span className={`text-sm font-medium ${getStatusColor(task)}`}>{getStatusText(task)}</span>

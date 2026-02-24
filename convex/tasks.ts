@@ -29,6 +29,53 @@ function normalizeMode(mode?: string): "photo" | "voice" | "time-window" {
   return "photo";
 }
 
+function parseHmToMinutes(value?: string): number | null {
+  if (!value) return null;
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+function localMinutesInTimezone(timestampMs: number, timezone: string): number {
+  const date = new Date(timestampMs);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(date);
+
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return hour * 60 + minute;
+}
+
+function isWithinConfiguredWindow(task: any, timestampMs: number, timezone: string): boolean {
+  if (normalizeMode(task.verification_mode) !== "time-window") return true;
+  const start = parseHmToMinutes(task.time_window_start);
+  if (start === null) return true;
+
+  let duration = typeof task.time_window_duration_minutes === "number" ? task.time_window_duration_minutes : null;
+  if (!duration && task.time_window_end) {
+    const end = parseHmToMinutes(task.time_window_end);
+    if (end !== null) {
+      duration = end >= start ? end - start : 24 * 60 - start + end;
+    }
+  }
+  if (!duration || duration <= 0) return true;
+
+  const current = localMinutesInTimezone(timestampMs, timezone);
+  const windowEnd = (start + duration) % (24 * 60);
+  if (windowEnd > start) {
+    return current >= start && current <= windowEnd;
+  }
+  return current >= start || current <= windowEnd;
+}
+
 function isTimeWindowAutoApprovalEligible(task: any, nowMs: number): boolean {
   if (normalizeMode(task.verification_mode) !== "time-window") return false;
   if ((task.auto_approval_policy || "time_window_only") !== "time_window_only") return false;
@@ -132,6 +179,8 @@ export const create = mutation({
     verification_confidence: v.optional(v.number()),
     time_window_start: v.optional(v.string()),
     time_window_end: v.optional(v.string()),
+    time_window_duration_minutes: v.optional(v.number()),
+    requires_partner_review: v.optional(v.boolean()),
     auto_approval_policy: v.optional(v.string()),
     auto_approval_timeout_hours: v.optional(v.number()),
     auto_approval_min_confidence: v.optional(v.number()),
@@ -166,6 +215,8 @@ export const create = mutation({
       verification_confidence: args.verification_confidence,
       time_window_start: args.time_window_start,
       time_window_end: args.time_window_end,
+      time_window_duration_minutes: args.time_window_duration_minutes,
+      requires_partner_review: args.requires_partner_review,
       auto_approval_policy: args.auto_approval_policy,
       auto_approval_timeout_hours: args.auto_approval_timeout_hours,
       auto_approval_min_confidence: args.auto_approval_min_confidence,
@@ -219,10 +270,16 @@ export const submitVerification = mutation({
       .withIndex("by_firebase_uid", (q: any) => q.eq("firebase_uid", identity.subject))
       .unique();
     const now = Date.now();
+    const completedAt = args.completed_at ?? now;
+
+    const timezone = currentUser?.timezone || "UTC";
+    if (!isWithinConfiguredWindow(task, completedAt, timezone)) {
+      throw new Error("Check-in outside allowed window");
+    }
 
     await ctx.db.patch(args.id, {
       status: "pending-verification",
-      verification_submitted_at: args.completed_at ?? now,
+      verification_submitted_at: completedAt,
       verification_evidence_confidence: args.evidence_confidence,
       verification_outcome: "pending_partner_review",
       verification_reviewed_at: undefined,

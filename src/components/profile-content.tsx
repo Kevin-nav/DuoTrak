@@ -3,20 +3,18 @@
 import { motion } from "framer-motion"
 import { useState, useEffect, useRef } from "react"
 import { UserRead } from "@/schemas/user";
-import { Settings, Palette, Bell, Shield, HelpCircle, LogOut, Edit3, Camera, ChevronRight, Mail, User, Upload, Check, Loader2 } from "lucide-react"
+import { Settings, Bell, Shield, HelpCircle, LogOut, Edit3, Camera, ChevronRight, User, Upload, Check, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import ThemeSwitcher from "./theme/theme-switcher"
 import { useUser } from "@/contexts/UserContext"
 import { toast } from "sonner"
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from "firebase/auth"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import FullPageSpinner from "./ui/FullPageSpinner"
 import { useAction, useMutation } from "convex/react"
 import { api } from "../../convex/_generated/api"
@@ -24,8 +22,10 @@ import { Id } from "../../convex/_generated/dataModel"
 import { avatarLibrary } from "@/lib/avatars"
 import { cn } from "@/lib/utils"
 import { processAvatarVariants, validateImage, formatFileSize } from "@/lib/imageUtils"
+import { useRouter } from "next/navigation"
 
 export default function ProfileContent() {
+  const router = useRouter()
   const { userDetails, isLoading, refetchUserDetails, signOut } = useUser()
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
@@ -83,19 +83,7 @@ export default function ProfileContent() {
     total_tasks_completed,
     goals_conquered,
     notifications_enabled,
-    timezone,
   } = userDetails
-
-  const timezones = [
-    { value: "America/New_York", label: "Eastern Time (ET)" },
-    { value: "America/Chicago", label: "Central Time (CT)" },
-    { value: "America/Denver", label: "Mountain Time (MT)" },
-    { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
-    { value: "Europe/London", label: "Greenwich Mean Time (GMT)" },
-    { value: "Europe/Paris", label: "Central European Time (CET)" },
-    { value: "Asia/Tokyo", label: "Japan Standard Time (JST)" },
-    { value: "Australia/Sydney", label: "Sydney (AET)" },
-  ]
 
   const handleNicknameSave = async () => {
     try {
@@ -184,17 +172,6 @@ export default function ProfileContent() {
     } catch (error) {
       toast.error("Failed to update notification settings.")
       console.error("Failed to update notification settings:", error)
-    }
-  }
-
-  const handleTimezoneChange = async (value: string) => {
-    try {
-      await updateUser({ timezone: value })
-      refetchUserDetails()
-      toast.success("Timezone updated successfully!")
-    } catch (error) {
-      toast.error("Failed to update timezone.")
-      console.error("Failed to update timezone:", error)
     }
   }
 
@@ -293,26 +270,26 @@ export default function ProfileContent() {
                     <Camera className="w-4 h-4 text-white" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)]">
                   <DialogHeader>
-                    <DialogTitle>Choose Your Avatar</DialogTitle>
+                    <DialogTitle className="text-[var(--theme-foreground)]">Choose Your Avatar</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-6 py-4">
                     {/* Presets */}
                     <div>
-                      <h4 className="text-sm font-medium mb-3 text-muted-foreground">Choose from library</h4>
+                      <h4 className="mb-3 text-sm font-medium text-[var(--theme-secondary)]">Choose from library</h4>
                       <div className="grid grid-cols-4 gap-4">
                         {avatarLibrary.map((avatarUrl) => (
                           <button
                             key={avatarUrl}
                             onClick={() => handleSaveAvatar(avatarUrl)}
-                            className="rounded-full hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="rounded-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"
                             disabled={isUploading}
                           >
                             <img
                               src={avatarUrl}
                               alt="Avatar option"
-                              className="w-16 h-16 rounded-full object-cover border border-border"
+                              className="h-16 w-16 rounded-full border border-[var(--theme-border)] object-cover"
                             />
                           </button>
                         ))}
@@ -323,13 +300,13 @@ export default function ProfileContent() {
 
                     {/* Upload */}
                     <div>
-                      <h4 className="text-sm font-medium mb-3 text-muted-foreground">Or upload your own</h4>
+                      <h4 className="mb-3 text-sm font-medium text-[var(--theme-secondary)]">Or upload your own</h4>
                       <div className="flex items-center gap-4">
                         <Button
                           variant="outline"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploading}
-                          className="w-full"
+                          className="w-full border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)] hover:bg-[var(--theme-muted)]"
                         >
                           <Upload className="w-4 h-4 mr-2" />
                           {selectedFile ? "Change File" : "Select Image"}
@@ -344,14 +321,14 @@ export default function ProfileContent() {
                       </div>
                       {selectedFile && previewUrl && (
                         <div className="mt-4 flex flex-col items-center gap-4">
-                          <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-primary">
+                          <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-[var(--theme-primary)]">
                             <img
                               src={previewUrl}
                               alt="Preview"
                               className="w-full h-full object-cover"
                             />
                           </div>
-                          <Button onClick={() => handleSaveAvatar()} disabled={isUploading}>
+                          <Button onClick={() => handleSaveAvatar()} disabled={isUploading} className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-secondary)]">
                             {isUploading ? "Uploading..." : "Confirm Upload"}
                           </Button>
                         </div>
@@ -372,13 +349,13 @@ export default function ProfileContent() {
                       <Edit3 className="w-4 h-4" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)]">
                     <DialogHeader>
-                      <DialogTitle>Change Email Address</DialogTitle>
+                      <DialogTitle className="text-[var(--theme-foreground)]">Change Email Address</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-charcoal dark:text-gray-200 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-[var(--theme-foreground)]">
                           New Email Address
                         </label>
                         <Input
@@ -386,10 +363,11 @@ export default function ProfileContent() {
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
                           placeholder="Enter new email address"
+                          className="border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-foreground)]"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-charcoal dark:text-gray-200 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-[var(--theme-foreground)]">
                           Current Password (for verification)
                         </label>
                         <Input
@@ -397,13 +375,14 @@ export default function ProfileContent() {
                           value={currentPasswordForReauth}
                           onChange={(e) => setCurrentPasswordForReauth(e.target.value)}
                           placeholder="Enter your current password"
+                          className="border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-foreground)]"
                         />
                       </div>
                       <div className="flex space-x-2 justify-end">
-                        <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)} className="border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)] hover:bg-[var(--theme-muted)]">
                           Cancel
                         </Button>
-                        <Button onClick={handleEmailSave}>Save Changes</Button>
+                        <Button onClick={handleEmailSave} className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-secondary)]">Save Changes</Button>
                       </div>
                     </div>
                   </DialogContent>
@@ -455,27 +434,6 @@ export default function ProfileContent() {
         </CardContent>
       </Card>
 
-      {/* Theme Settings */}
-      <Card className="bg-[var(--theme-card)] border-[var(--theme-border)]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-[var(--theme-foreground)]">
-            <Palette className="w-5 h-5 text-[var(--theme-primary)]" />
-            Theme & Appearance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-[var(--theme-foreground)]">Customize Theme</h3>
-              <p className="text-sm text-[var(--theme-secondary)]">
-                Choose your preferred theme and sync with your partner
-              </p>
-            </div>
-            <ThemeSwitcher />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Settings & Preferences */}
       <Card className="bg-[var(--theme-card)] border-[var(--theme-border)]">
         <CardHeader>
@@ -520,13 +478,13 @@ export default function ProfileContent() {
                   Change
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)]">
                 <DialogHeader>
-                  <DialogTitle>Change Password</DialogTitle>
+                  <DialogTitle className="text-[var(--theme-foreground)]">Change Password</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-charcoal dark:text-gray-200 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-[var(--theme-foreground)]">
                       Current Password
                     </label>
                     <Input
@@ -534,10 +492,11 @@ export default function ProfileContent() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter current password"
+                      className="border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-foreground)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal dark:text-gray-200 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-[var(--theme-foreground)]">
                       New Password
                     </label>
                     <Input
@@ -545,10 +504,11 @@ export default function ProfileContent() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
+                      className="border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-foreground)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-charcoal dark:text-gray-200 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-[var(--theme-foreground)]">
                       Confirm New Password
                     </label>
                     <Input
@@ -556,15 +516,17 @@ export default function ProfileContent() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
+                      className="border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-foreground)]"
                     />
                   </div>
                   <div className="flex space-x-2 justify-end">
-                    <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>
+                    <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)} className="border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)] hover:bg-[var(--theme-muted)]">
                       Cancel
                     </Button>
                     <Button
                       onClick={handlePasswordSave}
                       disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}
+                      className="bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)] hover:bg-[var(--theme-secondary)] disabled:opacity-60"
                     >
                       Update Password
                     </Button>
@@ -589,43 +551,17 @@ export default function ProfileContent() {
             </div>
             <div className="flex items-center gap-2">
               <Input
-                className="w-48"
+                className="w-48 border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-foreground)]"
                 placeholder="e.g., Alex"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
               />
-              <Button variant="outline" size="sm" onClick={handleNicknameSave}>
+              <Button variant="outline" size="sm" onClick={handleNicknameSave} className="border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)] hover:bg-[var(--theme-muted)]">
                 Save
               </Button>
             </div>
           </div>
 
-          <Separator />
-
-          {/* Timezone */}
-          <div className="flex items-center justify-between p-4 rounded-lg hover:bg-[var(--theme-muted)] transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[var(--theme-accent)]">
-                <Mail className="w-5 h-5 text-[var(--theme-primary)]" />
-              </div>
-              <div>
-                <h3 className="font-medium text-[var(--theme-foreground)]">Timezone</h3>
-                <p className="text-sm text-[var(--theme-secondary)]">Set your current timezone</p>
-              </div>
-            </div>
-            <Select value={timezone ?? undefined} onValueChange={handleTimezoneChange}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {timezones.map((tz) => (
-                  <SelectItem key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </CardContent>
       </Card>
 
@@ -652,7 +588,12 @@ export default function ProfileContent() {
                 </h3>
                 <p className="text-sm text-[var(--theme-secondary)]">Connected partner</p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/partner")}
+                className="border-[var(--theme-border)] bg-[var(--theme-card)] text-[var(--theme-foreground)] hover:bg-[var(--theme-muted)]"
+              >
                 View Profile
               </Button>
             </div>

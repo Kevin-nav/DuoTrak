@@ -36,7 +36,7 @@ export default function BottomNavbar() {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
-      className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--theme-background)] border-t border-[var(--theme-border)] px-4 py-2 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--theme-border)] bg-[var(--theme-card)]/95 px-4 py-2 shadow-lg backdrop-blur-md"
     >
       <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
@@ -62,14 +62,14 @@ export default function BottomNavbar() {
               }}
               className={`relative flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-300 ${
                 isActive
-                  ? "text-[var(--theme-primary)]"
-                  : "text-[var(--theme-secondary)] hover:text-[var(--theme-foreground)]"
+                  ? "text-[var(--theme-primary-foreground)]"
+                  : "text-[var(--theme-muted-foreground)] hover:bg-[var(--theme-muted)] hover:text-[var(--theme-foreground)]"
               }`}
             >
               {isActive && (
                 <motion.div
                   layoutId="activeBackground"
-                  className="absolute inset-0 bg-[var(--theme-accent)] rounded-lg"
+                  className="absolute inset-0 rounded-lg bg-[var(--theme-primary)]"
                   initial={false}
                   transition={{
                     type: "spring",
@@ -94,11 +94,17 @@ export default function BottomNavbar() {
                 }}
                 className="relative z-10"
               >
-                <Icon className={`w-6 h-6 ${isActive ? "text-[var(--theme-primary)]" : ""}`} />
+                <Icon
+                  className={`w-6 h-6 ${
+                    isActive ? "text-[var(--theme-primary-foreground)]" : "text-[var(--theme-muted-foreground)]"
+                  }`}
+                />
               </motion.div>
 
               <motion.span
-                className={`text-xs font-medium relative z-10 ${isActive ? "text-[var(--theme-primary)]" : ""}`}
+                className={`relative z-10 text-xs font-medium ${
+                  isActive ? "text-[var(--theme-primary-foreground)]" : "text-[var(--theme-muted-foreground)]"
+                }`}
                 animate={isActive ? { y: [0, -2, 0] } : {}}
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
@@ -110,7 +116,7 @@ export default function BottomNavbar() {
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0, opacity: 0 }}
-                  className="absolute -bottom-1 w-1 h-1 bg-[var(--theme-primary)] rounded-full"
+                  className="absolute -bottom-1 h-1 w-1 rounded-full bg-[var(--theme-primary-foreground)]"
                   transition={{
                     type: "spring",
                     stiffness: 500,

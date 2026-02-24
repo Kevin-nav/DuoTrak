@@ -79,7 +79,7 @@ export default function InviteeOnboardingFlow() {
   });
 
   const { mutate: createGoal, isPending: isCreating } = useMutation({
-    mutationFn: (data: any) => apiClient.createOnboardingGoal(data.goal, data.task),
+    mutationFn: (data: any) => apiClient.createOnboardingGoal(data.goal, data.task, data.additionalTasks),
     onSuccess: () => {
       setXpEarned((prev) => prev + 25); // +25 XP for first task
       toast.success('Your first goal has been created!');
@@ -123,9 +123,10 @@ export default function InviteeOnboardingFlow() {
         goalType: goal.category,
         tasks: [
           {
-            taskName: `Start ${goal.title.toLowerCase()}`,
+            taskName: goal.title,
             description: goal.description,
             repeatFrequency: goal.frequency || 'daily',
+            verificationMode: 'photo',
           },
         ],
       },
@@ -139,15 +140,18 @@ export default function InviteeOnboardingFlow() {
   };
 
   const handleCustomPlanGenerated = (plan: any) => {
-    updateData({ generatedPlan: plan });
+    updateData({
+      generatedPlan: plan,
+      customGoal: plan?.selectedGoal ?? null,
+    });
     setShowCustomGoal(false);
     setIsStepValid(true);
     handleNext();
   };
 
   const handleFinish = () => {
-    const { selectedGoal, generatedPlan, firstTask } = onboardingData;
-    const goalToUse = selectedGoal;
+    const { selectedGoal, customGoal, generatedPlan, firstTask } = onboardingData;
+    const goalToUse = selectedGoal ?? customGoal;
 
     if (!goalToUse || !generatedPlan) {
       toast.error('Please select a goal first.');
@@ -167,7 +171,8 @@ export default function InviteeOnboardingFlow() {
       is_habit: goalToUse.frequency === 'daily' || goalToUse.frequency === 'weekly',
     };
 
-    const taskData = {
+    // Build the lead task from user input on the FirstTaskStep
+    const leadTask = {
       name: firstTask.title.trim(),
       description: firstTask.description.trim(),
       due_date: firstTask.scheduledTime ? new Date(firstTask.scheduledTime).toISOString() : null,
@@ -178,7 +183,17 @@ export default function InviteeOnboardingFlow() {
         : 'No photo required; task can be checked in by time window.',
     };
 
-    createGoal({ goal: goalData, task: taskData });
+    // Include all tasks from the generated plan (beyond just the lead task)
+    const planTasks = (generatedPlan.tasks || [])
+      .filter((t: any) => (t.taskName || t.name) !== firstTask.title.trim())
+      .map((t: any) => ({
+        name: t.taskName || t.name,
+        description: t.description || '',
+        repeat_frequency: t.repeatFrequency || goalToUse.frequency || 'daily',
+        verification_mode: t.verificationMode || (firstTask.requiresVerification ? 'photo' : 'time-window'),
+      }));
+
+    createGoal({ goal: goalData, task: leadTask, additionalTasks: planTasks });
   };
 
   const handleSkip = () => {
@@ -297,20 +312,19 @@ export default function InviteeOnboardingFlow() {
         ) : null}
         {!showCustomGoal
           ? STEPS.map((step, index) => (
-              <div
-                key={step.id}
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${
-                  completedSteps.includes(index)
-                    ? 'border-landing-sage/40 bg-landing-sage/15 text-landing-espresso'
-                    : index === currentStep
-                      ? 'border-landing-terracotta/40 bg-landing-terracotta/15 text-landing-espresso'
-                      : 'border-landing-clay bg-white text-landing-espresso-light'
+            <div
+              key={step.id}
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${completedSteps.includes(index)
+                ? 'border-landing-sage/40 bg-landing-sage/15 text-landing-espresso'
+                : index === currentStep
+                  ? 'border-landing-terracotta/40 bg-landing-terracotta/15 text-landing-espresso'
+                  : 'border-landing-clay bg-white text-landing-espresso-light'
                 }`}
-              >
-                {completedSteps.includes(index) ? <Check className="h-3.5 w-3.5" /> : null}
-                {step.title}
-              </div>
-            ))
+            >
+              {completedSteps.includes(index) ? <Check className="h-3.5 w-3.5" /> : null}
+              {step.title}
+            </div>
+          ))
           : null}
       </div>
 

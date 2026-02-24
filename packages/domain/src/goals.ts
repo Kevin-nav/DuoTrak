@@ -46,6 +46,8 @@ export type DomainGoal = {
   availability?: string[];
   timeCommitment?: string;
   accountabilityType?: string;
+  goalArchetype?: "savings" | "marathon" | "daily_habit" | "general";
+  goalProfileJson?: string;
   createdAt: string;
   updatedAt: string;
   tasks: DomainTask[];
@@ -82,6 +84,10 @@ export const mapGoalFromConvex = (goal: ConvexGoal): DomainGoal => ({
     : [],
   timeCommitment: typeof goal.time_commitment === "string" ? goal.time_commitment : "",
   accountabilityType: typeof goal.accountability_type === "string" ? goal.accountability_type : "",
+  goalArchetype: typeof goal.goal_archetype === "string"
+    ? (goal.goal_archetype as "savings" | "marathon" | "daily_habit" | "general")
+    : "general",
+  goalProfileJson: typeof goal.goal_profile_json === "string" ? goal.goal_profile_json : "",
   createdAt: new Date(goal._creationTime).toISOString(),
   updatedAt: new Date(goal.updated_at ?? goal._creationTime).toISOString(),
   tasks: Array.isArray(goal.tasks) ? goal.tasks.map(mapTaskFromConvex) : [],

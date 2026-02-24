@@ -70,6 +70,36 @@ async function getOrCreatePreferences(ctx: any, userId: Id<"users">) {
   return await ctx.db.get(prefId);
 }
 
+async function getPreferencesReadOnly(ctx: any, userId: Id<"users">) {
+  const existing = await ctx.db
+    .query("notification_preferences")
+    .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+    .first();
+  if (existing) return existing;
+
+  const user = await ctx.db.get(userId);
+  const now = Date.now();
+  return {
+    _id: undefined,
+    _creationTime: now,
+    user_id: userId,
+    in_app_enabled: true,
+    email_enabled: user?.notifications_enabled ?? true,
+    quiet_hours_enabled: false,
+    quiet_hours_start: "22:00",
+    quiet_hours_end: "07:00",
+    task_notifications: true,
+    partner_notifications: true,
+    chat_notifications: true,
+    journal_notifications: true,
+    progress_notifications: true,
+    system_notifications: true,
+    sound_enabled: true,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
 function categoryEnabled(preferences: any, category: NotificationCategory): boolean {
   if (category === "task") return !!preferences.task_notifications;
   if (category === "partner") return !!preferences.partner_notifications;
@@ -130,7 +160,7 @@ export const getPreferences = query({
   args: {},
   handler: async (ctx) => {
     const user = await getCurrentUserOrThrow(ctx);
-    return await getOrCreatePreferences(ctx, user._id);
+    return await getPreferencesReadOnly(ctx, user._id);
   },
 });
 
@@ -429,7 +459,7 @@ export const getEmailContext = internalQuery({
     if (!notification) return null;
     const user = await ctx.db.get(notification.user_id);
     if (!user) return null;
-    const prefs = await getOrCreatePreferences(ctx, notification.user_id);
+    const prefs = await getPreferencesReadOnly(ctx, notification.user_id);
     return { notification, user, prefs };
   },
 });

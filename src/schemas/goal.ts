@@ -10,6 +10,10 @@ import {
   TaskVerificationModeSchema,
   TaskProofGuidanceSchema,
   TaskPartnerInvolvementSchema,
+  TaskCadenceSchema,
+  HabitConfigSchema,
+  MilestoneConfigSchema,
+  TargetDateConfigSchema,
   type GoalWizardRequest,
   type StrategicQuestion,
   type QuestionsResponse,
@@ -19,6 +23,10 @@ import {
   type TaskVerificationMode,
   type TaskProofGuidance,
   type TaskPartnerInvolvement,
+  type TaskCadence,
+  type HabitConfig,
+  type MilestoneConfig,
+  type TargetDateConfig,
 } from "../../packages/contracts/src/goalCreation";
 
 export {
@@ -31,6 +39,10 @@ export {
   TaskVerificationModeSchema,
   TaskProofGuidanceSchema,
   TaskPartnerInvolvementSchema,
+  TaskCadenceSchema,
+  HabitConfigSchema,
+  MilestoneConfigSchema,
+  TargetDateConfigSchema,
 };
 
 export type {
@@ -43,6 +55,10 @@ export type {
   TaskVerificationMode,
   TaskProofGuidance,
   TaskPartnerInvolvement,
+  TaskCadence,
+  HabitConfig,
+  MilestoneConfig,
+  TargetDateConfig,
 };
 
 export const TaskSchema = z.object({
@@ -76,6 +92,10 @@ export const GoalReadSchema = GoalBaseSchema.extend({
   availability: z.array(z.string()).nullable().optional(),
   timeCommitment: z.string().nullable().optional(),
   accountabilityType: z.string().nullable().optional(),
+  templateSourceId: z.string().optional(),
+  templateSourceSlug: z.string().optional(),
+  templateSourceVersion: z.number().optional(),
+  templateSourceTitle: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   // Computed fields from backend
@@ -86,6 +106,12 @@ export const GoalReadSchema = GoalBaseSchema.extend({
 
 export const GoalCreateSchema = GoalBaseSchema.extend({
   isHabit: z.boolean().default(false),
+  goalType: z.enum(["habit", "target-date", "milestone"]).optional(),
+  endDate: z.string().datetime().nullable().optional(),
+  templateSourceId: z.string().optional(),
+  templateSourceSlug: z.string().optional(),
+  templateSourceVersion: z.number().optional(),
+  templateSourceTitle: z.string().optional(),
   availability: z.array(z.string()).optional(),
   timeCommitment: z.string().optional(),
   accountabilityType: z.string().optional(),
@@ -95,21 +121,32 @@ export const GoalCreateSchema = GoalBaseSchema.extend({
     repeatFrequency: z.string().optional(),
     timeWindow: z.string().optional(),
     accountabilityType: z.string().optional(),
+    verificationMode: z.string().optional(),
+    timeWindowStart: z.string().optional(),
+    timeWindowEnd: z.string().optional(),
+    timeWindowDurationMinutes: z.number().int().positive().optional(),
+    requiresPartnerReview: z.boolean().optional(),
   })),
 });
 
 // For updates, we allow a subset of the base fields.
 // Note: We are not allowing tasks to be updated via this endpoint for now.
 export const GoalUpdateSchema = z.object({
-    name: z.string().optional(),
-    description: z.string().optional(),
-    motivation: z.string().optional(),
-    category: z.string().optional(),
-    icon: z.string().optional(),
-    color: z.string().optional(),
-    availability: z.array(z.string()).optional(),
-    timeCommitment: z.string().optional(),
-    accountabilityType: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  motivation: z.string().optional(),
+  category: z.string().optional(),
+  icon: z.string().optional(),
+  color: z.string().optional(),
+  goalType: z.enum(["habit", "target-date", "milestone"]).optional(),
+  endDate: z.string().datetime().optional(),
+  templateSourceId: z.string().optional(),
+  templateSourceSlug: z.string().optional(),
+  templateSourceVersion: z.number().optional(),
+  templateSourceTitle: z.string().optional(),
+  availability: z.array(z.string()).optional(),
+  timeCommitment: z.string().optional(),
+  accountabilityType: z.string().optional(),
 });
 
 export type TaskRead = z.infer<typeof TaskSchema>;

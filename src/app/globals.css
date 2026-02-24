@@ -17,6 +17,8 @@
   --theme-accent: #F8F2EA;
   --theme-destructive: #EF4444;
   --theme-destructive-foreground: #FAFAFA;
+  --theme-card: #FFFDF9;
+  --theme-card-foreground: #4E4640;
 }
 
 [data-theme="dark"] {
@@ -49,23 +51,65 @@ html {
 }
 
 /* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b8a693 #f8f2ea;
+}
+
+/* Forced beige scope for profile route */
+.profile-beige-scope {
+  --theme-background: #fffaf2;
+  --theme-foreground: #4f463e;
+  --theme-muted: #f6ede1;
+  --theme-muted-foreground: #857a70;
+  --theme-border: #e7dac9;
+  --theme-primary: #bda792;
+  --theme-primary-foreground: #ffffff;
+  --theme-secondary: #a99480;
+  --theme-accent: #f3e8da;
+  --theme-destructive: #ef4444;
+  --theme-destructive-foreground: #ffffff;
+  --theme-card: #fffdf9;
+  --theme-card-foreground: #4f463e;
+
+  /* Also override shadcn semantic tokens used by shared components */
+  --background: 36 70% 97%;
+  --foreground: 28 12% 28%;
+  --card: 36 75% 98%;
+  --card-foreground: 28 12% 28%;
+  --popover: 36 75% 98%;
+  --popover-foreground: 28 12% 28%;
+  --primary: 30 24% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 35 42% 92%;
+  --secondary-foreground: 28 12% 28%;
+  --muted: 35 42% 93%;
+  --muted-foreground: 27 9% 49%;
+  --accent: 35 42% 91%;
+  --accent-foreground: 28 12% 28%;
+  --border: 33 31% 84%;
+  --input: 33 31% 84%;
+  --ring: 30 24% 65%;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--theme-muted);
+  background: #f8f2ea;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--theme-primary);
-  border-radius: 4px;
-  opacity: 0.8;
+  background: #b8a693;
+  border-radius: 9999px;
+  border: 2px solid #f8f2ea;
+  min-height: 28px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-primary);
-  opacity: 1;
+  background: #a58f7a;
 }
 
 /* Animation utilities */

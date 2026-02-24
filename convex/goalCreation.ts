@@ -101,11 +101,31 @@ export const getStrategicQuestions = action({
       availability: v.array(v.string()),
       timeCommitment: v.string(),
       accountabilityType: v.string(),
+      goalType: v.optional(v.union(v.literal("habit"), v.literal("target-date"), v.literal("milestone"))),
+      timezone: v.optional(v.string()),
+      goalTemplateId: v.optional(v.string()),
+      goalTemplateTitle: v.optional(v.string()),
+      goalTemplateTasks: v.optional(v.array(v.object({
+        name: v.string(),
+        description: v.optional(v.string()),
+        repeatFrequency: v.optional(v.string()),
+        verificationMode: v.optional(v.string()),
+        timeWindowStart: v.optional(v.string()),
+        timeWindowEnd: v.optional(v.string()),
+        timeWindowDurationMinutes: v.optional(v.number()),
+        requiresPartnerReview: v.optional(v.boolean()),
+      }))),
       partnerName: v.optional(v.union(v.string(), v.null())),
       targetDeadline: v.optional(v.union(v.string(), v.null())),
       preferredCheckInStyle: v.optional(
         v.union(v.literal("quick_text"), v.literal("photo_recap"), v.literal("voice_note"))
       ),
+      // Shared goal intent
+      isSharedGoal: v.optional(v.boolean()),
+      sharedGoalMode: v.optional(v.union(v.literal("independent"), v.literal("together"))),
+      partnerTimezone: v.optional(v.string()),
+      // Template enhancement mode
+      templateEnhancementMode: v.optional(v.boolean()),
     }),
   },
   handler: async (_ctx, args) => {

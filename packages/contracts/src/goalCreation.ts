@@ -8,6 +8,10 @@ export {
   TaskVerificationModeSchema,
   TaskProofGuidanceSchema,
   TaskPartnerInvolvementSchema,
+  TaskCadenceSchema,
+  HabitConfigSchema,
+  MilestoneConfigSchema,
+  TargetDateConfigSchema,
 } from "./goalPlan";
 
 export type {
@@ -18,6 +22,10 @@ export type {
   TaskVerificationMode,
   TaskProofGuidance,
   TaskPartnerInvolvement,
+  TaskCadence,
+  HabitConfig,
+  MilestoneConfig,
+  TargetDateConfig,
 } from "./goalPlan";
 
 export const GoalWizardDataSchema = z.object({
@@ -26,9 +34,33 @@ export const GoalWizardDataSchema = z.object({
   availability: z.array(z.string()),
   time_commitment: z.string(),
   accountability_type: z.string(),
+  goal_type: z.enum(["habit", "target-date", "milestone"]).optional(),
+  timezone: z.string().optional(),
+  goal_template_id: z.string().optional(),
+  goal_template_title: z.string().optional(),
+  goal_template_tasks: z.array(
+    z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      repeat_frequency: z.string().optional(),
+      verification_mode: z.string().optional(),
+      time_window_start: z.string().optional(),
+      time_window_end: z.string().optional(),
+      time_window_duration_minutes: z.number().optional(),
+      requires_partner_review: z.boolean().optional(),
+    }),
+  ).optional(),
   partner_name: z.string().nullable().optional(),
   target_deadline: z.string().nullable().optional(),
   preferred_check_in_style: z.enum(["quick_text", "photo_recap", "voice_note"]).optional(),
+
+  // ── Shared Goal Intent ──
+  is_shared_goal: z.boolean().optional(),
+  shared_goal_mode: z.enum(["independent", "together"]).optional(),
+  partner_timezone: z.string().optional(),
+
+  // ── Template Enhancement Mode ──
+  template_enhancement_mode: z.boolean().optional(),
 });
 
 export const GoalWizardRequestSchema = z.object({

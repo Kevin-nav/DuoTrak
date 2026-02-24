@@ -24,4 +24,11 @@ crons.cron(
   {}
 );
 
+crons.cron(
+  "generate-daily-task-instances",
+  "0 0 * * *",
+  internal.taskScheduler.generateDailyInstances,
+  {}
+);
+
 export default crons;

@@ -20,8 +20,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <DashboardLayout>
-      <ProfileContent />
-    </DashboardLayout>
+    <div data-theme="warm-beige" className="profile-beige-scope min-h-full">
+      <DashboardLayout>
+        <ProfileContent />
+      </DashboardLayout>
+    </div>
   );
 }

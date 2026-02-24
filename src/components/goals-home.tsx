@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { motion, AnimatePresence, type Variants } from "framer-motion"
-import { Plus, Target, Search, Users, User, Edit, Copy, Archive } from "lucide-react"
+import { Plus, Target, Search, Edit, Copy, Archive } from "lucide-react"
 import { useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -105,8 +105,8 @@ export default function GoalsHome() {
     return goal.status === "Completed" ? "Completed" : "On Track";
   };
 
-  const getStatusEmoji = (status: string) => {
-    return status === "Completed" ? "âœ…" : "ðŸŽ‰";
+  const getStatusLabel = (status: string) => {
+    return status === "Completed" ? "Done" : "Active";
   };
 
   const containerVariants: Variants = {
@@ -139,8 +139,20 @@ export default function GoalsHome() {
     <DashboardLayout>
       <div className="max-w-4xl mx-auto px-4 py-6">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="text-3xl font-bold text-charcoal dark:text-gray-100 mb-2">Your Goals</h1>
-          <p className="text-stone-gray dark:text-gray-300">Track your progress and achieve your dreams</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-bold text-charcoal dark:text-gray-100 mb-2">Your Goals</h1>
+              <p className="text-stone-gray dark:text-gray-300">Track your progress and achieve your dreams</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/goals/new")}
+              className="hidden items-center gap-2 rounded-lg bg-primary-blue px-4 py-2 text-sm font-semibold text-white hover:bg-primary-blue-hover sm:inline-flex"
+            >
+              <Plus className="h-4 w-4" />
+              Create Goal
+            </button>
+          </div>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 shadow-sm border border-cool-gray dark:border-gray-700">
@@ -194,7 +206,7 @@ export default function GoalsHome() {
                                   {goal.category} • {goal.isHabit ? 'Habit' : 'Project'}
                                 </p>
                               </div>
-                              <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center space-x-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                                 <motion.button
                                   whileHover={{ scale: 1.1 }}
                                   whileTap={{ scale: 0.9 }}
@@ -226,7 +238,7 @@ export default function GoalsHome() {
                                 </motion.button>
                               </div>
                               <span className="text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded-full">
-                                {getStatusText(goal)} {getStatusEmoji(goal.status)}
+                                {getStatusText(goal)} · {getStatusLabel(goal.status)}
                               </span>
                             </div>
 
@@ -283,7 +295,7 @@ export default function GoalsHome() {
           </AlertDialogContent>
         </AlertDialog>
 
-        <div className="fixed bottom-24 right-6 z-40">
+        <div className="fixed bottom-24 right-6 z-40 sm:hidden">
           <motion.button
             onClick={() => router.push("/goals/new")}
             whileHover={{ scale: 1.1 }}
