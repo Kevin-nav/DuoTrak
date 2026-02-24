@@ -147,3 +147,27 @@ async def test_finalize_success_with_complete_partner_accountability(client):
     assert body["finalized"] is True
     assert body["goal_plan"]["intent"] == "milestone"
     assert body["goal_plan"]["tasks"][0]["requires_partner_review"] is True
+
+
+async def test_summary_endpoints_roundtrip(client):
+    create_response = await client.post("/api/v1/goal-chat/sessions", json={})
+    session_id = create_response.json()["session_id"]
+
+    await client.post(
+        f"/api/v1/goal-chat/{session_id}/turns",
+        json={
+            "message": "I want a habit goal. Success means 30 days consistent. weekday mornings. 30 minutes daily. partner review. weekly. tasks: run, stretch",
+        },
+    )
+
+    summary_response = await client.post(f"/api/v1/goal-chat/{session_id}/summary")
+    assert summary_response.status_code == 200
+    summary = summary_response.json()["summary"]
+
+    summary["success_definition"] = "Stay consistent for 30 days"
+    patch_response = await client.patch(
+        f"/api/v1/goal-chat/{session_id}/summary",
+        json={"summary": summary},
+    )
+    assert patch_response.status_code == 200
+    assert patch_response.json()["summary"]["success_definition"] == "Stay consistent for 30 days"

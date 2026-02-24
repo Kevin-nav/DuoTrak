@@ -19,7 +19,7 @@ export default function GoalChatThread({ messages }: { messages: Message[] }) {
                 : "ml-auto bg-primary-blue text-white"
             }`}
           >
-            {message.text}
+            {message.text || "..."}
           </div>
         ))}
       </div>

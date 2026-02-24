@@ -70,6 +70,42 @@ class GoalChatSessionService:
             self._sessions[session_id] = updated_session
             return response
 
+    async def get_summary(self, session_id: str) -> Dict[str, Any]:
+        session = await self.get_session(session_id)
+        slots = dict(session.get("slots", {}))
+        tasks = slots.get("tasks") or []
+        normalized_tasks = []
+        for task in tasks:
+            if isinstance(task, dict):
+                normalized_tasks.append(
+                    {
+                        "name": task.get("name", ""),
+                        "description": task.get("description", ""),
+                        "requires_partner_review": task.get("requires_partner_review", True),
+                        "review_sla": task.get("review_sla", "24h"),
+                        "escalation_policy": task.get("escalation_policy", "Escalate after missed SLA"),
+                    }
+                )
+        slots["tasks"] = normalized_tasks
+        return {
+            "session_id": session_id,
+            "ready_for_summary": len(self.missing_slots(slots)) == 0,
+            "summary": slots,
+        }
+
+    async def patch_summary(self, session_id: str, summary_patch: Dict[str, Any]) -> Dict[str, Any]:
+        async with self._lock:
+            session = self._sessions.get(session_id)
+            if session is None or float(session["expires_at"]) <= time.monotonic():
+                self._sessions.pop(session_id, None)
+                raise KeyError("Goal chat session not found or expired.")
+
+            session["slots"] = self._conversation_manager._slot_tracker.merge_slots(session.get("slots", {}), summary_patch)
+            session["expires_at"] = time.monotonic() + self._ttl_seconds
+            self._sessions[session_id] = session
+
+        return await self.get_summary(session_id)
+
     async def finalize(self, session_id: str, has_partner: bool) -> Dict[str, Any]:
         session = await self.get_session(session_id)
         slots = session.get("slots", {})
@@ -110,3 +146,6 @@ class GoalChatSessionService:
 
     def required_slots(self) -> list[str]:
         return self._conversation_manager.required_slots()
+
+    def missing_slots(self, slots: Dict[str, Any]) -> list[str]:
+        return self._conversation_manager._slot_tracker.missing_slots(slots)

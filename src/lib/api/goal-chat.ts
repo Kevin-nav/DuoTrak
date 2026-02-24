@@ -1,7 +1,5 @@
 import { apiClient } from "@/lib/api/client";
 
-export type GoalIntent = "target-date" | "habit" | "milestone";
-
 export type GoalChatTask = {
   name: string;
   description?: string;
@@ -10,70 +8,96 @@ export type GoalChatTask = {
   escalation_policy?: string;
 };
 
-export type GoalChatSlotUpdates = {
-  intent?: GoalIntent;
-  success_definition?: string;
-  availability?: string;
-  time_budget?: string;
-  accountability_mode?: string;
-  deadline?: string;
-  review_cycle?: string;
-  tasks?: GoalChatTask[];
-};
-
-export type GoalChatProfilePrompt = {
-  prompt_id: string;
-  question: string;
-};
-
 export type GoalChatProfileState = {
   behavioral_summary: string;
-  self_profile_prompts: GoalChatProfilePrompt[];
+  self_profile_prompts: Array<{ prompt_id: string; question: string }>;
   answers: Record<string, string>;
   merged_summary: string;
 };
 
-export type GoalChatCreateSessionResponse = {
+export type GoalChatSessionResponse = {
   session_id: string;
   missing_slots: string[];
   required_slots: string[];
   profile: GoalChatProfileState;
 };
 
-export type GoalChatTurnResponse = {
-  session_id: string;
+export type GoalChatQuestionState = {
   missing_slots: string[];
   captured_slots: Record<string, any>;
-  next_prompt: string;
   is_ready_to_finalize: boolean;
   profile: GoalChatProfileState;
 };
 
-export type GoalChatFinalizeResponse = {
+export type GoalChatSummaryResponse = {
   session_id: string;
-  finalized: boolean;
-  goal_plan?: Record<string, any>;
-  validation_errors: string[];
+  ready_for_summary: boolean;
+  summary: Record<string, any>;
 };
 
-export const createGoalChatSession = async (payload: {
-  user_id?: string;
-  behavioral_summary?: string;
-}): Promise<GoalChatCreateSessionResponse> =>
-  apiClient.post<GoalChatCreateSessionResponse>("/api/v1/goal-chat/sessions", payload);
+export const createGoalChatSession = async (payload: { user_id?: string; behavioral_summary?: string }) =>
+  apiClient.post<GoalChatSessionResponse>("/api/v1/goal-chat/sessions", payload);
 
-export const sendGoalChatTurn = async (
+export const getGoalChatSummary = async (sessionId: string) =>
+  apiClient.post<GoalChatSummaryResponse>(`/api/v1/goal-chat/${sessionId}/summary`);
+
+export const patchGoalChatSummary = async (sessionId: string, summary: Record<string, any>) =>
+  apiClient.patch<GoalChatSummaryResponse>(`/api/v1/goal-chat/${sessionId}/summary`, { summary });
+
+export const finalizeGoalChat = async (sessionId: string, hasPartner: boolean) =>
+  apiClient.post<{ session_id: string; finalized: boolean; goal_plan?: Record<string, any>; validation_errors: string[] }>(
+    `/api/v1/goal-chat/${sessionId}/finalize`,
+    { has_partner: hasPartner },
+  );
+
+export async function streamGoalChatTurn(
   sessionId: string,
-  payload: {
-    message: string;
-    slot_updates?: GoalChatSlotUpdates;
-    profile_answers?: Record<string, string>;
+  payload: { message: string; selected_chip?: string; profile_answers?: Record<string, string> },
+  handlers: {
+    onToken: (token: string) => void;
+    onChips: (chips: string[]) => void;
+    onQuestionState: (state: GoalChatQuestionState) => void;
+    onReadyForSummary: (ready: boolean) => void;
   },
-): Promise<GoalChatTurnResponse> =>
-  apiClient.post<GoalChatTurnResponse>(`/api/v1/goal-chat/${sessionId}/turns`, payload);
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const response = await fetch(`${baseUrl}/api/v1/goal-chat/${sessionId}/turns/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ message: payload.message, selected_chip: payload.selected_chip, profile_answers: payload.profile_answers || {} }),
+  });
 
-export const finalizeGoalChat = async (
-  sessionId: string,
-  payload: { has_partner: boolean },
-): Promise<GoalChatFinalizeResponse> =>
-  apiClient.post<GoalChatFinalizeResponse>(`/api/v1/goal-chat/${sessionId}/finalize`, payload);
+  if (!response.ok || !response.body) {
+    throw new Error(`Streaming failed with status ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const rawEvent = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      boundary = buffer.indexOf("\n\n");
+
+      const eventLine = rawEvent.split("\n").find((line) => line.startsWith("event:"));
+      const dataLine = rawEvent.split("\n").find((line) => line.startsWith("data:"));
+      if (!eventLine || !dataLine) continue;
+
+      const eventName = eventLine.replace("event:", "").trim();
+      const data = JSON.parse(dataLine.replace("data:", "").trim());
+
+      if (eventName === "token") handlers.onToken(data.text || "");
+      if (eventName === "chips") handlers.onChips(data.chips || []);
+      if (eventName === "question_state") handlers.onQuestionState(data);
+      if (eventName === "ready_for_summary") handlers.onReadyForSummary(Boolean(data.ready));
+    }
+  }
+}

@@ -53,6 +53,7 @@ class GoalChatTurnRequest(BaseModel):
     message: str = Field(..., min_length=1)
     slot_updates: GoalChatSlotUpdates = Field(default_factory=GoalChatSlotUpdates)
     profile_answers: Dict[str, str] = Field(default_factory=dict)
+    selected_chip: Optional[str] = None
 
 
 class GoalChatTurnResponse(BaseModel):
@@ -62,6 +63,7 @@ class GoalChatTurnResponse(BaseModel):
     next_prompt: str
     is_ready_to_finalize: bool
     profile: GoalChatProfileState
+    quick_reply_chips: List[str] = Field(default_factory=list)
 
 
 class GoalChatFinalizeRequest(BaseModel):
@@ -73,3 +75,13 @@ class GoalChatFinalizeResponse(BaseModel):
     finalized: bool
     goal_plan: Optional[Dict[str, Any]] = None
     validation_errors: List[str] = Field(default_factory=list)
+
+
+class GoalChatSummaryResponse(BaseModel):
+    session_id: str
+    ready_for_summary: bool
+    summary: Dict[str, Any]
+
+
+class GoalChatSummaryPatchRequest(BaseModel):
+    summary: Dict[str, Any]

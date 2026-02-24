@@ -28,3 +28,10 @@ async def test_goal_chat_routes_are_registered(client):
         json={"has_partner": False},
     )
     assert finalize_response.status_code == 400
+
+    stream_response = await client.post(
+        f"/api/v1/goal-chat/{session_id}/turns/stream",
+        json={"message": "habit goal"},
+    )
+    assert stream_response.status_code == 200
+    assert "text/event-stream" in stream_response.headers.get("content-type", "")
