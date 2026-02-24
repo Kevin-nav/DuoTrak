@@ -4,6 +4,7 @@ import json
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 
+from app.core.config import settings
 from app.schemas.goal_chat import (
     GoalChatCreateSessionRequest,
     GoalChatCreateSessionResponse,
@@ -14,6 +15,7 @@ from app.schemas.goal_chat import (
     GoalChatTurnRequest,
     GoalChatTurnResponse,
 )
+from app.services.gemini_service import gemini_service
 from app.services.goal_chat_session_service import GoalChatSessionService
 
 
@@ -67,10 +69,39 @@ async def create_goal_chat_turn_stream(session_id: str, request: GoalChatTurnReq
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     async def stream():
-        assistant_text = turn_result["next_prompt"]
-        for chunk in assistant_text.split(" "):
-            yield _sse_event("token", {"text": f"{chunk} "})
-            await asyncio.sleep(0.01)
+        use_live_model_stream = str(getattr(settings, "ENVIRONMENT", "")).lower() not in {"test"} and bool(
+            getattr(settings, "GOAL_CHAT_AI_ENABLED", True)
+        )
+        if use_live_model_stream:
+            prompt = f"""
+You are DuoTrak's goal-creation coach.
+Write exactly one concise conversational question to ask next based on this draft prompt:
+{turn_result["next_prompt"]}
+
+Constraints:
+- One question only.
+- Friendly and direct.
+- 8-20 words.
+- No markdown.
+"""
+            model = gemini_service.get_flash_model(use_zero_thinking_budget=True)
+            async for chunk in model.astream(prompt):
+                content = getattr(chunk, "content", "")
+                if isinstance(content, str) and content:
+                    yield _sse_event("token", {"text": content})
+                elif isinstance(content, list):
+                    text = "".join(
+                        str(part.get("text", ""))
+                        for part in content
+                        if isinstance(part, dict) and part.get("text")
+                    )
+                    if text:
+                        yield _sse_event("token", {"text": text})
+        else:
+            assistant_text = turn_result["next_prompt"]
+            for chunk in assistant_text.split(" "):
+                yield _sse_event("token", {"text": f"{chunk} "})
+                await asyncio.sleep(0.01)
         yield _sse_event("chips", {"chips": turn_result.get("quick_reply_chips", [])})
         yield _sse_event(
             "question_state",

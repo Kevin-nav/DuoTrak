@@ -5,9 +5,11 @@ from typing import Any, Dict
 
 from app.core.config import settings
 from app.services.goal_chat.conversation_manager import ConversationManager
+from app.services.goal_chat.crew_orchestrator import GoalChatCrewOrchestrator
 from app.services.goal_chat.plan_validator import PlanValidator
 from app.services.goal_chat.profile_engine import ProfileEngine
 from app.services.goal_chat.slot_tracker import SlotTracker
+from app.services.gemini_config import GeminiModelConfig
 
 
 class GoalChatSessionService:
@@ -21,6 +23,7 @@ class GoalChatSessionService:
         self._conversation_manager = ConversationManager(slot_tracker=slot_tracker, profile_engine=profile_engine)
         self._profile_engine = profile_engine
         self._plan_validator = PlanValidator(slot_tracker=slot_tracker)
+        self._crew_orchestrator = GoalChatCrewOrchestrator(gemini_config=GeminiModelConfig())
 
     async def create_session(self, user_id: str | None, behavioral_summary: str | None) -> Dict[str, Any]:
         session_id = str(uuid.uuid4())
@@ -60,12 +63,34 @@ class GoalChatSessionService:
                 self._sessions.pop(session_id, None)
                 raise KeyError("Goal chat session not found or expired.")
 
+            use_ai_orchestrator = (
+                bool(getattr(settings, "GOAL_CHAT_AI_ENABLED", True))
+                and str(getattr(settings, "ENVIRONMENT", "")).lower() not in {"test"}
+            )
+            if use_ai_orchestrator:
+                missing_slots_before = self.missing_slots(session.get("slots", {}))
+                ai_enrichment = self._crew_orchestrator.enrich_turn(
+                    user_message=message,
+                    current_slots=session.get("slots", {}),
+                    missing_slots=missing_slots_before,
+                )
+            else:
+                ai_enrichment = {"extracted_slots": {}, "next_prompt": None, "quick_reply_chips": []}
+            merged_slot_updates = self._conversation_manager._slot_tracker.merge_slots(
+                ai_enrichment.get("extracted_slots", {}),
+                slot_updates,
+            )
             updated_session, response = self._conversation_manager.apply_turn(
                 state=session,
                 message=message,
-                slot_updates=slot_updates,
+                slot_updates=merged_slot_updates,
                 profile_answers=profile_answers,
             )
+            if ai_enrichment.get("next_prompt"):
+                response["next_prompt"] = ai_enrichment["next_prompt"]
+            ai_chips = ai_enrichment.get("quick_reply_chips", [])
+            if isinstance(ai_chips, list) and ai_chips:
+                response["quick_reply_chips"] = [str(chip) for chip in ai_chips[:4]]
             updated_session["expires_at"] = time.monotonic() + self._ttl_seconds
             self._sessions[session_id] = updated_session
             return response
