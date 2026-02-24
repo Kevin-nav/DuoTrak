@@ -146,11 +146,20 @@ export default function GoalsHome() {
             </div>
             <button
               type="button"
-              onClick={() => router.push("/goals/new")}
+              onClick={() => router.push("/goals/new-ai")}
               className="hidden items-center gap-2 rounded-lg bg-primary-blue px-4 py-2 text-sm font-semibold text-white hover:bg-primary-blue-hover sm:inline-flex"
             >
               <Plus className="h-4 w-4" />
-              Create Goal
+              Create Goal with AI
+            </button>
+          </div>
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => router.push("/goals/new")}
+              className="text-xs font-semibold text-primary-blue underline-offset-2 hover:underline"
+            >
+              Use classic wizard
             </button>
           </div>
         </motion.div>
@@ -297,7 +306,7 @@ export default function GoalsHome() {
 
         <div className="fixed bottom-24 right-6 z-40 sm:hidden">
           <motion.button
-            onClick={() => router.push("/goals/new")}
+            onClick={() => router.push("/goals/new-ai")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="w-14 h-14 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-full shadow-lg flex items-center justify-center"
