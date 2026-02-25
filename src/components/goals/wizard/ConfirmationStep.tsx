@@ -68,7 +68,7 @@ export default function ConfirmationStep({
             </motion.div>
 
             {/* Goal type badge */}
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-xs font-medium">
                     <GoalIcon className="h-3.5 w-3.5" />
                     {typeLabel}
@@ -164,7 +164,7 @@ export default function ConfirmationStep({
                     </h4>
                     <div className="space-y-2">
                         {goalPlan.milestone_config.checkpoints.map((cp, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
+                            <div key={idx} className="flex flex-col items-start gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
                                 <span className="text-muted-foreground">{cp.target_label}</span>
                                 <span className="text-xs font-medium">{cp.deadline_description}</span>
                             </div>
@@ -186,7 +186,7 @@ export default function ConfirmationStep({
                     </h4>
                     <div className="space-y-2">
                         {goalPlan.target_date_config.phases.map((phase, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
+                            <div key={idx} className="flex flex-col items-start gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
                                 <span className="font-medium">{phase.name}</span>
                                 <span className="text-xs text-muted-foreground">Weeks {phase.week_range}</span>
                             </div>

@@ -25,12 +25,12 @@ export default function GoalChatPage() {
 
   return (
     <motion.div
-      className="mx-auto max-w-3xl px-4 py-6"
+      className="mx-auto max-w-3xl px-3 py-4 sm:px-4 sm:py-6"
       initial={pageInitial}
       animate={pageAnimate}
     >
       {/* ── Header ── */}
-      <header className="mb-5 rounded-2xl border border-border bg-card p-5">
+      <header className="mb-4 rounded-2xl border border-border bg-card p-4 sm:mb-5 sm:p-5">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sand">
             <Sparkles className="h-4 w-4 text-espresso" />
@@ -39,7 +39,7 @@ export default function GoalChatPage() {
             AI Goal Builder
           </p>
         </div>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="mt-2 text-xl font-extrabold tracking-tight text-foreground sm:text-3xl">
           Let&apos;s build your next goal
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">

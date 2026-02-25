@@ -34,8 +34,8 @@ export default function GoalCreationWizard() {
   const nextButtonLabel = flow.currentStep === 0 ? "Next: Motivation" : "Next";
 
   return (
-    <div className="min-h-screen bg-pearl-gray pb-20 pt-16 dark:bg-gray-900">
-      <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="min-h-screen bg-pearl-gray pb-20 pt-12 dark:bg-gray-900 sm:pt-16">
+      <div className="mx-auto max-w-2xl px-3 py-5 sm:px-4 sm:py-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -49,7 +49,7 @@ export default function GoalCreationWizard() {
             <ArrowLeft className="h-6 w-6 text-charcoal dark:text-gray-100" />
           </button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-charcoal dark:text-gray-100">Create New Goal</h1>
+            <h1 className="text-xl font-bold text-charcoal dark:text-gray-100 sm:text-2xl">Create New Goal</h1>
             <p className="text-sm text-stone-gray dark:text-gray-400">
               Step {flow.currentStep + 1} of {steps.length}
             </p>
@@ -78,7 +78,7 @@ export default function GoalCreationWizard() {
                 animate="visible"
                 exit="exit"
                 transition={{ duration: 0.3 }}
-                className="mb-6 rounded-xl border border-cool-gray bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="mb-6 rounded-xl border border-cool-gray bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
               >
                 <h2 className="mb-2 text-xl font-bold text-charcoal dark:text-gray-100">{stepTitle}</h2>
                 <p className="mb-6 text-stone-gray dark:text-gray-300">{stepDescription}</p>
@@ -146,7 +146,7 @@ export default function GoalCreationWizard() {
             </AnimatePresence>
 
             {flow.currentStep !== 0 && (
-            <div className="sticky bottom-20 z-20 -mx-1 rounded-xl bg-pearl-gray/95 p-1 backdrop-blur dark:bg-gray-900/90 sm:static sm:mx-0 sm:bg-transparent sm:p-0">
+            <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 -mx-1 rounded-xl bg-pearl-gray/95 p-1 backdrop-blur dark:bg-gray-900/90 sm:static sm:mx-0 sm:bg-transparent sm:p-0">
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <motion.button
                   type="button"
@@ -154,7 +154,7 @@ export default function GoalCreationWizard() {
                   whileTap={{ scale: 0.95 }}
                   onClick={flow.handleBack}
                   disabled={isFirstStep}
-                  className="w-full rounded-lg border border-cool-gray px-6 py-3 text-charcoal transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:w-auto"
+                  className="w-full rounded-lg border border-cool-gray px-6 py-3.5 text-charcoal transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:w-auto sm:py-3"
                 >
                   Back
                 </motion.button>
@@ -168,7 +168,7 @@ export default function GoalCreationWizard() {
                     whileTap={{ scale: 0.95 }}
                     onClick={flow.handleNext}
                     disabled={flow.getQuestionsMutation.isPending || flow.getPlanMutation.isPending}
-                    className="flex w-full items-center justify-center space-x-2 rounded-lg bg-primary-blue px-6 py-3 text-white transition-colors hover:bg-primary-blue-hover disabled:opacity-50 sm:w-auto"
+                    className="flex w-full items-center justify-center space-x-2 rounded-lg bg-primary-blue px-6 py-3.5 text-white transition-colors hover:bg-primary-blue-hover disabled:opacity-50 sm:w-auto sm:py-3"
                   >
                     <span>
                       {flow.getQuestionsMutation.isPending
@@ -185,7 +185,7 @@ export default function GoalCreationWizard() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     disabled={flow.createGoalMutation.isPending || !flow.finalGoalPlan}
-                    className="w-full rounded-lg bg-primary-blue px-6 py-3 text-white transition-colors hover:bg-primary-blue-hover disabled:opacity-50 sm:w-auto"
+                    className="w-full rounded-lg bg-primary-blue px-6 py-3.5 text-white transition-colors hover:bg-primary-blue-hover disabled:opacity-50 sm:w-auto sm:py-3"
                   >
                     {flow.createGoalMutation.isPending ? "Saving..." : "Save Goal"}
                   </motion.button>

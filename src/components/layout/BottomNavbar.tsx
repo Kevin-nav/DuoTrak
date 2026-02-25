@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Home, Target, Users, User, TrendingUp, BookOpenText } from 'lucide-react'
+import { Home, Target, Users, TrendingUp, BookOpenText } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
@@ -13,10 +13,9 @@ export default function BottomNavbar() {
   const navItems = [
     { id: "home", label: "Home", icon: Home, path: "/dashboard" },
     { id: "goals", label: "Goals", icon: Target, path: "/goals" },
-    { id: "progress", label: "Progress", icon: TrendingUp, path: "/progress" },
     { id: "journal", label: "Journal", icon: BookOpenText, path: "/journal" },
+    { id: "progress", label: "Progress", icon: TrendingUp, path: "/progress" },
     { id: "partner", label: "Partner", icon: Users, path: "/partner" },
-    { id: "profile", label: "Profile", icon: User, path: "/profile" },
   ]
 
   useEffect(() => {
@@ -38,7 +37,7 @@ export default function BottomNavbar() {
       transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--theme-border)] bg-[var(--theme-card)]/95 px-2 py-1.5 shadow-lg backdrop-blur-md sm:px-4 sm:py-2"
     >
-      <div className="mx-auto flex max-w-md items-center justify-between gap-0.5 sm:justify-around">
+      <div className="mx-auto flex max-w-lg items-center justify-around gap-1">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeTab === item.id

@@ -182,13 +182,13 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
   }
 
   return (
-    <div className="min-h-screen pt-16 pb-20">
-      <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className="mx-auto max-w-2xl px-3 pt-4 sm:px-4 sm:pt-8">
         {/* Header & Progress */}
-        <div className="mb-5 rounded-2xl border border-border bg-card">
-          <div className="border-b border-border p-5">
-            <div className="flex items-center gap-2.5">
-              <button onClick={() => router.back()} className="mr-1 rounded-lg p-1.5 transition-colors hover:bg-background">
+        <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-card sm:mb-5">
+          <div className="border-b border-border p-4 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <button onClick={() => router.back()} className="rounded-lg p-1.5 transition-colors hover:bg-background sm:-ml-1.5 mr-1">
                 <ArrowLeft className="h-4.5 w-4.5 text-muted-foreground" />
               </button>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sand">
@@ -201,19 +201,19 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
             </div>
 
             {/* Meta badges */}
-            <div className="mt-3 flex flex-wrap gap-2 pl-[3.25rem]">
-              <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-espresso">
+            <div className="mt-3 flex flex-wrap gap-1.5 pl-[2.75rem] sm:gap-2 sm:pl-[3.25rem]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2 py-0.5 sm:px-2.5 text-[10px] font-medium uppercase tracking-wider text-espresso">
                 <Target className="h-3 w-3" />
                 {archetype.replace("_", " ")}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-espresso">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2 py-0.5 sm:px-2.5 text-[10px] font-medium uppercase tracking-wider text-espresso">
                 {goal.accountabilityType?.replace("_", " ") || "Task Completion"}
               </span>
             </div>
           </div>
 
           {/* Progress bar preview */}
-          <div className="px-5 py-4">
+          <div className="p-4 sm:px-5 sm:py-4">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-medium">{progressModel.title}</span>
               <span>{completedCount}/{goal.tasks.length} tasks completed</span>
@@ -269,25 +269,25 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
         </div>
 
         {/* Tabs */}
-        <div className="mb-5 rounded-2xl border border-border bg-card p-1.5 overflow-x-auto">
-          <div className="flex min-w-max gap-1">
+        <div className="mb-4 rounded-2xl border border-border bg-card p-1.5 sm:mb-5">
+          <div className="grid grid-cols-3 gap-1 sm:flex sm:min-w-max">
             <button
               onClick={() => setActiveTab("this-week")}
-              className={`flex-1 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${activeTab === "this-week" ? "bg-sand text-espresso shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
+              className={`flex-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-all sm:px-4 sm:text-xs ${activeTab === "this-week" ? "bg-sand text-espresso shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
             >
-              <span className="inline-flex items-center justify-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />This Week</span>
+              <span className="inline-flex items-center justify-center gap-1.5"><CalendarDays className="hidden h-3.5 w-3.5 min-[381px]:block" />This Week</span>
             </button>
             <button
               onClick={() => setActiveTab("full-plan")}
-              className={`flex-1 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${activeTab === "full-plan" ? "bg-sand text-espresso shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
+              className={`flex-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-all sm:px-4 sm:text-xs ${activeTab === "full-plan" ? "bg-sand text-espresso shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
             >
-              <span className="inline-flex items-center justify-center gap-1.5"><ListChecks className="h-3.5 w-3.5" />Full Plan</span>
+              <span className="inline-flex items-center justify-center gap-1.5"><ListChecks className="hidden h-3.5 w-3.5 min-[381px]:block" />Full Plan</span>
             </button>
             <button
               onClick={() => setActiveTab("settings")}
-              className={`flex-1 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${activeTab === "settings" ? "bg-sand text-espresso shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
+              className={`flex-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-all sm:px-4 sm:text-xs ${activeTab === "settings" ? "bg-sand text-espresso shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
             >
-              <span className="inline-flex items-center justify-center gap-1.5"><Settings2 className="h-3.5 w-3.5" />Settings</span>
+              <span className="inline-flex items-center justify-center gap-1.5"><Settings2 className="hidden h-3.5 w-3.5 min-[381px]:block" />Settings</span>
             </button>
           </div>
         </div>
@@ -311,7 +311,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                     <h3 className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</h3>
                     {group.label !== "TODAY" ? <AlertCircle className="h-3 w-3 text-amber-500" /> : null}
                   </div>
-                  <div className="px-5 pb-4">
+                  <div className="px-4 pb-4 sm:px-5">
                     {group.tasks.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-border/60 bg-background/30 px-4 py-3 text-xs text-muted-foreground text-center">
                         No tasks scheduled.
@@ -342,7 +342,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                                 {!isDone && (
                                   <button
                                     onClick={() => handleTaskAction(task)}
-                                    className="shrink-0 rounded-md bg-sand px-2.5 py-1 text-[10px] font-bold text-espresso transition-colors hover:bg-sand/80 shadow-sm"
+                                    className="shrink-0 rounded-md bg-sand px-2.5 py-1.5 text-[11px] font-bold text-espresso shadow-sm transition-colors hover:bg-sand/80"
                                   >
                                     {actionLabelForMode(mode)}
                                   </button>
@@ -375,7 +375,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
             className="rounded-2xl border border-border bg-card"
           >
-            <div className="border-b border-border px-5 py-4">
+            <div className="border-b border-border p-4 sm:px-5 sm:py-4">
               <h2 className="text-sm font-bold text-foreground">Full Plan</h2>
             </div>
             <div className="space-y-0">
@@ -397,20 +397,20 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                       <button
                         type="button"
                         onClick={() => toggleMilestone(mIdx)}
-                        className="flex w-full items-start gap-3 px-5 pt-4 pb-2 transition-colors hover:bg-background/50 text-left"
+                        className="flex w-full items-start gap-2 sm:gap-3 p-4 sm:px-5 sm:pt-4 sm:pb-2 transition-colors hover:bg-background/50 text-left"
                       >
-                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sand">
-                          <Trophy className="h-3.5 w-3.5 text-espresso" />
+                        <div className="mt-0.5 flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-sand">
+                          <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-espresso" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <h3 className="text-sm font-bold text-foreground">{milestone.name}</h3>
-                            <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                              Week {milestone.target_week}
+                            <span className="flex items-center gap-1 sm:gap-2 text-[11px] sm:text-xs font-semibold text-muted-foreground">
+                              Wk {milestone.target_week}
                               {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                             </span>
                           </div>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{milestone.description}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none leading-snug">{milestone.description}</p>
                         </div>
                       </button>
 
@@ -422,7 +422,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-5 pb-4 pl-14">
+                            <div className="p-4 pt-0 pl-9 sm:px-5 sm:pb-4 sm:pl-14">
                               <div className="space-y-2">
                                 {milestoneTasks.map((task) => (
                                   <div
@@ -479,7 +479,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                   )
                 })
               ) : (
-                <div className="px-5 py-4 space-y-2">
+                <div className="p-4 sm:px-5 sm:py-4 space-y-2">
                   {goal.tasks.map((task, tIdx) => (
                     <motion.div
                       key={task.id}
@@ -526,10 +526,10 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
             className="rounded-2xl border border-border bg-card"
           >
-            <div className="border-b border-border px-5 py-4">
+            <div className="border-b border-border p-4 sm:px-5 sm:py-4">
               <h2 className="text-sm font-bold text-foreground">Goal Profile</h2>
             </div>
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               {(archetype === "savings" || archetype === "marathon" || archetype === "daily_habit") && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {archetype === "savings" && (
@@ -590,12 +590,12 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
                   )}
                 </div>
               )}
-              <div className="mt-5 flex justify-end pt-4 border-t border-border">
+              <div className="mt-5 flex justify-end border-t border-border pt-4">
                 <button
                   type="button"
                   onClick={saveProfile}
                   disabled={isSavingProfile}
-                  className="rounded-lg bg-espresso px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-espresso/90 disabled:opacity-60 shadow-sm"
+                  className="w-full rounded-lg bg-espresso px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-espresso/90 disabled:opacity-60 sm:w-auto"
                 >
                   {isSavingProfile ? "Saving..." : "Save Changes"}
                 </button>
@@ -621,7 +621,9 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
               className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
             >
               <div className="text-center">
-                <p className="text-4xl">🎉</p>
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-md">
+                  <Trophy className="h-7 w-7 text-amber-500" />
+                </div>
                 <p className="mt-2 font-semibold text-white">Great job!</p>
               </div>
             </motion.div>
@@ -631,3 +633,4 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
     </div>
   )
 }
+

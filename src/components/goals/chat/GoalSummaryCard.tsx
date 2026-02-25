@@ -41,11 +41,7 @@ export default function GoalSummaryCard({
   const tasks = Array.isArray(summary.tasks) ? summary.tasks : [];
 
   return (
-    <motion.div
-      className="rounded-2xl border border-border bg-card p-5"
-      initial={cardInitial}
-      animate={cardAnimate}
-    >
+    <motion.div className="rounded-2xl border border-border bg-card p-4 sm:p-5" initial={cardInitial} animate={cardAnimate}>
       <div className="flex items-center gap-2.5">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sand">
           <ListChecks className="h-4.5 w-4.5 text-espresso" />
@@ -88,11 +84,11 @@ export default function GoalSummaryCard({
             onChange={(e) => onChangeField("accountability_type", e.target.value)}
             className={inputClasses}
           >
-            <option value="photo">📸 Photo Proof</option>
-            <option value="video">🎥 Video Proof</option>
-            <option value="voice">🎙️ Voice Reflection</option>
-            <option value="check_in">⏰ Check-in Window</option>
-            <option value="task_completion">✅ Task Completion</option>
+            <option value="photo">Photo Proof</option>
+            <option value="video">Video Proof</option>
+            <option value="voice">Voice Reflection</option>
+            <option value="check_in">Check-in Window</option>
+            <option value="task_completion">Task Completion</option>
           </select>
         </label>
 
@@ -185,12 +181,12 @@ export default function GoalSummaryCard({
       </div>
 
       {/* ── Actions ── */}
-      <div className="mt-6 flex gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
+        <Button type="button" variant="outline" onClick={onBack} className="w-full sm:w-auto">
           Back to Chat
         </Button>
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button type="button" onClick={onApprove} disabled={isCreating}>
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
+          <Button type="button" onClick={onApprove} disabled={isCreating} className="w-full sm:w-auto">
             {isCreating ? "Creating..." : "Approve & Create Goal"}
           </Button>
         </motion.div>
@@ -198,3 +194,4 @@ export default function GoalSummaryCard({
     </motion.div>
   );
 }
+

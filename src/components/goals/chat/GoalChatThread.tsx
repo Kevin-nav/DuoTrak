@@ -60,7 +60,7 @@ export default function GoalChatThread({
   const showTyping = isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.text === "";
 
   return (
-    <div className="h-[56vh] overflow-y-auto rounded-2xl border border-border bg-card p-4">
+    <div className="h-[48vh] overflow-y-auto rounded-2xl border border-border bg-card p-3 max-[380px]:h-[42vh] sm:h-[56vh] sm:p-4">
       <div className="space-y-3">
         <AnimatePresence initial={false}>
           {messages.map((message) => {
@@ -73,16 +73,16 @@ export default function GoalChatThread({
                 initial={bubbleInitial}
                 animate={bubbleAnimate}
                 layout
-                className={`max-w-[85%] ${message.role === "user" ? "ml-auto" : ""}`}
+                className={`max-w-[92%] sm:max-w-[85%] ${message.role === "user" ? "ml-auto" : ""}`}
               >
                 <div
-                  className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${message.role === "assistant"
+                  className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 ${message.role === "assistant"
                     ? "rounded-bl-sm border border-border bg-card text-foreground shadow-sm"
                     : "rounded-br-sm bg-gradient-to-br from-landing-terracotta to-[#D7A88B] text-white shadow-sm"
                     }`}
                 >
                   {message.role === "assistant" && (
-                    <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-taupe">
+                    <span className="mb-1 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-taupe sm:text-[10px]">
                       <Sparkles className="h-3 w-3" />
                       DuoTrak AI
                     </span>
@@ -105,4 +105,3 @@ export default function GoalChatThread({
     </div>
   );
 }
-

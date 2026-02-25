@@ -26,7 +26,7 @@ export default function TimeInvestmentStep({
         </p>
         {!!selectedAvailability?.length && (
           <p className="mt-2 text-xs text-stone-gray dark:text-gray-300">
-            Available windows: <span className="font-medium">{selectedAvailability.join(" · ")}</span>
+            Available windows: <span className="font-medium break-words">{selectedAvailability.join(" | ")}</span>
           </p>
         )}
       </div>

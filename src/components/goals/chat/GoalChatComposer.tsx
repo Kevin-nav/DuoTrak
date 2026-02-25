@@ -43,7 +43,7 @@ export default function GoalChatComposer({
   };
 
   return (
-    <div className="space-y-2.5 rounded-2xl border border-border bg-card p-3">
+    <div className="space-y-2.5 rounded-2xl border border-border bg-card p-2.5 sm:p-3">
       {/* ── Chip Suggestions ── */}
       <AnimatePresence>
         {chips.length > 0 && (
@@ -88,7 +88,7 @@ export default function GoalChatComposer({
           }}
           onKeyDown={handleKeyDown}
           placeholder="Type your reply..."
-          className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-taupe/40 transition-shadow"
+          className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-taupe/40 sm:px-4"
           style={{ maxHeight: 120 }}
         />
         <motion.button
@@ -97,7 +97,7 @@ export default function GoalChatComposer({
           onClick={isStreaming ? onStop : onSend}
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
-          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isStreaming
+          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isStreaming
             ? "bg-red-500 text-white hover:bg-red-600"
             : "bg-landing-terracotta text-white hover:bg-landing-terracotta/90"
             }`}
@@ -120,7 +120,7 @@ export default function GoalChatComposer({
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
             className="overflow-hidden"
           >
-            <div className="flex items-center justify-between rounded-xl border border-landing-sage/30 bg-landing-sage/10 px-3.5 py-2.5">
+            <div className="flex flex-col items-start gap-2 rounded-xl border border-landing-sage/30 bg-landing-sage/10 px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-landing-sage" />
                 <p className="text-xs font-medium text-landing-sage">
@@ -131,7 +131,7 @@ export default function GoalChatComposer({
                 type="button"
                 size="sm"
                 onClick={onOpenSummary}
-                className="bg-landing-sage text-white hover:bg-landing-sage/90"
+                className="w-full bg-landing-sage text-white hover:bg-landing-sage/90 sm:w-auto"
               >
                 Generate Plan
               </Button>

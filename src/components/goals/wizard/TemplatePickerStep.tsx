@@ -175,7 +175,7 @@ export default function TemplatePickerStep({
                 type="button"
                 onClick={continueStepOneManual}
                 disabled={continuePending}
-                className="rounded-lg bg-primary-blue px-4 py-2 text-sm font-medium text-white hover:bg-primary-blue-hover disabled:opacity-60"
+                className="w-full rounded-lg bg-primary-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-blue-hover disabled:opacity-60 sm:w-auto sm:py-2"
               >
                 {continuePending ? "Continuing..." : "Continue"}
               </button>
@@ -184,7 +184,7 @@ export default function TemplatePickerStep({
                   type="button"
                   onClick={continueStepOneAi}
                   disabled={continuePending}
-                  className="rounded-lg border border-cool-gray px-4 py-2 text-sm text-charcoal dark:border-gray-600 dark:text-gray-100 disabled:opacity-60"
+                  className="w-full rounded-lg border border-cool-gray px-4 py-2.5 text-sm text-charcoal dark:border-gray-600 dark:text-gray-100 disabled:opacity-60 sm:w-auto sm:py-2"
                 >
                   Continue with AI
                 </button>

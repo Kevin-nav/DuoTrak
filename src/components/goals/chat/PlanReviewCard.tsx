@@ -16,11 +16,11 @@ import { Button } from "@/components/ui/button";
 import type { GeneratedPlan } from "@/lib/api/goal-chat";
 
 const ACCOUNTABILITY_LABELS: Record<string, string> = {
-    photo: "📸 Photo Proof",
-    video: "🎥 Video Proof",
-    voice: "🎙️ Voice Reflection",
-    check_in: "⏰ Check-in",
-    task_completion: "✅ Task Completion",
+    photo: "Photo Proof",
+    video: "Video Proof",
+    voice: "Voice Reflection",
+    check_in: "Check-in",
+    task_completion: "Task Completion",
 };
 
 const FREQ_LABELS: Record<string, string> = {
@@ -50,7 +50,7 @@ export default function PlanReviewCard({
     if (isLoading || !plan) {
         return (
             <motion.div
-                className="rounded-2xl border border-border bg-card p-8"
+                className="rounded-2xl border border-border bg-card p-5 sm:p-8"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -78,7 +78,7 @@ export default function PlanReviewCard({
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
             {/* Header */}
-            <div className="border-b border-border p-5">
+            <div className="border-b border-border p-4 sm:p-5">
                 <div className="flex items-center gap-2.5">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sand">
                         <ListChecks className="h-4.5 w-4.5 text-espresso" />
@@ -108,7 +108,7 @@ export default function PlanReviewCard({
             </div>
 
             {/* Progress bar preview */}
-            <div className="border-b border-border px-5 py-3">
+            <div className="border-b border-border px-4 py-3 sm:px-5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="font-medium">Progress Preview</span>
                     <span>{plan.milestones.length} milestones</span>
@@ -152,7 +152,7 @@ export default function PlanReviewCard({
                         transition={{ delay: mIdx * 0.08, duration: 0.3 }}
                     >
                         {/* Milestone header */}
-                        <div className="flex items-start gap-3 px-5 pt-4 pb-2">
+                        <div className="flex items-start gap-2.5 px-4 pb-2 pt-4 sm:gap-3 sm:px-5">
                             <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sand">
                                 <Trophy className="h-3.5 w-3.5 text-espresso" />
                             </div>
@@ -168,7 +168,7 @@ export default function PlanReviewCard({
                         </div>
 
                         {/* Tasks */}
-                        <div className="px-5 pb-4 pl-14">
+                        <div className="px-4 pb-4 pl-11 sm:px-5 sm:pl-14">
                             <div className="space-y-2">
                                 {milestone.tasks.map((task, tIdx) => (
                                     <div
@@ -216,8 +216,8 @@ export default function PlanReviewCard({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between border-t border-border p-4">
-                <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
+            <div className="flex flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <Button variant="ghost" size="sm" onClick={onBack} className="w-full gap-1.5 sm:w-auto">
                     <ArrowLeft className="h-3.5 w-3.5" />
                     Back to Chat
                 </Button>
@@ -225,7 +225,7 @@ export default function PlanReviewCard({
                     size="sm"
                     onClick={onApprove}
                     disabled={isCreating}
-                    className="gap-1.5 bg-espresso text-white hover:bg-espresso/90"
+                    className="w-full gap-1.5 bg-espresso text-white hover:bg-espresso/90 sm:w-auto"
                 >
                     {isCreating ? (
                         <>

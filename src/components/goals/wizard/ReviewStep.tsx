@@ -45,7 +45,7 @@ export default function ReviewStep({
       ) : (
         <motion.div key="plan" className="space-y-6">
           <h3 className="text-xl font-bold text-charcoal dark:text-gray-100">{finalGoalPlan.title}</h3>
-          <p className="text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
+          <p className="break-words text-stone-gray dark:text-gray-300">{finalGoalPlan.description}</p>
 
           {finalGoalPlan.schedule_impact && (
             <div className="rounded-lg border border-cool-gray bg-white p-3 text-sm dark:border-gray-600 dark:bg-gray-800">
@@ -57,7 +57,7 @@ export default function ReviewStep({
               <p className="text-stone-gray dark:text-gray-300">
                 Fit: {finalGoalPlan.schedule_impact.fit_band}
                 {typeof finalGoalPlan.schedule_impact.overload_percent === "number" &&
-                  ` · Overload ${finalGoalPlan.schedule_impact.overload_percent}%`}
+                  ` | Overload ${finalGoalPlan.schedule_impact.overload_percent}%`}
               </p>
             </div>
           )}
@@ -74,7 +74,7 @@ export default function ReviewStep({
               {showRecommendationReasons && (
                 <ul className="mt-2 space-y-1 text-sm text-stone-gray dark:text-gray-300">
                   {recommendationReasons.map((reason, reasonIndex) => (
-                    <li key={`reason-${reasonIndex}`}>- {reason}</li>
+                    <li key={`reason-${reasonIndex}`} className="break-words">- {reason}</li>
                   ))}
                 </ul>
               )}
@@ -95,7 +95,7 @@ export default function ReviewStep({
                       <p>
                         <strong>{task.description}</strong>
                       </p>
-                      <p className="mt-1 text-stone-gray dark:text-gray-400">{task.success_metric ?? task.successMetric}</p>
+                            <p className="mt-1 break-words text-stone-gray dark:text-gray-400">{task.success_metric ?? task.successMetric}</p>
                       <p className="mt-2">
                         <strong>Cadence:</strong> {task.recommended_cadence ?? task.recommendedCadence}
                       </p>
@@ -142,10 +142,10 @@ export default function ReviewStep({
                         <p>
                           <strong>Suggested proof guidance:</strong>
                         </p>
-                        <ul className="list-inside list-disc text-stone-gray dark:text-gray-400">
+                        <ul className="list-inside list-disc break-words text-stone-gray dark:text-gray-400">
                           {(task.proof_guidance?.what_counts ?? task.proofGuidance?.whatCounts ?? []).map(
                             (item: string, proofIdx: number) => (
-                              <li key={`count-${proofIdx}`}>{item}</li>
+                              <li key={`count-${proofIdx}`} className="break-words">{item}</li>
                             ),
                           )}
                         </ul>
@@ -161,4 +161,3 @@ export default function ReviewStep({
     </AnimatePresence>
   );
 }
-

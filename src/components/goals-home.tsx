@@ -141,7 +141,7 @@ export default function GoalsHome() {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-charcoal dark:text-gray-100 mb-2">Your Goals</h1>
+              <h1 className="mb-1.5 text-2xl font-bold text-charcoal dark:text-gray-100 sm:mb-2 sm:text-3xl">Your Goals</h1>
               <p className="text-stone-gray dark:text-gray-300">Track your progress and achieve your dreams</p>
             </div>
             <button
@@ -153,7 +153,7 @@ export default function GoalsHome() {
               Create Goal with AI
             </button>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 hidden sm:block">
             <button
               type="button"
               onClick={() => router.push("/goals/new")}
@@ -162,9 +162,26 @@ export default function GoalsHome() {
               Use classic wizard
             </button>
           </div>
+          <div className="mt-4 grid gap-2 sm:hidden">
+            <button
+              type="button"
+              onClick={() => router.push("/goals/new-ai")}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-blue px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-blue-hover"
+            >
+              <Plus className="h-4 w-4" />
+              Create Goal with AI
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/goals/new")}
+              className="rounded-lg border border-cool-gray px-4 py-2.5 text-sm font-semibold text-charcoal dark:border-gray-700 dark:text-gray-100"
+            >
+              Use classic wizard
+            </button>
+          </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 shadow-sm border border-cool-gray dark:border-gray-700">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-xl border border-cool-gray bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-stone-gray dark:text-gray-400" />
             <input
@@ -172,7 +189,7 @@ export default function GoalsHome() {
               placeholder="Search goals..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-cool-gray dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-charcoal dark:text-gray-100 focus:border-primary-blue focus:outline-none"
+              className="w-full rounded-lg border border-cool-gray bg-white py-2.5 pl-10 pr-4 text-charcoal focus:border-primary-blue focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
             />
           </div>
         </motion.div>
@@ -197,19 +214,19 @@ export default function GoalsHome() {
                       <motion.div
                         variants={itemVariants}
                         whileHover={{ scale: 1.02, y: -2 }}
-                        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700 group cursor-pointer"
+                        className="group cursor-pointer rounded-xl border border-cool-gray bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
                       >
-                        <div className="flex items-start space-x-4">
+                        <div className="flex items-start gap-3 sm:gap-4">
                           <motion.div
-                            className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center"
+                            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full sm:h-12 sm:w-12"
                             style={{ backgroundColor: `${goal.color || '#8B5CF6'}20` }}
                           >
-                            <Icon className="w-6 h-6" style={{ color: goal.color || "#8B5CF6" }} />
+                            <Icon className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: goal.color || "#8B5CF6" }} />
                           </motion.div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
+                            <div className="mb-2 flex flex-col gap-2 sm:mb-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0 flex-1">
                                 <h3 className="text-lg font-bold text-charcoal dark:text-gray-100 truncate">{goal.name}</h3>
                                 <p className="text-sm text-stone-gray dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
                                   {goal.category && <span>{goal.category}</span>}
@@ -229,40 +246,42 @@ export default function GoalsHome() {
                                   )}
                                 </p>
                               </div>
-                              <div className="flex items-center space-x-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={(e) => handleEditGoal(e, goal)}
-                                  className="p-2 hover:bg-cool-gray dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                  title="Edit Goal"
-                                >
-                                  <Edit className="w-4 h-4 text-stone-gray dark:text-gray-400" />
-                                </motion.button>
+                              <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                                <span className="rounded-full bg-green-100 px-2 py-1 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                  {getStatusText(goal)} · {getStatusLabel(goal.status)}
+                                </span>
+                                <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => handleEditGoal(e, goal)}
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-cool-gray dark:hover:bg-gray-700"
+                                    title="Edit Goal"
+                                  >
+                                    <Edit className="h-4 w-4 text-stone-gray dark:text-gray-400" />
+                                  </motion.button>
 
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={(e) => handleDuplicateGoal(e, goal)}
-                                  className="p-2 hover:bg-cool-gray dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                  title="Duplicate Goal"
-                                >
-                                  <Copy className="w-4 h-4 text-stone-gray dark:text-gray-400" />
-                                </motion.button>
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => handleDuplicateGoal(e, goal)}
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-cool-gray dark:hover:bg-gray-700"
+                                    title="Duplicate Goal"
+                                  >
+                                    <Copy className="h-4 w-4 text-stone-gray dark:text-gray-400" />
+                                  </motion.button>
 
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={(e) => promptArchiveGoal(e, goal)}
-                                  className="p-2 hover:bg-cool-gray dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                  title="Archive Goal"
-                                >
-                                  <Archive className="w-4 h-4 text-stone-gray dark:text-gray-400" />
-                                </motion.button>
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => promptArchiveGoal(e, goal)}
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-cool-gray dark:hover:bg-gray-700"
+                                    title="Archive Goal"
+                                  >
+                                    <Archive className="h-4 w-4 text-stone-gray dark:text-gray-400" />
+                                  </motion.button>
+                                </div>
                               </div>
-                              <span className="text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded-full">
-                                {getStatusText(goal)} · {getStatusLabel(goal.status)}
-                              </span>
                             </div>
 
                             <div className="space-y-2">
@@ -330,17 +349,6 @@ export default function GoalsHome() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        <div className="fixed bottom-24 right-6 z-40 sm:hidden">
-          <motion.button
-            onClick={() => router.push("/goals/new-ai")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="w-14 h-14 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-full shadow-lg flex items-center justify-center"
-          >
-            <Plus className="w-6 h-6" />
-          </motion.button>
-        </div>
       </div>
     </DashboardLayout>
   );
