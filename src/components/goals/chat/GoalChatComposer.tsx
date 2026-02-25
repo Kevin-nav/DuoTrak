@@ -2,7 +2,7 @@
 
 import { useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, CheckCircle2 } from "lucide-react";
+import { Send, Square, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function GoalChatComposer({
@@ -11,6 +11,7 @@ export default function GoalChatComposer({
   chips,
   onSend,
   onSendChip,
+  onStop,
   isStreaming,
   readyForSummary,
   onOpenSummary,
@@ -20,6 +21,7 @@ export default function GoalChatComposer({
   chips: string[];
   onSend: () => void;
   onSendChip: (chip: string) => void;
+  onStop: () => void;
   isStreaming: boolean;
   readyForSummary: boolean;
   onOpenSummary: () => void;
@@ -91,14 +93,17 @@ export default function GoalChatComposer({
         />
         <motion.button
           type="button"
-          disabled={isStreaming || !input.trim()}
-          onClick={onSend}
+          disabled={!isStreaming && !input.trim()}
+          onClick={isStreaming ? onStop : onSend}
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-landing-terracotta text-white shadow-sm transition-colors hover:bg-landing-terracotta/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isStreaming
+            ? "bg-red-500 text-white hover:bg-red-600"
+            : "bg-landing-terracotta text-white hover:bg-landing-terracotta/90"
+            }`}
         >
           {isStreaming ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Square className="h-4 w-4" />
           ) : (
             <Send className="h-4 w-4" />
           )}
@@ -119,7 +124,7 @@ export default function GoalChatComposer({
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-landing-sage" />
                 <p className="text-xs font-medium text-landing-sage">
-                  I have everything I need. Ready to review?
+                  I have everything I need!
                 </p>
               </div>
               <Button
@@ -128,7 +133,7 @@ export default function GoalChatComposer({
                 onClick={onOpenSummary}
                 className="bg-landing-sage text-white hover:bg-landing-sage/90"
               >
-                Review Summary
+                Generate Plan
               </Button>
             </div>
           </motion.div>

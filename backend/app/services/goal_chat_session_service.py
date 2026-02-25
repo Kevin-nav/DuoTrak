@@ -1,15 +1,17 @@
 import asyncio
+import json as _json
+import logging
 import time
 import uuid
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from app.core.config import settings
 from app.services.goal_chat.conversation_manager import ConversationManager
-from app.services.goal_chat.crew_orchestrator import GoalChatCrewOrchestrator
 from app.services.goal_chat.plan_validator import PlanValidator
 from app.services.goal_chat.profile_engine import ProfileEngine
 from app.services.goal_chat.slot_tracker import SlotTracker
-from app.services.gemini_config import GeminiModelConfig
+
+logger = logging.getLogger(__name__)
 
 
 class GoalChatSessionService:
@@ -23,7 +25,6 @@ class GoalChatSessionService:
         self._conversation_manager = ConversationManager(slot_tracker=slot_tracker, profile_engine=profile_engine)
         self._profile_engine = profile_engine
         self._plan_validator = PlanValidator(slot_tracker=slot_tracker)
-        self._crew_orchestrator = GoalChatCrewOrchestrator(gemini_config=GeminiModelConfig())
 
     async def create_session(self, user_id: str | None, behavioral_summary: str | None) -> Dict[str, Any]:
         session_id = str(uuid.uuid4())
@@ -63,37 +64,172 @@ class GoalChatSessionService:
                 self._sessions.pop(session_id, None)
                 raise KeyError("Goal chat session not found or expired.")
 
-            use_ai_orchestrator = (
+            use_ai = (
                 bool(getattr(settings, "GOAL_CHAT_AI_ENABLED", True))
                 and str(getattr(settings, "ENVIRONMENT", "")).lower() not in {"test"}
             )
-            if use_ai_orchestrator:
-                missing_slots_before = self.missing_slots(session.get("slots", {}))
-                ai_enrichment = self._crew_orchestrator.enrich_turn(
+
+            # Add user message to history FIRST so AI sees it
+            history = list(session.get("history", []))
+            history.append({"role": "user", "message": message})
+
+            if use_ai:
+                t0 = time.monotonic()
+                ai_result = await self._chat_turn(
                     user_message=message,
-                    current_slots=session.get("slots", {}),
-                    missing_slots=missing_slots_before,
+                    conversation_history=history,
                 )
+                logger.info("chat_turn completed in %.1fs", time.monotonic() - t0)
             else:
-                ai_enrichment = {"extracted_slots": {}, "next_prompt": None, "quick_reply_chips": []}
+                ai_result = {
+                    "next_prompt": "Tell me more about your goal.",
+                    "quick_reply_chips": [],
+                    "conversation_complete": False,
+                }
+
+            next_prompt = ai_result.get("next_prompt", "Tell me more about your goal.")
+            conversation_complete = ai_result.get("conversation_complete", False)
+            quick_reply_chips = ai_result.get("quick_reply_chips", [])
+
+            # Add AI response to history
+            history.append({"role": "assistant", "message": next_prompt})
+
+            # Update session
+            session["history"] = history
+            session["status"] = "ready" if conversation_complete else "collecting"
+            session["expires_at"] = time.monotonic() + self._ttl_seconds
+            self._sessions[session_id] = session
+
+            # Also run the old slot-based system for backward compat
             merged_slot_updates = self._conversation_manager._slot_tracker.merge_slots(
-                ai_enrichment.get("extracted_slots", {}),
+                ai_result.get("extracted_slots", {}),
                 slot_updates,
             )
-            updated_session, response = self._conversation_manager.apply_turn(
-                state=session,
-                message=message,
-                slot_updates=merged_slot_updates,
-                profile_answers=profile_answers,
+            session["slots"] = self._conversation_manager._slot_tracker.merge_slots(
+                session.get("slots", {}), merged_slot_updates
             )
-            if ai_enrichment.get("next_prompt"):
-                response["next_prompt"] = ai_enrichment["next_prompt"]
-            ai_chips = ai_enrichment.get("quick_reply_chips", [])
-            if isinstance(ai_chips, list) and ai_chips:
-                response["quick_reply_chips"] = [str(chip) for chip in ai_chips[:4]]
-            updated_session["expires_at"] = time.monotonic() + self._ttl_seconds
-            self._sessions[session_id] = updated_session
+            self._sessions[session_id] = session
+
+            missing = self._conversation_manager._slot_tracker.missing_slots(session.get("slots", {}))
+
+            chips = [str(c) for c in quick_reply_chips[:4]] if isinstance(quick_reply_chips, list) else []
+            if conversation_complete and "Review my plan" not in chips:
+                chips = ["Review my plan"]
+
+            response = {
+                "missing_slots": missing,
+                "captured_slots": session.get("slots", {}),
+                "next_prompt": next_prompt,
+                "is_ready_to_finalize": conversation_complete,
+                "profile": session["profile"],
+                "quick_reply_chips": chips,
+            }
             return response
+
+    async def _chat_turn(
+        self,
+        user_message: str,
+        conversation_history: List[Dict[str, str]],
+    ) -> Dict[str, Any]:
+        """Conversational AI turn — no structured slot extraction.
+        The AI just has a natural conversation and signals when it has enough info."""
+
+        history_lines = []
+        for entry in conversation_history:
+            role = entry.get("role", "user")
+            history_lines.append(f"  {role}: {entry.get('message', '')}")
+        history_text = "\n".join(history_lines)
+
+        user_turn_count = sum(1 for e in conversation_history if e.get("role") == "user")
+
+        prompt = (
+            "You are DuoTrak's friendly goal coach. DuoTrak is an app where people achieve goals "
+            "with a REAL accountability partner (a friend, not AI). Your job is to have a short, "
+            "natural conversation to understand what the user wants to achieve, then signal when "
+            "you have enough information for the plan generator to create their plan.\n\n"
+            "THINGS YOU WANT TO UNDERSTAND (through natural conversation, NOT interrogation):\n"
+            "1. What is their goal?\n"
+            "2. When/how often do they want to work on it? (schedule)\n"
+            "3. What does success look like for them?\n"
+            "4. Any specific focus areas or preferences?\n\n"
+            "ACCOUNTABILITY TYPES (mention the best one naturally):\n"
+            "- Photo proof: gym, cooking, cleaning, art\n"
+            "- Video proof: music, dance, workouts, sports\n"
+            "- Voice notes: reading, studying, programming, journaling\n"
+            "- Check-in: waking up, medication, daily habits\n"
+            "- Task completion: project milestones, general tasks\n\n"
+            f"CONVERSATION SO FAR:\n{history_text}\n\n"
+            f"THIS IS USER TURN #{user_turn_count}\n\n"
+            "CONVERSATION PACING:\n"
+            "- Turn 1: Acknowledge the goal, suggest how accountability works for it, "
+            "ask about their schedule/availability.\n"
+            "- Turn 2: Ask about what success looks like, or what areas to focus on.\n"
+            "- Turn 3+: If you feel you understand the goal well enough, set conversation_complete "
+            "to true and tell them you will generate their plan.\n"
+            "- If the user says 'yeah', 'yes', 'sure', 'let's go', 'sounds good' as a confirmation, "
+            "set conversation_complete to true.\n\n"
+            "RULES:\n"
+            "1. Be warm and friendly. Max 2-3 sentences.\n"
+            "2. Ask ONE question at a time.\n"
+            "3. Never repeat a question already answered.\n"
+            "4. Don't list tasks or create plans — that's the plan generator's job.\n"
+            "5. When setting conversation_complete to true, say something like: "
+            "'I have a great picture of your goal now! Let me build your personalized plan.'\n\n"
+            "Return ONLY valid JSON:\n"
+            "{\n"
+            '  "next_prompt": "your conversational message",\n'
+            '  "quick_reply_chips": ["suggestion 1", "suggestion 2"],\n'
+            '  "conversation_complete": false\n'
+            "}\n"
+        )
+
+        try:
+            from google import genai
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+            response = await client.aio.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents=prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=0.5,
+                    top_p=0.9,
+                    response_mime_type="application/json",
+                ),
+            )
+            raw = response.text.strip().replace("```json", "").replace("```", "").strip()
+            result = _json.loads(raw)
+            return {
+                "next_prompt": result.get("next_prompt", "Tell me more about your goal."),
+                "quick_reply_chips": result.get("quick_reply_chips", []),
+                "conversation_complete": bool(result.get("conversation_complete", False)),
+                "extracted_slots": result.get("extracted_slots", {}),
+            }
+        except Exception as exc:
+            logger.warning("_chat_turn fallback: %s", exc)
+            return {
+                "next_prompt": "Tell me more about your goal.",
+                "quick_reply_chips": [],
+                "conversation_complete": False,
+                "extracted_slots": {},
+            }
+
+    async def generate_plan(self, session_id: str) -> Dict[str, Any]:
+        """Call the AI planner to generate a rich structured plan from chat context."""
+        from app.services.goal_chat.plan_generator import generate_plan as _generate
+
+        session = await self.get_session(session_id)
+        slots = session.get("slots", {})
+        history = session.get("history", [])
+
+        plan = await _generate(slots=slots, conversation_history=history)
+
+        # Cache generated plan in session
+        async with self._lock:
+            if session_id in self._sessions:
+                self._sessions[session_id]["generated_plan"] = plan
+                self._sessions[session_id]["expires_at"] = time.monotonic() + self._ttl_seconds
+
+        return {"session_id": session_id, "plan": plan}
 
     async def get_summary(self, session_id: str) -> Dict[str, Any]:
         session = await self.get_session(session_id)
@@ -106,9 +242,6 @@ class GoalChatSessionService:
                     {
                         "name": task.get("name", ""),
                         "description": task.get("description", ""),
-                        "requires_partner_review": task.get("requires_partner_review", True),
-                        "review_sla": task.get("review_sla", "24h"),
-                        "escalation_policy": task.get("escalation_policy", "Escalate after missed SLA"),
                     }
                 )
         slots["tasks"] = normalized_tasks
@@ -144,14 +277,13 @@ class GoalChatSessionService:
             }
 
         goal_plan = {
-            "intent": slots["intent"],
-            "success_definition": slots["success_definition"],
-            "availability": slots["availability"],
-            "time_budget": slots["time_budget"],
-            "accountability_mode": slots["accountability_mode"],
+            "intent": slots.get("intent"),
+            "success_definition": slots.get("success_definition"),
+            "accountability_type": slots.get("accountability_type"),
             "deadline": slots.get("deadline"),
             "review_cycle": slots.get("review_cycle"),
-            "tasks": slots["tasks"],
+            "tasks": slots.get("tasks", []),
+            "user_summary": slots.get("user_summary", ""),
             "profile_summary": session["profile"]["merged_summary"],
         }
         async with self._lock:

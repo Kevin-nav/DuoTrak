@@ -6,9 +6,7 @@ def test_slot_tracker_requires_deadline_for_target_date():
     slots = {
         "intent": "target-date",
         "success_definition": "Launch by date",
-        "availability": "Weekdays",
-        "time_budget": "10h/week",
-        "accountability_mode": "partner-review",
+        "accountability_type": "task_completion",
         "tasks": [{"name": "Build API"}],
     }
 
@@ -16,18 +14,23 @@ def test_slot_tracker_requires_deadline_for_target_date():
     assert missing == ["deadline"]
 
 
-def test_slot_tracker_requires_review_cycle_for_habit_and_milestone():
+def test_slot_tracker_no_extra_requirements_for_habit():
     tracker = SlotTracker()
-    base_slots = {
+    slots = {
+        "intent": "habit",
         "success_definition": "Consistency",
-        "availability": "Mornings",
-        "time_budget": "30m/day",
-        "accountability_mode": "check-in",
+        "accountability_type": "photo",
         "tasks": [{"name": "Practice"}],
     }
 
-    habit_missing = tracker.missing_slots({"intent": "habit", **base_slots})
-    milestone_missing = tracker.missing_slots({"intent": "milestone", **base_slots})
+    missing = tracker.missing_slots(slots)
+    assert missing == []
 
-    assert habit_missing == ["review_cycle"]
-    assert milestone_missing == ["review_cycle"]
+
+def test_slot_tracker_base_missing_slots():
+    tracker = SlotTracker()
+    missing = tracker.missing_slots({})
+    assert "intent" in missing
+    assert "success_definition" in missing
+    assert "accountability_type" in missing
+    assert "tasks" in missing

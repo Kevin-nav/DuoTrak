@@ -7,6 +7,7 @@ import { useState } from "react";
 import GoalChatComposer from "@/components/goals/chat/GoalChatComposer";
 import GoalChatThread from "@/components/goals/chat/GoalChatThread";
 import GoalSummaryCard from "@/components/goals/chat/GoalSummaryCard";
+import PlanReviewCard from "@/components/goals/chat/PlanReviewCard";
 import { useGoalChatFlow } from "@/components/goals/chat/useGoalChatFlow";
 
 const pageInitial = { opacity: 0, y: 18 };
@@ -42,7 +43,7 @@ export default function GoalChatPage() {
           Let&apos;s build your next goal
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Chat naturally — I&apos;ll ask one focused question at a time, then summarize everything for your approval.
+          Chat naturally — I&apos;ll ask one focused question at a time, then generate a full plan for your approval.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
           Prefer a form?{" "}
@@ -72,6 +73,7 @@ export default function GoalChatPage() {
               isStreaming={flow.isStreaming}
               onSend={() => flow.sendMessage(flow.input)}
               onSendChip={(chip) => flow.sendMessage(chip, chip)}
+              onStop={flow.stopGeneration}
               readyForSummary={flow.readyForSummary}
               onOpenSummary={flow.openSummary}
             />
@@ -115,6 +117,22 @@ export default function GoalChatPage() {
                 )}
               </AnimatePresence>
             </div>
+          </motion.div>
+        ) : flow.screen === "plan" ? (
+          <motion.div
+            key="plan-screen"
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+          >
+            <PlanReviewCard
+              plan={flow.generatedPlan}
+              isLoading={flow.isGeneratingPlan}
+              onBack={() => flow.setScreen("chat")}
+              onApprove={flow.approveAndCreate}
+              isCreating={flow.isCreating}
+            />
           </motion.div>
         ) : flow.summary ? (
           <motion.div

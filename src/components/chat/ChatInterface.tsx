@@ -27,6 +27,7 @@ interface ChatInterfaceProps {
     isPartnerOnline?: boolean;
     partnerLastSeen?: Date;
     onClose?: () => void;
+    showHeader?: boolean;
 }
 
 export default function ChatInterface({
@@ -38,6 +39,7 @@ export default function ChatInterface({
     isPartnerOnline = false,
     partnerLastSeen,
     onClose,
+    showHeader = true,
 }: ChatInterfaceProps) {
     const { userDetails } = useUser();
     const currentUserId = userDetails?._id;
@@ -185,9 +187,12 @@ export default function ChatInterface({
     const handleSendMessage = useCallback(
         async (content: string, attachments?: Message["attachments"]) => {
             if (!content.trim() && !attachments?.length) return;
+            const hasVoiceAttachment = attachments?.some((attachment) => attachment.type === "voice") ?? false;
+            const inferredMessageType = !content.trim() && hasVoiceAttachment ? "voice" : undefined;
 
             try {
                 await sendMessage(content, {
+                    message_type: inferredMessageType,
                     attachments,
                     reply_to_id: replyingTo?._id,
                     reply_preview: replyingTo
@@ -265,14 +270,16 @@ export default function ChatInterface({
     if (!partnerId && !partnershipId) {
         return (
             <div className="flex flex-col h-full bg-gradient-to-b from-landing-cream to-landing-sand/35">
-                <ChatHeader
-                    partnerName={partnerName}
-                    partnerAvatar={partnerAvatar}
-                    partnerInitials={partnerInitials}
-                    isOnline={derivedIsPartnerOnline}
-                    lastSeen={derivedPartnerLastSeen}
-                    onClose={onClose}
-                />
+                {showHeader ? (
+                    <ChatHeader
+                        partnerName={partnerName}
+                        partnerAvatar={partnerAvatar}
+                        partnerInitials={partnerInitials}
+                        isOnline={derivedIsPartnerOnline}
+                        lastSeen={derivedPartnerLastSeen}
+                        onClose={onClose}
+                    />
+                ) : null}
                 <div className="flex-1 flex items-center justify-center p-8">
                     <div className="text-center max-w-md">
                         <div className="w-16 h-16 bg-landing-sand rounded-full flex items-center justify-center mx-auto mb-4">
@@ -306,14 +313,16 @@ export default function ChatInterface({
     if (isLoading) {
         return (
             <div className="flex flex-col h-full bg-gradient-to-b from-landing-cream to-landing-sand/35">
-                <ChatHeader
-                    partnerName={partnerName}
-                    partnerAvatar={partnerAvatar}
-                    partnerInitials={partnerInitials}
-                    isOnline={derivedIsPartnerOnline}
-                    lastSeen={derivedPartnerLastSeen}
-                    onClose={onClose}
-                />
+                {showHeader ? (
+                    <ChatHeader
+                        partnerName={partnerName}
+                        partnerAvatar={partnerAvatar}
+                        partnerInitials={partnerInitials}
+                        isOnline={derivedIsPartnerOnline}
+                        lastSeen={derivedPartnerLastSeen}
+                        onClose={onClose}
+                    />
+                ) : null}
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <Loader2 className="h-8 w-8 animate-spin text-landing-terracotta mx-auto mb-3" />
@@ -329,15 +338,17 @@ export default function ChatInterface({
             className="flex flex-col h-full bg-gradient-to-b from-landing-cream to-landing-sand/35"
         >
             {/* Header */}
-            <ChatHeader
-                partnerName={partnerName}
-                partnerAvatar={partnerAvatar}
-                partnerInitials={partnerInitials}
-                isOnline={derivedIsPartnerOnline}
-                isTyping={partnerIsTyping}
-                lastSeen={derivedPartnerLastSeen}
-                onClose={onClose}
-            />
+            {showHeader ? (
+                <ChatHeader
+                    partnerName={partnerName}
+                    partnerAvatar={partnerAvatar}
+                    partnerInitials={partnerInitials}
+                    isOnline={derivedIsPartnerOnline}
+                    isTyping={partnerIsTyping}
+                    lastSeen={derivedPartnerLastSeen}
+                    onClose={onClose}
+                />
+            ) : null}
 
             {/* Offline banner */}
             <AnimatePresence>
@@ -422,7 +433,11 @@ export default function ChatInterface({
                                     >
                                         <div className="max-w-[80%] sm:max-w-[70%]">
                                             <div className="bg-gradient-to-br from-landing-terracotta to-[#D7A88B] text-white rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
-                                                <p className="text-sm leading-relaxed">{optMsg.content}</p>
+                                                {optMsg.content ? (
+                                                    <p className="text-sm leading-relaxed">{optMsg.content}</p>
+                                                ) : optMsg.attachments?.some((attachment) => attachment.type === "voice") ? (
+                                                    <p className="text-sm leading-relaxed">Voice note</p>
+                                                ) : null}
                                                 <div className="flex items-center justify-end gap-1 mt-1">
                                                     <span className="text-xs text-landing-sand">
                                                         {format(new Date(optMsg.created_at), "p")}

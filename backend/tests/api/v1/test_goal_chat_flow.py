@@ -33,9 +33,7 @@ async def test_turn_logic_enforces_conditional_slots(client):
             "slot_updates": {
                 "intent": "target-date",
                 "success_definition": "Finish launch checklist",
-                "availability": "Weeknights",
-                "time_budget": "5 hours/week",
-                "accountability_mode": "partner-review",
+                "accountability_type": "task_completion",
             },
         },
     )
@@ -51,14 +49,7 @@ async def test_turn_logic_enforces_conditional_slots(client):
             "message": "Adding tasks and deadline",
             "slot_updates": {
                 "deadline": "2026-04-15",
-                "tasks": [
-                    {
-                        "name": "Draft launch doc",
-                        "requires_partner_review": True,
-                        "review_sla": "24h",
-                        "escalation_policy": "Escalate after 48h",
-                    }
-                ],
+                "tasks": [{"name": "Draft launch doc"}],
             },
             "profile_answers": {"energy_pattern": "Mornings"},
         },
@@ -70,26 +61,22 @@ async def test_turn_logic_enforces_conditional_slots(client):
     assert "energy_pattern: Mornings" in second_body["profile"]["merged_summary"]
 
 
-async def test_finalize_requires_partner_and_partner_review_fields(client):
+async def test_finalize_requires_partner(client):
     create_response = await client.post("/api/v1/goal-chat/sessions", json={})
     session_id = create_response.json()["session_id"]
 
-    turn_response = await client.post(
+    await client.post(
         f"/api/v1/goal-chat/{session_id}/turns",
         json={
             "message": "Fill all required slots",
             "slot_updates": {
                 "intent": "habit",
                 "success_definition": "Workout 4x weekly",
-                "availability": "Mon/Wed/Fri mornings",
-                "time_budget": "45 minutes/day",
-                "accountability_mode": "daily-checkin",
-                "review_cycle": "weekly",
+                "accountability_type": "photo",
                 "tasks": [{"name": "Morning workout"}],
             },
         },
     )
-    assert turn_response.status_code == 200
 
     no_partner = await client.post(
         f"/api/v1/goal-chat/{session_id}/finalize",
@@ -98,45 +85,24 @@ async def test_finalize_requires_partner_and_partner_review_fields(client):
     assert no_partner.status_code == 400
     assert "Partner is required" in str(no_partner.json()["detail"]["errors"])
 
-    has_partner_invalid_tasks = await client.post(
-        f"/api/v1/goal-chat/{session_id}/finalize",
-        json={"has_partner": True},
-    )
-    assert has_partner_invalid_tasks.status_code == 400
-    errors = has_partner_invalid_tasks.json()["detail"]["errors"]
-    assert any("must require partner review" in error for error in errors)
-    assert any("missing review_sla" in error for error in errors)
-    assert any("missing escalation_policy" in error for error in errors)
 
-
-async def test_finalize_success_with_complete_partner_accountability(client):
+async def test_finalize_success(client):
     create_response = await client.post("/api/v1/goal-chat/sessions", json={})
     session_id = create_response.json()["session_id"]
 
-    turn_response = await client.post(
+    await client.post(
         f"/api/v1/goal-chat/{session_id}/turns",
         json={
-            "message": "Complete all goal slots",
+            "message": "Complete goal",
             "slot_updates": {
                 "intent": "milestone",
                 "success_definition": "Ship v1 API",
-                "availability": "Weekdays",
-                "time_budget": "2 hours/day",
-                "accountability_mode": "partner-review",
-                "review_cycle": "bi-weekly",
-                "tasks": [
-                    {
-                        "name": "Implement endpoint",
-                        "requires_partner_review": True,
-                        "review_sla": "24h",
-                        "escalation_policy": "Escalate to weekly sync",
-                    }
-                ],
+                "accountability_type": "task_completion",
+                "tasks": [{"name": "Implement endpoint"}],
             },
             "profile_answers": {"support_style": "Blunt feedback"},
         },
     )
-    assert turn_response.status_code == 200
 
     finalize = await client.post(
         f"/api/v1/goal-chat/{session_id}/finalize",
@@ -146,7 +112,7 @@ async def test_finalize_success_with_complete_partner_accountability(client):
     body = finalize.json()
     assert body["finalized"] is True
     assert body["goal_plan"]["intent"] == "milestone"
-    assert body["goal_plan"]["tasks"][0]["requires_partner_review"] is True
+    assert body["goal_plan"]["accountability_type"] == "task_completion"
 
 
 async def test_summary_endpoints_roundtrip(client):
@@ -156,7 +122,7 @@ async def test_summary_endpoints_roundtrip(client):
     await client.post(
         f"/api/v1/goal-chat/{session_id}/turns",
         json={
-            "message": "I want a habit goal. Success means 30 days consistent. weekday mornings. 30 minutes daily. partner review. weekly. tasks: run, stretch",
+            "message": "I want a habit goal",
         },
     )
 

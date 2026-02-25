@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import MarkdownMessage from "@/components/goals/chat/MarkdownMessage";
 
 type Message = {
   id: string;
@@ -86,7 +87,11 @@ export default function GoalChatThread({
                       DuoTrak AI
                     </span>
                   )}
-                  <span className="whitespace-pre-wrap">{message.text || "..."}</span>
+                  {message.role === "assistant" ? (
+                    <MarkdownMessage content={message.text || "..."} />
+                  ) : (
+                    <span className="whitespace-pre-wrap">{message.text}</span>
+                  )}
                 </div>
               </motion.div>
             );
@@ -100,3 +105,4 @@ export default function GoalChatThread({
     </div>
   );
 }
+

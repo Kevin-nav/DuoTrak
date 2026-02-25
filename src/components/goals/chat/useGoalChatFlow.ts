@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation as useConvexMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
@@ -9,45 +9,79 @@ import { useToast } from "@/hooks/use-toast";
 import {
   createGoalChatSession,
   finalizeGoalChat,
+  generateGoalPlan,
   getGoalChatSummary,
   patchGoalChatSummary,
   streamGoalChatTurn,
+  type GeneratedPlan,
   type GoalChatProfileState,
 } from "@/lib/api/goal-chat";
 
 type ChatMessage = { id: string; role: "assistant" | "user"; text: string };
 
-const toGoalPayload = (plan: Record<string, any>) => {
+/** Map frequency string to Convex cadence_type */
+const toCadenceType = (freq: string): "daily" | "weekly" | "custom" => {
+  if (freq === "daily") return "daily";
+  if (freq === "weekly" || freq === "biweekly" || freq === "monthly") return "weekly";
+  return "custom";
+};
+
+/**
+ * Convert the AI-generated plan into the exact shape Convex's
+ * `goals.createWithInstances` expects — no extra fields.
+ */
+const toGoalPayload = (plan: GeneratedPlan) => {
   const intent = (plan.intent ?? "habit") as "habit" | "target-date" | "milestone";
-  const endDate = intent === "target-date" && typeof plan.deadline === "string" ? Date.parse(plan.deadline) : NaN;
-  const tasks = Array.isArray(plan.tasks) ? plan.tasks : [];
+  const endDate =
+    intent === "target-date" && typeof plan.deadline === "string" ? Date.parse(plan.deadline) : NaN;
+
+  // Flatten milestones → tasks, mapping to Convex schema fields
+  const tasks = plan.milestones.flatMap((milestone) =>
+    milestone.tasks.map((task) => ({
+      name: String(task.name || "Task"),
+      description: task.description || undefined,
+      repeat_frequency: task.frequency || "weekly",
+      accountability_type: task.accountability_type || plan.accountability_type || "task_completion",
+      verification_mode: task.accountability_type || plan.accountability_type || "task_completion",
+      verification_mode_reason: "Partner accountability",
+      verification_confidence: 0.9,
+      requires_partner_review: true,
+      auto_approval_policy: "none",
+      auto_approval_timeout_hours: 24,
+      auto_approval_min_confidence: 0.85,
+      is_template_task: true,
+      // Convex schema fields for schedule
+      cadence_type: toCadenceType(task.frequency),
+      cadence_days: task.days,
+      time_window_duration_minutes: task.duration_minutes,
+    })),
+  );
+
+  // Store milestone metadata in ai_plan_json for progress tracking
+  const aiPlan = {
+    milestones: plan.milestones.map((m) => ({
+      name: m.name,
+      description: m.description,
+      target_week: m.target_week,
+      progress_weight: m.progress_weight,
+      task_count: m.tasks.length,
+    })),
+    generated_at: new Date().toISOString(),
+  };
 
   return {
-    name: (plan.success_definition as string) || "AI Goal",
-    description: `Created from AI goal chat (${intent})`,
-    motivation: (plan.success_definition as string) || "",
+    name: plan.title || "AI Goal",
+    description: plan.description || `Created from AI goal chat (${intent})`,
+    motivation: plan.description || "",
     category: "General",
     is_habit: intent === "habit",
     goal_type: intent,
     end_date: Number.isFinite(endDate) ? endDate : undefined,
     goal_archetype: "general" as const,
-    goal_profile_json: JSON.stringify({ profile: plan.profile_summary || "" }),
-    availability: plan.availability ? [String(plan.availability)] : [],
-    time_commitment: typeof plan.time_budget === "string" ? plan.time_budget : undefined,
-    accountability_type: typeof plan.accountability_mode === "string" ? plan.accountability_mode : "partner-review",
-    tasks: tasks.map((task: any) => ({
-      name: String(task.name || "Task"),
-      description: task.description ? String(task.description) : undefined,
-      repeat_frequency: intent === "habit" ? "daily" : "weekly",
-      accountability_type: String(plan.accountability_mode || "partner-review"),
-      verification_mode: "photo",
-      verification_mode_reason: "Partner review accountability",
-      verification_confidence: 0.9,
-      requires_partner_review: Boolean(task.requires_partner_review ?? true),
-      auto_approval_policy: "none",
-      auto_approval_timeout_hours: 24,
-      auto_approval_min_confidence: 0.85,
-    })),
+    accountability_type: plan.accountability_type || "task_completion",
+    planning_mode: "ai" as const,
+    ai_plan_json: JSON.stringify(aiPlan),
+    tasks,
   };
 };
 
@@ -61,9 +95,12 @@ export function useGoalChatFlow() {
   const [profileAnswers, setProfileAnswers] = useState<Record<string, string>>({});
   const [isStreaming, setIsStreaming] = useState(false);
   const [readyForSummary, setReadyForSummary] = useState(false);
-  const [screen, setScreen] = useState<"chat" | "summary">("chat");
+  const [screen, setScreen] = useState<"chat" | "summary" | "plan">("chat");
   const [summary, setSummary] = useState<Record<string, any> | null>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const { userDetails } = useUser();
   const { toast } = useToast();
@@ -72,18 +109,21 @@ export function useGoalChatFlow() {
 
   useEffect(() => {
     let mounted = true;
+    console.log("[GoalChat] Creating session...");
     createGoalChatSession({
       user_id: userDetails?.id,
       behavioral_summary: "Behavioral profile inference will be enriched from historical performance data.",
     })
       .then((session) => {
         if (!mounted) return;
+        console.log("[GoalChat] Session created:", session.session_id);
         setSessionId(session.session_id);
         setMissingSlots(session.missing_slots);
         setProfile(session.profile);
-        setMessages([{ id: crypto.randomUUID(), role: "assistant", text: "Tell me the goal you want to create, and I’ll guide you one step at a time." }]);
+        setMessages([{ id: crypto.randomUUID(), role: "assistant", text: "Tell me the goal you want to create, and I'll guide you one step at a time." }]);
       })
       .catch((error) => {
+        console.error("[GoalChat] Session creation FAILED:", error);
         toast({ title: "Failed to start goal chat", description: String(error), variant: "destructive" });
       });
     return () => {
@@ -91,10 +131,24 @@ export function useGoalChatFlow() {
     };
   }, [toast, userDetails?.id]);
 
+  const stopGeneration = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsStreaming(false);
+  }, []);
+
   const sendMessage = async (text: string, selectedChip?: string) => {
-    if (!sessionId || isStreaming) return;
+    console.log("[GoalChat] sendMessage called. sessionId:", sessionId, "isStreaming:", isStreaming);
+    if (!sessionId || isStreaming) {
+      console.warn("[GoalChat] sendMessage blocked — sessionId:", sessionId, "isStreaming:", isStreaming);
+      return;
+    }
     const outgoing = selectedChip || text.trim();
     if (!outgoing) return;
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setIsStreaming(true);
     setInput("");
@@ -125,22 +179,30 @@ export function useGoalChatFlow() {
           },
           onReadyForSummary: (ready) => setReadyForSummary(ready),
         },
+        controller.signal,
       );
     } catch (error) {
-      toast({ title: "Streaming failed", description: String(error), variant: "destructive" });
+      if (!controller.signal.aborted) {
+        toast({ title: "Streaming failed", description: String(error), variant: "destructive" });
+      }
     } finally {
       setIsStreaming(false);
+      abortRef.current = null;
     }
   };
 
   const openSummary = async () => {
     if (!sessionId) return;
     try {
-      const data = await getGoalChatSummary(sessionId);
-      setSummary(data.summary);
-      setScreen("summary");
+      setIsGeneratingPlan(true);
+      setScreen("plan");
+      const data = await generateGoalPlan(sessionId);
+      setGeneratedPlan(data.plan);
     } catch (error) {
-      toast({ title: "Could not load summary", description: String(error), variant: "destructive" });
+      toast({ title: "Could not generate plan", description: String(error), variant: "destructive" });
+      setScreen("chat");
+    } finally {
+      setIsGeneratingPlan(false);
     }
   };
 
@@ -159,17 +221,26 @@ export function useGoalChatFlow() {
   };
 
   const approveAndCreate = async () => {
-    if (!sessionId || !summary) return;
+    if (!sessionId) return;
     try {
       setIsCreating(true);
-      await patchGoalChatSummary(sessionId, summary);
-      const finalized = await finalizeGoalChat(sessionId, Boolean(userDetails?.partner_id));
-      if (!finalized.finalized || !finalized.goal_plan) {
-        throw new Error((finalized.validation_errors || []).join(", ") || "Plan validation failed.");
+
+      if (generatedPlan) {
+        // Use the AI-generated plan directly
+        const goalId = await createGoal(toGoalPayload(generatedPlan) as any);
+        toast({ title: "Goal created", description: "Your new goal is live!" });
+        router.push(`/goals/${goalId}`);
+      } else if (summary) {
+        // Fallback: old summary flow
+        await patchGoalChatSummary(sessionId, summary);
+        const finalized = await finalizeGoalChat(sessionId, Boolean(userDetails?.partner_id));
+        if (!finalized.finalized || !finalized.goal_plan) {
+          throw new Error((finalized.validation_errors || []).join(", ") || "Plan validation failed.");
+        }
+        const goalId = await createGoal(toGoalPayload(finalized.goal_plan as any) as any);
+        toast({ title: "Goal created", description: "Your new goal is live!" });
+        router.push(`/goals/${goalId}`);
       }
-      const goalId = await createGoal(toGoalPayload(finalized.goal_plan) as any);
-      toast({ title: "Goal created", description: "Your new goal is live." });
-      router.push(`/goals/${goalId}`);
     } catch (error) {
       toast({ title: "Could not create goal", description: String(error), variant: "destructive" });
     } finally {
@@ -188,10 +259,13 @@ export function useGoalChatFlow() {
     setInput,
     chips,
     sendMessage,
+    stopGeneration,
     isStreaming,
     readyForSummary,
     openSummary,
     summary,
+    generatedPlan,
+    isGeneratingPlan,
     updateSummaryField,
     updateSummaryTask,
     approveAndCreate,

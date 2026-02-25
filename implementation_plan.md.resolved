@@ -1,0 +1,82 @@
+# Redesign: DuoTrak-Aware AI Goal Chat
+
+## Problem
+
+The current AI chat is a **generic slot-filler** that knows nothing about DuoTrak. It robotically asks for 6 fields ([intent](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/slot_tracker.py#20-25), `success_definition`, `availability`, `time_budget`, `accountability_mode`, `tasks`) with no understanding of partner accountability, proof types, or DuoTrak's unique value.
+
+## What DuoTrak Actually Is
+
+DuoTrak is **partner accountability** — you're accountable to a *real person*, not code or AI. The chat AI must understand:
+
+| Accountability Type | Use Case | How It Works |
+|---|---|---|
+| **📸 Photo proof** | Gym, cooking, cleaning, projects | Partner sends photo evidence |
+| **🎥 Video proof** | Workouts, practice sessions | Partner sends video evidence |
+| **🎙️ Voice reflection** | Reading, learning, journaling | Voice note summarizing what you learned |
+| **⏰ Check-in window** | Wake up at 7am, medication, hydration | Time-triggered, small window to confirm |
+| **✅ Task completion** | General tasks, milestones | Mark as done, partner reviews |
+
+## Proposed Change
+
+Replace the rigid slot-filling system with a **two-phase AI approach**:
+
+### Phase 1: Natural Conversation (what changes)
+The AI has a rich system prompt that understands DuoTrak. Instead of asking "What's your accountability mode?", it naturally suggests the right one based on context.
+
+> **User**: "I want to learn Python in 3 months"
+> **AI**: "Great! How many hours a week can you dedicate? And would you prefer **voice reflections** after study sessions so your partner can hear what you've learned, or **photo proof** of completed exercises?"
+
+### Phase 2: AI-Generated Summary (what changes)
+When the conversation has enough info, the AI produces a **structured summary** (JSON) that includes the required planning fields plus a rich narrative.
+
+---
+
+## Proposed Changes
+
+### Backend
+
+#### [MODIFY] [_fast_enrich_turn in goal_chat_session_service.py](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat_session_service.py)
+- Inject DuoTrak system context into the AI prompt (accountability types, partner model)
+- The AI extracts slots **and** suggests the best accountability type based on goal context
+- Add `accountability_type` slot: photo | video | voice | check_in | task_completion
+- Add `user_summary` field to capture intent/reservations in natural language
+
+#### [MODIFY] [slot_tracker.py](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/slot_tracker.py)
+- Replace `accountability_mode` with `accountability_type` (photo, video, voice, check_in, task_completion)
+- Add `user_summary` as a required slot (AI-generated narrative of user's intent + reservations)
+- Keep: [intent](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/slot_tracker.py#20-25), `success_definition`, `deadline`/`review_cycle`, `tasks`
+- Remove: `availability`, `time_budget` → fold into `user_summary` (useful context but not a rigid field)
+
+#### [MODIFY] [conversation_manager.py](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/conversation_manager.py)
+- Update `SLOT_PROMPTS` and [_chips_for_slot](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/conversation_manager.py#70-85) for the new slot set
+- Chips for `accountability_type`: ["📸 Photo proof", "🎙️ Voice reflection", "⏰ Check-in", "✅ Task completion"]
+
+#### [MODIFY] [goal_chat.py](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/api/v1/endpoints/goal_chat.py)
+- Update streaming prompt to include DuoTrak personality
+
+#### [MODIFY] [plan_validator.py](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/plan_validator.py)
+- Update validation for new slot structure
+
+#### [MODIFY] [goal_chat schemas](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/schemas/goal_chat.py)
+- Update [GoalChatSlotUpdates](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/schemas/goal_chat.py#22-31) and [GoalChatTurnResponse](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/schemas/goal_chat.py#59-67) for new fields
+
+---
+
+## New Required Slots
+
+| Slot | Description | Before |
+|------|-------------|--------|
+| [intent](file:///c:/Users/Kevin/Projects/personal_projects/DuoTrak_v1.1/backend/app/services/goal_chat/slot_tracker.py#20-25) | habit, milestone, target-date | ✅ Same |
+| `success_definition` | What does success look like | ✅ Same |
+| `accountability_type` | photo, video, voice, check_in, task_completion | 🔄 Was `accountability_mode` (generic text) |
+| `tasks` | Key tasks with partner review settings | ✅ Same |
+| `user_summary` | **NEW** — AI-written narrative of user's goals, motivations, schedule, reservations | 🆕 Replaces `availability` + `time_budget` as separate slots |
+| `deadline` / `review_cycle` | Conditional on intent | ✅ Same |
+
+## Verification
+
+- Test fresh chat with "I want to learn Python in 3 months"
+- Verify AI suggests voice reflections (learning goal)
+- Test "I want to wake up at 7am every day" → AI suggests check-in window
+- Test "I want to go to the gym 4x/week" → AI suggests photo proof
+- Confirm summary includes user_summary narrative

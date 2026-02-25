@@ -16,17 +16,18 @@ class PlanValidator:
         if not has_partner:
             errors.append("Partner is required to finalize goal chat plan.")
 
+        # Validate accountability_type
+        at = slots.get("accountability_type")
+        if at and at not in SlotTracker.VALID_ACCOUNTABILITY_TYPES:
+            errors.append(f"Invalid accountability_type: {at}. Must be one of: {', '.join(SlotTracker.VALID_ACCOUNTABILITY_TYPES)}")
+
         tasks = slots.get("tasks") or []
         for idx, task in enumerate(tasks):
             if not isinstance(task, dict):
                 errors.append(f"Task {idx + 1} must be an object.")
                 continue
-            if task.get("requires_partner_review") is not True:
-                errors.append(f"Task {idx + 1} must require partner review.")
-            if not self._has_text(task.get("review_sla")):
-                errors.append(f"Task {idx + 1} is missing review_sla.")
-            if not self._has_text(task.get("escalation_policy")):
-                errors.append(f"Task {idx + 1} is missing escalation_policy.")
+            if not self._has_text(task.get("name")):
+                errors.append(f"Task {idx + 1} is missing a name.")
 
         return errors
 

@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 GoalIntent = Literal["target-date", "habit", "milestone"]
+AccountabilityType = Literal["photo", "video", "voice", "check_in", "task_completion"]
 
 
 class SelfProfilePrompt(BaseModel):
@@ -14,20 +15,16 @@ class SelfProfilePrompt(BaseModel):
 class GoalChatTask(BaseModel):
     name: str = Field(..., min_length=1)
     description: Optional[str] = None
-    requires_partner_review: Optional[bool] = None
-    review_sla: Optional[str] = None
-    escalation_policy: Optional[str] = None
 
 
 class GoalChatSlotUpdates(BaseModel):
     intent: Optional[GoalIntent] = None
     success_definition: Optional[str] = None
-    availability: Optional[str] = None
-    time_budget: Optional[str] = None
-    accountability_mode: Optional[str] = None
+    accountability_type: Optional[AccountabilityType] = None
     deadline: Optional[str] = None
     review_cycle: Optional[str] = None
     tasks: Optional[List[GoalChatTask]] = None
+    user_summary: Optional[str] = None
 
 
 class GoalChatProfileState(BaseModel):
@@ -85,3 +82,37 @@ class GoalChatSummaryResponse(BaseModel):
 
 class GoalChatSummaryPatchRequest(BaseModel):
     summary: Dict[str, Any]
+
+
+# ── Plan Generation Schemas ──
+
+
+class PlanTask(BaseModel):
+    name: str
+    description: str = ""
+    frequency: Literal["daily", "weekly", "biweekly", "monthly"] = "weekly"
+    days: List[str] = Field(default_factory=list)
+    duration_minutes: int = 30
+    accountability_type: AccountabilityType = "task_completion"
+
+
+class PlanMilestone(BaseModel):
+    name: str
+    description: str = ""
+    target_week: int = 4
+    progress_weight: int = 25
+    tasks: List[PlanTask] = Field(default_factory=list)
+
+
+class GeneratedPlan(BaseModel):
+    title: str
+    description: str = ""
+    intent: GoalIntent = "habit"
+    accountability_type: AccountabilityType = "task_completion"
+    deadline: Optional[str] = None
+    milestones: List[PlanMilestone] = Field(default_factory=list)
+
+
+class GeneratePlanResponse(BaseModel):
+    session_id: str
+    plan: GeneratedPlan

@@ -82,32 +82,28 @@ export default function GoalSummaryCard({
         </label>
 
         <label className="block">
-          <FieldLabel icon={Clock} label="Availability" />
-          <input
-            value={summary.availability || ""}
-            onChange={(e) => onChangeField("availability", e.target.value)}
+          <FieldLabel icon={Users} label="Accountability Type" />
+          <select
+            value={summary.accountability_type || "task_completion"}
+            onChange={(e) => onChangeField("accountability_type", e.target.value)}
             className={inputClasses}
-            placeholder="e.g. mornings, weekends"
-          />
+          >
+            <option value="photo">📸 Photo Proof</option>
+            <option value="video">🎥 Video Proof</option>
+            <option value="voice">🎙️ Voice Reflection</option>
+            <option value="check_in">⏰ Check-in Window</option>
+            <option value="task_completion">✅ Task Completion</option>
+          </select>
         </label>
 
-        <label className="block">
-          <FieldLabel icon={Clock} label="Time Budget" />
-          <input
-            value={summary.time_budget || ""}
-            onChange={(e) => onChangeField("time_budget", e.target.value)}
+        <label className="block sm:col-span-2">
+          <FieldLabel icon={Target} label="Summary" />
+          <textarea
+            value={summary.user_summary || ""}
+            onChange={(e) => onChangeField("user_summary", e.target.value)}
             className={inputClasses}
-            placeholder="e.g. 30 min/day"
-          />
-        </label>
-
-        <label className="block">
-          <FieldLabel icon={Users} label="Accountability" />
-          <input
-            value={summary.accountability_mode || ""}
-            onChange={(e) => onChangeField("accountability_mode", e.target.value)}
-            className={inputClasses}
-            placeholder="e.g. partner-review"
+            rows={3}
+            placeholder="AI-generated summary of your goals and motivations"
           />
         </label>
 

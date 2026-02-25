@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { motion, AnimatePresence, type Variants } from "framer-motion"
-import { Plus, Target, Search, Edit, Copy, Archive } from "lucide-react"
+import { Plus, Target, Search, Edit, Copy, Archive, Sparkles, Layers, ListChecks } from "lucide-react"
 import { useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -211,8 +211,22 @@ export default function GoalsHome() {
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
                                 <h3 className="text-lg font-bold text-charcoal dark:text-gray-100 truncate">{goal.name}</h3>
-                                <p className="text-sm text-stone-gray dark:text-gray-400">
-                                  {goal.category} • {goal.isHabit ? 'Habit' : 'Project'}
+                                <p className="text-sm text-stone-gray dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                                  {goal.category && <span>{goal.category}</span>}
+                                  {goal.category && <span>•</span>}
+                                  <span>{goal.isHabit ? 'Habit' : 'Project'}</span>
+                                  {(goal as any).planningMode === 'ai' && (
+                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                                      <Sparkles className="h-2.5 w-2.5" />
+                                      AI
+                                    </span>
+                                  )}
+                                  {(goal as any).goalType && (
+                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-sand dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-espresso dark:text-gray-300">
+                                      <Target className="h-2.5 w-2.5" />
+                                      {((goal as any).goalType || '').replace('-', ' ')}
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
@@ -264,8 +278,21 @@ export default function GoalsHome() {
                                   animate={{ width: `${progressPercentage}%` }}
                                   transition={{ duration: 1, ease: "easeOut" }}
                                   className="h-full rounded-full"
-                                  style={{ backgroundColor: goal.color || "#8B5CF6" }}
+                                  style={{ backgroundColor: goal.color || "#B8A693" }}
                                 />
+                              </div>
+                              {/* Task / Milestone meta */}
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="inline-flex items-center gap-0.5 text-[10px] text-stone-gray dark:text-gray-400">
+                                  <ListChecks className="h-3 w-3" />
+                                  {goal.tasks.length} tasks
+                                </span>
+                                {(goal as any).aiPlan && (goal as any).aiPlan.milestones?.length > 0 && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-stone-gray dark:text-gray-400">
+                                    <Layers className="h-3 w-3" />
+                                    {(goal as any).aiPlan.milestones.length} milestones
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>

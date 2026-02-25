@@ -175,6 +175,7 @@ export default function PartnerChatSurface({
           partnerInitials={partnerInitials}
           isPartnerOnline={derivedIsPartnerOnline}
           partnerLastSeen={derivedPartnerLastSeen}
+          showHeader={false}
           onClose={onCloseOverlay || (() => router.push("/partner"))}
         />
       </div>

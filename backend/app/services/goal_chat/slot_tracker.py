@@ -5,17 +5,15 @@ class SlotTracker:
     BASE_REQUIRED_SLOTS: List[str] = [
         "intent",
         "success_definition",
-        "availability",
-        "time_budget",
-        "accountability_mode",
+        "accountability_type",
         "tasks",
     ]
 
     INTENT_REQUIRED_SLOTS: Dict[str, List[str]] = {
         "target-date": ["deadline"],
-        "habit": ["review_cycle"],
-        "milestone": ["review_cycle"],
     }
+
+    VALID_ACCOUNTABILITY_TYPES = {"photo", "video", "voice", "check_in", "task_completion"}
 
     def required_slots_for_intent(self, intent: str | None) -> List[str]:
         required = list(self.BASE_REQUIRED_SLOTS)

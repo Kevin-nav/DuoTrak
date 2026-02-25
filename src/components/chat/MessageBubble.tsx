@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { format } from "date-fns";
 import {
@@ -35,6 +35,103 @@ interface MessageBubbleProps {
     isHighlighted?: boolean;
 }
 
+type ChatAttachment = NonNullable<Message["attachments"]>[number];
+
+interface VoiceAttachmentPlayerProps {
+    attachment: ChatAttachment;
+    isOwn: boolean;
+}
+
+function formatDuration(seconds?: number): string {
+    if (!seconds || !Number.isFinite(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function VoiceAttachmentPlayer({ attachment, isOwn }: VoiceAttachmentPlayerProps) {
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(attachment.duration || 0);
+    const [playbackRate, setPlaybackRate] = useState(1);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        const onLoaded = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : attachment.duration || 0);
+        const onTime = () => setCurrentTime(audio.currentTime || 0);
+        const onEnd = () => setIsPlaying(false);
+        const onError = () => {
+            setIsPlaying(false);
+            setError("Playback unavailable");
+        };
+        audio.addEventListener("loadedmetadata", onLoaded);
+        audio.addEventListener("timeupdate", onTime);
+        audio.addEventListener("ended", onEnd);
+        audio.addEventListener("error", onError);
+        return () => {
+            audio.pause();
+            audio.removeEventListener("loadedmetadata", onLoaded);
+            audio.removeEventListener("timeupdate", onTime);
+            audio.removeEventListener("ended", onEnd);
+            audio.removeEventListener("error", onError);
+        };
+    }, [attachment.duration, attachment.url]);
+
+    const togglePlayback = async () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        setError(null);
+        try {
+            if (audio.paused) {
+                await audio.play();
+                setIsPlaying(true);
+            } else {
+                audio.pause();
+                setIsPlaying(false);
+            }
+        } catch {
+            setIsPlaying(false);
+            setError("Tap to retry");
+        }
+    };
+
+    const cycleRate = () => {
+        const nextRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
+        const audio = audioRef.current;
+        if (audio) audio.playbackRate = nextRate;
+        setPlaybackRate(nextRate);
+    };
+
+    const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+    return (
+        <div className={`rounded-lg px-3 py-2 ${isOwn ? "bg-landing-espresso-light/70" : "bg-landing-cream"}`}>
+            <audio ref={audioRef} src={attachment.url} preload="metadata" />
+            <div className="flex items-center gap-3">
+                <button onClick={() => void togglePlayback()} className={`w-10 h-10 rounded-full flex items-center justify-center ${isOwn ? "bg-landing-terracotta text-white" : "bg-landing-sand text-landing-espresso"}`}>
+                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+                </button>
+                <div className="flex-1">
+                    <div className="relative h-1.5 rounded-full bg-landing-clay/70 overflow-hidden">
+                        <div className={`h-full rounded-full ${isOwn ? "bg-white/80" : "bg-landing-terracotta"}`} style={{ width: `${progressPercent}%` }} />
+                    </div>
+                    <div className={`mt-1 flex items-center justify-between text-[11px] ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`}>
+                        <span>{formatDuration(currentTime)}</span>
+                        <span>{formatDuration(duration || attachment.duration)}</span>
+                    </div>
+                </div>
+                <button onClick={cycleRate} className={`h-7 min-w-10 rounded-full px-2 text-xs font-medium ${isOwn ? "bg-white/15 text-white" : "bg-white text-landing-espresso"} transition-colors`}>
+                    {playbackRate}x
+                </button>
+            </div>
+            {error && <p className={`mt-1 text-[11px] ${isOwn ? "text-white/80" : "text-red-600"}`}>{error}</p>}
+        </div>
+    );
+}
+
 
 export default function MessageBubble({
     message,
@@ -51,7 +148,6 @@ export default function MessageBubble({
     isHighlighted = false,
 }: MessageBubbleProps) {
     const [showReactionPicker, setShowReactionPicker] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
     // Swipe to reply
@@ -133,14 +229,6 @@ export default function MessageBubble({
         const sizes = ["B", "KB", "MB", "GB"];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-    };
-
-    // Format duration for voice messages
-    const formatDuration = (seconds?: number) => {
-        if (!seconds) return "0:00";
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
     const bubbleClasses = isOwn
@@ -294,26 +382,7 @@ export default function MessageBubble({
 
                                                 {/* Voice message */}
                                                 {attachment.type === "voice" && (
-                                                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isOwn ? "bg-landing-espresso-light" : "bg-landing-cream"}`}>
-                                                        <button
-                                                            onClick={() => setIsPlaying(!isPlaying)}
-                                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${isOwn ? "bg-landing-terracotta" : "bg-landing-sand"}`}
-                                                        >
-                                                            {isPlaying ? (
-                                                                <Pause className={`h-5 w-5 ${isOwn ? "text-white" : "text-landing-espresso"}`} />
-                                                            ) : (
-                                                                <Play className={`h-5 w-5 ml-0.5 ${isOwn ? "text-white" : "text-landing-espresso"}`} />
-                                                            )}
-                                                        </button>
-                                                        <div className="flex-1">
-                                                            <div className="h-1 bg-landing-clay rounded-full">
-                                                                <div className="h-full w-1/3 bg-current rounded-full" />
-                                                            </div>
-                                                            <span className={`text-xs mt-1 ${isOwn ? "text-white/85" : "text-landing-espresso-light"}`}>
-                                                                {formatDuration(attachment.duration)}
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                                                    <VoiceAttachmentPlayer attachment={attachment} isOwn={isOwn} />
                                                 )}
 
                                                 {/* Document */}

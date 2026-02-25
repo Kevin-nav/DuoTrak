@@ -7,6 +7,7 @@ import { uploadToR2 } from "./lib/r2";
 const ONLINE_WINDOW_MS = 70_000;
 const IMAGE_UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024;
 const VIDEO_UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024;
+const VOICE_UPLOAD_LIMIT_BYTES = 100 * 1024 * 1024;
 
 function decodeBase64ToBytes(base64Data: string): Uint8Array {
     if (typeof atob !== "function") {
@@ -20,12 +21,15 @@ function decodeBase64ToBytes(base64Data: string): Uint8Array {
     return bytes;
 }
 
-function getAttachmentTypeFromMime(mimeType: string): "image" | "video" | "document" {
+function getAttachmentTypeFromMime(mimeType: string): "image" | "video" | "voice" | "document" {
     if (mimeType.startsWith("image/")) {
         return "image";
     }
     if (mimeType.startsWith("video/")) {
         return "video";
+    }
+    if (mimeType.startsWith("audio/")) {
+        return "voice";
     }
     return "document";
 }
@@ -397,10 +401,17 @@ export const sendMessage = mutation({
             const replyMessage = await ctx.db.get(args.reply_to_id);
             if (replyMessage) {
                 const replySender = await ctx.db.get(replyMessage.sender_id);
+                const replyPreviewContent =
+                    replyMessage.content.trim() ||
+                    (replyMessage.message_type === "voice"
+                        ? "Voice note"
+                        : replyMessage.attachments?.length
+                            ? "Attachment"
+                            : "");
                 reply_preview = {
                     sender_id: replyMessage.sender_id,
                     sender_name: replySender?.full_name || replySender?.nickname || "Unknown",
-                    content: replyMessage.content.substring(0, 100), // Truncate for preview
+                    content: replyPreviewContent.substring(0, 100),
                     message_type: replyMessage.message_type,
                 };
             }
@@ -408,6 +419,13 @@ export const sendMessage = mutation({
 
         const now = Date.now();
         const messageType = args.message_type || "text";
+        const previewText =
+            args.content.trim() ||
+            (messageType === "voice"
+                ? "Voice note"
+                : args.attachments?.length
+                    ? "Attachment"
+                    : "");
 
         // Create message
         const messageId = await ctx.db.insert("messages", {
@@ -430,7 +448,7 @@ export const sendMessage = mutation({
         const isUser1 = currentUser._id === partnership.user1_id;
 
         await ctx.db.patch(conversation._id, {
-            last_message_text: args.content.substring(0, 100),
+            last_message_text: previewText.substring(0, 100),
             last_message_at: now,
             last_message_sender_id: currentUser._id,
             // Increment unread count for the OTHER user
@@ -452,7 +470,7 @@ export const sendMessage = mutation({
                 actorUserId: currentUser._id,
                 context: JSON.stringify({
                     conversationId: String(conversation._id),
-                    preview: args.content.substring(0, 140),
+                    preview: previewText.substring(0, 140),
                     messageId: String(messageId),
                 }),
             }
@@ -821,6 +839,9 @@ export const uploadAttachment = action({
         }
         if (attachmentType === "video" && fileBytes.byteLength > VIDEO_UPLOAD_LIMIT_BYTES) {
             throw new Error("Video exceeds 50MB limit");
+        }
+        if (attachmentType === "voice" && fileBytes.byteLength > VOICE_UPLOAD_LIMIT_BYTES) {
+            throw new Error("Voice note exceeds 100MB limit");
         }
 
         const safeName = sanitizeFileName(args.file_name);
