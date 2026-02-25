@@ -1049,7 +1049,9 @@ export const runDailyReminderSweep: any = internalAction({
               recipientUserId: user._id,
               context: JSON.stringify({
                 taskId: relatedTaskId,
+                goalId: task.goal_id ? String(task.goal_id) : undefined,
                 taskName: task.name,
+                instanceDate: task.due_date,
               }),
             });
           }
@@ -1067,7 +1069,9 @@ export const runDailyReminderSweep: any = internalAction({
               recipientUserId: user._id,
               context: JSON.stringify({
                 taskId: relatedTaskId,
+                goalId: task.goal_id ? String(task.goal_id) : undefined,
                 taskName: task.name,
+                instanceDate: task.due_date,
               }),
             });
           }
@@ -1112,9 +1116,13 @@ export const runWeeklySummarySweep: any = internalAction({
       const workload = await ctx.runQuery((internal as any).notifications.getUserTaskSweepData, {
         userId: user._id,
       });
-      const tasks = (workload?.tasks || []) as any[];
-      const total = tasks.length;
-      const completed = tasks.filter((task: any) => isTaskDone(task.status) && (task.updated_at ?? 0) >= now - weekMs).length;
+      const instances = (workload?.instances || []) as any[];
+      const weeklyInstances = instances.filter((instance: any) => {
+        const date = instance.instance_date ?? instance.updated_at ?? 0;
+        return date >= now - weekMs;
+      });
+      const total = weeklyInstances.length;
+      const completed = weeklyInstances.filter((instance: any) => isTaskDone(instance.status)).length;
 
       const exists = await ctx.runQuery((internal as any).notifications.hasRecentNotification, {
         userId: user._id,
@@ -1189,15 +1197,22 @@ export const getUserTaskSweepData = internalQuery({
       .collect();
 
     const tasks: any[] = [];
+    const instances: any[] = [];
     for (const goal of goals) {
       const rows = await ctx.db
         .query("tasks")
         .withIndex("by_goal", (q: any) => q.eq("goal_id", goal._id))
         .collect();
       tasks.push(...rows);
+
+      const instanceRows = await ctx.db
+        .query("task_instances")
+        .withIndex("by_goal_date", (q: any) => q.eq("goal_id", goal._id))
+        .collect();
+      instances.push(...instanceRows);
     }
 
-    return { tasks };
+    return { tasks, instances };
   },
 });
 

@@ -1,6 +1,25 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+function startOfWeekMonday(timestampMs: number): number {
+    const d = new Date(timestampMs);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay(); // 0=Sun ... 6=Sat
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.getTime();
+}
+
+function startOfDay(timestampMs: number): number {
+    const d = new Date(timestampMs);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+}
+
+function endOfDay(timestampMs: number): number {
+    return startOfDay(timestampMs) + (24 * 60 * 60 * 1000) - 1;
+}
+
 /**
  * List today's task instances for the current user.
  */
@@ -51,6 +70,107 @@ export const listForDate = query({
         );
 
         return enriched;
+    },
+});
+
+/**
+ * Goal-scoped execution view for weekly and timeline task instance rendering.
+ */
+export const getGoalExecutionView = query({
+    args: {
+        goal_id: v.id("goals"),
+        week_start: v.optional(v.number()),
+        timeline_limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthenticated");
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .unique();
+
+        if (!user) throw new Error("User not found");
+
+        const goal = await ctx.db.get(args.goal_id);
+        if (!goal) throw new Error("Goal not found");
+        if (goal.user_id !== user._id) throw new Error("Unauthorized");
+
+        const weekStart = args.week_start ?? startOfWeekMonday(Date.now());
+        const weekEnd = weekStart + (7 * 24 * 60 * 60 * 1000) - 1;
+        const todayStart = startOfDay(Date.now());
+        const todayEnd = endOfDay(Date.now());
+        const timelineLimit = Math.min(args.timeline_limit ?? 180, 365);
+
+        const goalInstances = await ctx.db
+            .query("task_instances")
+            .withIndex("by_goal_date", (q) => q.eq("goal_id", args.goal_id))
+            .collect();
+
+        const taskCache = new Map<string, any>();
+        const getTask = async (taskId: any) => {
+            const key = String(taskId);
+            if (!taskCache.has(key)) {
+                const task = await ctx.db.get(taskId);
+                taskCache.set(key, task);
+            }
+            return taskCache.get(key);
+        };
+
+        const enrich = async (instance: any) => {
+            const task = await getTask(instance.task_id);
+            return {
+                ...instance,
+                task_name: task?.name ?? "Unknown task",
+                task_description: task?.description ?? null,
+                task_verification_mode: task?.verification_mode ?? null,
+                task_accountability_type: task?.accountability_type ?? null,
+                task_time_window_start: task?.time_window_start ?? null,
+                task_time_window_end: task?.time_window_end ?? null,
+                task_time_window_duration_minutes: task?.time_window_duration_minutes ?? null,
+            };
+        };
+
+        const weekInstancesRaw = goalInstances
+            .filter((instance) => instance.instance_date >= weekStart && instance.instance_date <= weekEnd)
+            .sort((a, b) => a.instance_date - b.instance_date || a.created_at - b.created_at);
+        const weekInstances = await Promise.all(weekInstancesRaw.map(enrich));
+
+        const allInstancesRaw = goalInstances
+            .sort((a, b) => b.instance_date - a.instance_date || b.created_at - a.created_at)
+            .slice(0, timelineLimit);
+        const allInstances = await Promise.all(allInstancesRaw.map(enrich));
+
+        const weekSummary = weekInstances.reduce(
+            (acc, instance: any) => {
+                const status = instance.status;
+                if (status === "completed" || status === "verified") {
+                    acc.completed += 1;
+                } else if (status === "pending-verification") {
+                    acc.awaitingReview += 1;
+                } else if (status === "missed" || status === "skipped" || status === "failed") {
+                    acc.notCompleted += 1;
+                } else if (status === "rejected") {
+                    acc.rejected += 1;
+                } else {
+                    acc.pending += 1;
+                }
+                return acc;
+            },
+            { completed: 0, awaitingReview: 0, notCompleted: 0, rejected: 0, pending: 0 }
+        );
+
+        return {
+            goal_id: args.goal_id,
+            week_start: weekStart,
+            week_end: weekEnd,
+            today_start: todayStart,
+            today_end: todayEnd,
+            week_instances: weekInstances,
+            all_instances: allInstances,
+            week_summary: weekSummary,
+        };
     },
 });
 

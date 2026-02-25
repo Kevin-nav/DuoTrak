@@ -1,6 +1,6 @@
 import { DomainGoal, DomainTask } from "../../../packages/domain/src/goals";
 
-export type TabKey = "this-week" | "full-plan" | "settings";
+export type TabKey = "this-week" | "all-tasks" | "full-plan" | "settings";
 
 export interface GoalDetailViewProps {
   goal: DomainGoal;

@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { DomainGoal, DomainTask } from "../../../packages/domain/src/goals";
+import { useState } from "react";
+import { DomainGoal } from "../../../packages/domain/src/goals";
 import { validateArchetypeProfile } from "@/lib/goals/archetype-validators";
-import { WeekGroup } from "./types";
-import { dayName, resolveVerificationMode } from "./utils";
+import { resolveVerificationMode } from "./utils";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { TabKey } from "./types";
 
 const defaultProfileDraft = {
   currency: "USD",
@@ -31,11 +33,13 @@ export function useGoalDetailState({
   updateGoal: any;
   toast: (payload: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"this-week" | "full-plan" | "settings">("this-week");
-  const [proofModalTaskId, setProofModalTaskId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("this-week");
+  const [proofModal, setProofModal] = useState<{ instanceId: string; taskName: string } | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [collapsedMilestones, setCollapsedMilestones] = useState<Record<number, boolean>>({});
+  const markInstanceComplete = useMutation((api as any).taskInstances.markComplete);
+  const submitInstanceVerification = useMutation((api as any).taskInstances.submitVerification);
 
   const initialProfile = (() => {
     try {
@@ -60,33 +64,6 @@ export function useGoalDetailState({
     dailyTarget: String(initialProfile.dailyTarget || ""),
   });
 
-  const groupedWeekTasks = useMemo<WeekGroup[]>(() => {
-    const now = new Date();
-    const todayKey = now.toDateString();
-    const buckets = new Map<string, DomainTask[]>();
-
-    for (const task of goal.tasks) {
-      const date = new Date(task.created_at);
-      const key = date.toDateString();
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key)!.push(task);
-    }
-
-    const entries = [...buckets.entries()].sort(
-      (a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()
-    );
-    const groups = entries.map(([key, tasks]) => ({
-      label: key === todayKey ? "TODAY" : dayName(new Date(key)),
-      tasks,
-    }));
-
-    if (!groups.some((group) => group.label === "TODAY")) {
-      groups.push({ label: "TODAY", tasks: [] });
-    }
-
-    return groups;
-  }, [goal.tasks]);
-
   const completedCount = goal.tasks.filter((task) => task.status === "completed").length;
 
   const triggerCelebration = () => {
@@ -94,18 +71,48 @@ export function useGoalDetailState({
     setTimeout(() => setShowCelebration(false), 1800);
   };
 
-  const handleTaskAction = (task: DomainTask) => {
-    const mode = resolveVerificationMode(task, goal.accountabilityType || undefined);
+  const handleTaskAction = async (task: any) => {
+    const mode = resolveVerificationMode(
+      {
+        verificationMode: task.verificationMode || task.task_verification_mode,
+        accountabilityType: task.accountabilityType || task.task_accountability_type,
+      } as any,
+      goal.accountabilityType || undefined
+    );
     if (mode === "task_completion" || mode === "time-window") {
-      triggerCelebration();
+      const instanceId = task._id;
+      if (!instanceId) return;
+      try {
+        await markInstanceComplete({ instance_id: instanceId } as any);
+        triggerCelebration();
+      } catch (error: any) {
+        toast({
+          title: "Could not update task",
+          description: error?.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
       return;
     }
-    setProofModalTaskId(task.id);
+    setProofModal({
+      instanceId: String(task._id || task.instance_id || ""),
+      taskName: String(task.task_name || task.name || "Task"),
+    });
   };
 
-  const handleProofSubmit = () => {
-    setProofModalTaskId(null);
-    triggerCelebration();
+  const handleProofSubmit = async () => {
+    if (!proofModal?.instanceId) return;
+    try {
+      await submitInstanceVerification({ instance_id: proofModal.instanceId } as any);
+      setProofModal(null);
+      triggerCelebration();
+    } catch (error: any) {
+      toast({
+        title: "Could not submit verification",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const saveProfile = () => {
@@ -161,13 +168,12 @@ export function useGoalDetailState({
   return {
     activeTab,
     setActiveTab,
-    proofModalTaskId,
-    setProofModalTaskId,
+    proofModal,
+    setProofModal,
     isSavingProfile,
     showCelebration,
     collapsedMilestones,
     toggleMilestone,
-    groupedWeekTasks,
     completedCount,
     profileDraft,
     setProfileDraft,
