@@ -36,9 +36,9 @@ export default function BottomNavbar() {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--theme-border)] bg-[var(--theme-card)]/95 px-4 py-2 shadow-lg backdrop-blur-md"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--theme-border)] bg-[var(--theme-card)]/95 px-2 py-1.5 shadow-lg backdrop-blur-md sm:px-4 sm:py-2"
     >
-      <div className="flex items-center justify-around max-w-md mx-auto">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-0.5 sm:justify-around">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeTab === item.id
@@ -60,7 +60,7 @@ export default function BottomNavbar() {
                 stiffness: 400,
                 damping: 17,
               }}
-              className={`relative flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all duration-300 ${
+              className={`relative flex min-w-0 flex-1 flex-col items-center space-y-0.5 rounded-lg px-1.5 py-1.5 transition-all duration-300 sm:flex-none sm:space-y-1 sm:px-3 sm:py-2 ${
                 isActive
                   ? "text-[var(--theme-primary-foreground)]"
                   : "text-[var(--theme-muted-foreground)] hover:bg-[var(--theme-muted)] hover:text-[var(--theme-foreground)]"
@@ -95,14 +95,14 @@ export default function BottomNavbar() {
                 className="relative z-10"
               >
                 <Icon
-                  className={`w-6 h-6 ${
+                  className={`h-5 w-5 sm:h-6 sm:w-6 ${
                     isActive ? "text-[var(--theme-primary-foreground)]" : "text-[var(--theme-muted-foreground)]"
                   }`}
                 />
               </motion.div>
 
               <motion.span
-                className={`relative z-10 text-xs font-medium ${
+                className={`relative z-10 truncate text-[10px] font-medium leading-tight sm:text-xs ${
                   isActive ? "text-[var(--theme-primary-foreground)]" : "text-[var(--theme-muted-foreground)]"
                 }`}
                 animate={isActive ? { y: [0, -2, 0] } : {}}

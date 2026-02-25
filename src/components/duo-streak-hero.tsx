@@ -80,14 +80,14 @@ export default function DuoStreakHero({
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="relative overflow-hidden bg-gradient-to-br from-white to-pearl-gray dark:from-gray-800 dark:to-gray-900 rounded-2xl p-8 shadow-lg border border-cool-gray dark:border-gray-700"
+      className="relative overflow-hidden rounded-2xl border border-cool-gray bg-gradient-to-br from-white to-pearl-gray p-4 shadow-lg dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 sm:p-8"
     >
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5 dark:opacity-10">
-        <div className="absolute top-4 left-4 w-8 h-8 bg-primary-blue rounded-full"></div>
-        <div className="absolute top-12 right-8 w-4 h-4 bg-accent-light-blue rounded-full"></div>
-        <div className="absolute bottom-8 left-12 w-6 h-6 bg-primary-blue rounded-full"></div>
-        <div className="absolute bottom-4 right-4 w-3 h-3 bg-accent-light-blue rounded-full"></div>
+        <div className="absolute left-3 top-3 h-5 w-5 rounded-full bg-primary-blue sm:left-4 sm:top-4 sm:h-8 sm:w-8" />
+        <div className="absolute bottom-3 right-3 h-2.5 w-2.5 rounded-full bg-accent-light-blue sm:bottom-4 sm:right-4 sm:h-3 sm:w-3" />
+        <div className="absolute bottom-8 left-12 hidden h-6 w-6 rounded-full bg-primary-blue sm:block" />
+        <div className="absolute right-8 top-12 hidden h-4 w-4 rounded-full bg-accent-light-blue sm:block" />
       </div>
 
       {/* Celebration Overlay */}
@@ -131,7 +131,7 @@ export default function DuoStreakHero({
 
       <div className="relative z-10">
         {/* Main Content */}
-        <div className="text-center space-y-6">
+        <div className="space-y-4 text-center sm:space-y-6">
           {/* Duo Visual Icon */}
           <motion.div
             initial={{ scale: 0 }}
@@ -165,8 +165,8 @@ export default function DuoStreakHero({
             >
               {/* Main flame icon with gradient effect */}
               <div className="relative">
-                <Flame className="w-16 h-16 text-primary-blue" />
-                <Flame className="w-16 h-16 text-orange-500 absolute top-0 left-0 opacity-60" />
+                <Flame className="h-12 w-12 text-primary-blue sm:h-16 sm:w-16" />
+                <Flame className="absolute left-0 top-0 h-12 w-12 text-orange-500 opacity-60 sm:h-16 sm:w-16" />
 
                 {/* Glow effect */}
                 <motion.div
@@ -179,17 +179,14 @@ export default function DuoStreakHero({
                     repeat: Number.POSITIVE_INFINITY,
                     ease: "easeInOut",
                   }}
-                  className="absolute inset-0 bg-primary-blue rounded-full blur-xl opacity-30"
+                  className="absolute inset-0 rounded-full bg-primary-blue opacity-30 blur-xl"
                 />
               </div>
 
               {/* Duo indicator - two small flames */}
               <div className="absolute -top-2 -right-2">
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
-                >
-                  <Zap className="w-6 h-6 text-yellow-500" />
+                <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}>
+                  <Zap className="h-5 w-5 text-yellow-500 sm:h-6 sm:w-6" />
                 </motion.div>
               </div>
             </motion.div>
@@ -206,7 +203,7 @@ export default function DuoStreakHero({
                 stiffness: 300,
                 damping: 20,
               }}
-              className="text-6xl md:text-7xl font-black text-charcoal dark:text-gray-100"
+              className="text-5xl font-black text-charcoal dark:text-gray-100 sm:text-6xl md:text-7xl"
             >
               {displayCount}
             </motion.div>
@@ -215,7 +212,7 @@ export default function DuoStreakHero({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              className="text-lg font-bold text-primary-blue uppercase tracking-wider"
+              className="text-sm font-bold uppercase tracking-wide text-primary-blue sm:text-lg"
             >
               {streakCount === 1 ? "DAY STREAK!" : "DAYS CRUSHED TOGETHER!"}
             </motion.p>
@@ -226,7 +223,7 @@ export default function DuoStreakHero({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1 }}
-            className="text-stone-gray dark:text-gray-300 font-medium text-lg max-w-md mx-auto"
+            className="mx-auto max-w-md px-1 text-base font-medium text-stone-gray dark:text-gray-300 sm:text-lg"
           >
             {getMotivationalMessage()}
           </motion.p>
@@ -237,7 +234,7 @@ export default function DuoStreakHero({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.2 }}
-              className="flex justify-center space-x-6"
+              className="flex justify-center space-x-4 sm:space-x-6"
             >
               <div className="text-center">
                 <motion.div
@@ -288,12 +285,12 @@ export default function DuoStreakHero({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-primary-blue to-accent-light-blue text-white px-6 py-2 rounded-full shadow-lg"
+              className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary-blue to-accent-light-blue px-3 py-1.5 text-white shadow-lg sm:top-4 sm:px-6 sm:py-2"
             >
-              <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4" />
-                <span className="font-bold text-sm">{getMilestoneMessage()}</span>
-                <Sparkles className="w-4 h-4" />
+                <div className="flex items-center space-x-2">
+                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="text-xs font-bold sm:text-sm">{getMilestoneMessage()}</span>
+                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
             </motion.div>
           )}

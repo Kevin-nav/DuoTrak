@@ -138,9 +138,9 @@ export default function GoalsHighlights({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700"
+      className="rounded-xl border border-cool-gray bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700 sm:p-6"
     >
-      <motion.h2 variants={itemVariants} className="text-xl font-bold text-charcoal dark:text-gray-100 mb-6">
+      <motion.h2 variants={itemVariants} className="mb-4 text-lg font-bold text-charcoal dark:text-gray-100 sm:mb-6 sm:text-xl">
         Goals Highlights
       </motion.h2>
 
@@ -156,7 +156,7 @@ export default function GoalsHighlights({
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.01, x: 5 }}
+                whileHover={{ scale: 1.005 }}
                 className={`p-4 rounded-lg border cursor-pointer transition-all ${goal.pendingVerifications && goal.pendingVerifications > 0
                     ? "border-primary-blue/30 bg-accent-light-blue dark:bg-primary-blue/10"
                     : goal.status === "needs-attention"
@@ -164,22 +164,22 @@ export default function GoalsHighlights({
                       : "border-cool-gray dark:border-gray-600 hover:border-primary-blue"
                   }`}
               >
-                <div className="flex items-start space-x-4">
+                <div className="flex items-start space-x-3 sm:space-x-4">
                   {/* Goal Icon */}
                   <motion.div
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.5 }}
-                    className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10"
                     style={{ backgroundColor: `${goal.color}20` }}
                   >
-                    <Icon className="w-5 h-5" style={{ color: goal.color }} />
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: goal.color }} />
                   </motion.div>
 
                   <div className="flex-1 min-w-0">
                     {/* Goal Header */}
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold text-charcoal dark:text-gray-100">{goal.name}</h3>
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-charcoal dark:text-gray-100">{goal.name}</h3>
                         <div className="flex items-center space-x-1">
                           {goal.type === "shared" ? (
                             <Users className="w-3 h-3 text-primary-blue" />
@@ -228,7 +228,7 @@ export default function GoalsHighlights({
                     </div>
 
                     {/* Status and Accountability */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center space-x-2">
                         <span
                           className={`text-xs font-medium ${goal.pendingVerifications && goal.pendingVerifications > 0

@@ -17,6 +17,11 @@ The Dashboard feature provides a personalized overview for the user, aggregating
 - `src/components/dashboard-content.tsx`:
     - **Purpose:** The primary content area of the dashboard, orchestrating various smaller components to display aggregated information.
     - **Mechanism:** Receives user and partner data as props. Conditionally renders sections like `VerificationQueue` and partner info. Contains placeholder handlers for task and verification actions.
+- Mobile optimization notes (2026-02-25):
+    - Dashboard spacing is now mobile-first with tighter `375px` baseline padding.
+    - Hero, welcome card, task cards, goals cards, journal pulse, and quick actions all use compact mobile variants.
+    - Bottom navigation tab density was reduced to avoid crowding with six tabs on narrow screens.
+    - Interaction controls in journal cards now stack safely on mobile to prevent clipping/overflow.
 - `src/components/duo-streak-hero.tsx`:
     - **Purpose:** Displays the user's (and partner's) streak count with motivational messages and visual celebrations for milestones.
     - **Mechanism:** Purely presentational, receives data via props, highly animated using `framer-motion`.

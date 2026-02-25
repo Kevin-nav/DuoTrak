@@ -245,9 +245,9 @@ export default function TodaysTasks({
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700"
+        className="rounded-xl border border-cool-gray bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700 sm:p-6"
       >
-        <motion.h2 variants={itemVariants} className="text-xl font-bold text-charcoal dark:text-gray-100 mb-6">
+        <motion.h2 variants={itemVariants} className="mb-4 text-lg font-bold text-charcoal dark:text-gray-100 sm:mb-6 sm:text-xl">
           Today's Tasks
         </motion.h2>
 
@@ -263,9 +263,9 @@ export default function TodaysTasks({
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: index * 0.1 }}
-                whileHover={task.canComplete ? { scale: 1.01, x: 5 } : {}}
+                whileHover={task.canComplete ? { scale: 1.005 } : {}}
                 onClick={() => handleTaskClick(task)}
-                className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+                className={`rounded-lg border p-3.5 transition-all sm:p-4 ${
                   task.status === "verified" || task.status === "completed"
                     ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
                     : task.status === "failed"
@@ -279,13 +279,14 @@ export default function TodaysTasks({
                             : "border-cool-gray dark:border-gray-600 opacity-60"
                 }`}
               >
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3 sm:items-center sm:space-x-4">
                   {/* Status Icon */}
                   <div className="flex-shrink-0">{getStatusIcon(task)}</div>
 
                   {/* Task Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-1.5 sm:space-x-2">
                       <h4
                         className={`font-medium ${
                           task.status === "verified" || task.status === "completed"
@@ -306,7 +307,7 @@ export default function TodaysTasks({
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-stone-gray dark:text-gray-400">{task.goalName}</p>
+                    <p className="text-xs text-stone-gray dark:text-gray-400 sm:text-sm">{task.goalName}</p>
                     {getArchetypeHint(task) && (
                       <p className="text-xs font-medium text-primary-blue mt-1">{getArchetypeHint(task)}</p>
                     )}
@@ -322,18 +323,19 @@ export default function TodaysTasks({
                 </div>
 
                 {/* Status/Action */}
-                <div className="flex-shrink-0">
+                <div className="w-full sm:w-auto sm:flex-shrink-0">
                   {task.canComplete && (task.status === "pending" || task.status === "rejected") ? (
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="px-3 py-1.5 bg-primary-blue hover:bg-primary-blue-hover text-white rounded-lg font-medium transition-colors text-sm"
+                      className="w-full rounded-lg bg-primary-blue px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-blue-hover sm:w-auto sm:py-1.5"
                     >
                       {getArchetypeActionLabel(task)}
                     </motion.button>
                   ) : (
-                    <span className={`text-sm font-medium ${getStatusColor(task)}`}>{getStatusText(task)}</span>
+                    <span className={`block text-right text-sm font-medium sm:text-left ${getStatusColor(task)}`}>{getStatusText(task)}</span>
                   )}
+                </div>
                 </div>
               </motion.div>
             </MouseGlowEffect>

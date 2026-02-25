@@ -95,9 +95,9 @@ export default function QuickActions({ hasPartner = false }: QuickActionsProps) 
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700"
+      className="rounded-xl border border-cool-gray bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700 sm:p-6"
     >
-      <motion.h2 variants={itemVariants} className="text-xl font-bold text-charcoal dark:text-gray-100 mb-6">
+      <motion.h2 variants={itemVariants} className="mb-4 text-lg font-bold text-charcoal dark:text-gray-100 sm:mb-6 sm:text-xl">
         Quick Actions
       </motion.h2>
 
@@ -117,15 +117,15 @@ export default function QuickActions({ hasPartner = false }: QuickActionsProps) 
                 boxShadow: "0 4px 12px rgba(25, 161, 229, 0.15)",
               }}
               whileTap={{ scale: 0.98 }}
-              className="group bg-primary-blue hover:bg-primary-blue-hover text-white p-4 rounded-lg font-medium transition-all duration-200 text-left"
+              className="group rounded-lg bg-primary-blue p-3.5 text-left font-medium text-white transition-all duration-200 hover:bg-primary-blue-hover sm:p-4"
             >
               <div className="flex items-start space-x-3">
                 <motion.div whileHover={{ rotate: 5 }} transition={{ duration: 0.2 }} className="flex-shrink-0">
                   <Icon className="w-5 h-5" />
                 </motion.div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm mb-1 group-hover:text-white transition-colors">{action.label}</p>
-                  <p className="text-white/80 text-xs leading-relaxed">{action.description}</p>
+                  <p className="mb-1 text-sm font-semibold transition-colors group-hover:text-white">{action.label}</p>
+                  <p className="line-clamp-2 text-xs leading-relaxed text-white/80">{action.description}</p>
                 </div>
               </div>
             </motion.button>

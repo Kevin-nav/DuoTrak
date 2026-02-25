@@ -62,8 +62,8 @@ export default function JournalEntryInteractions({ entryId }: JournalEntryIntera
   };
 
   return (
-    <div className="mt-3 space-y-2 rounded-xl border border-landing-clay bg-landing-cream/70 p-2.5">
-      <div className="flex flex-wrap gap-1.5">
+    <div className="mt-2.5 space-y-2 rounded-xl border border-landing-clay bg-landing-cream/70 p-2 sm:mt-3 sm:p-2.5">
+      <div className="flex flex-wrap gap-1">
         {REACTIONS.map((reaction) => {
           const stats = reactionSummary.get(reaction.key);
           const isActive = !!stats?.mine;
@@ -95,18 +95,18 @@ export default function JournalEntryInteractions({ entryId }: JournalEntryIntera
         })}
       </div>
 
-      <form onSubmit={onSubmitComment} className="flex gap-1.5">
+      <form onSubmit={onSubmitComment} className="flex flex-col gap-1.5 sm:flex-row">
         <input
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Add a quick comment"
           maxLength={280}
-          className="w-full rounded-lg border border-landing-clay bg-white px-2.5 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
+          className="w-full rounded-lg border border-landing-clay bg-white px-2.5 py-2 text-xs text-landing-espresso outline-none focus:border-landing-terracotta sm:py-1.5"
         />
         <button
           type="submit"
           disabled={isSubmitting || !comment.trim()}
-          className="inline-flex items-center gap-1 rounded-lg bg-landing-espresso px-2.5 py-1.5 text-xs font-semibold text-landing-cream disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-landing-espresso px-2.5 py-2 text-xs font-semibold text-landing-cream disabled:opacity-60 sm:w-auto sm:py-1.5"
         >
           <Send className="h-3 w-3" />
           Send

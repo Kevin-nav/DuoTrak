@@ -161,7 +161,7 @@ export default function DashboardContent({
   };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <DuoStreakHero
         streakCount={streak}
         partnerName={partnerName}
@@ -174,27 +174,27 @@ export default function DashboardContent({
         <motion.section
           variants={itemVariants}
           whileHover={{ scale: 1.01 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border-cool-gray dark:border-gray-700"
+          className="rounded-xl border-cool-gray bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700 sm:p-6"
         >
-          <div className="space-y-4">
-            <h1 className="text-2xl md:text-3xl font-bold text-charcoal dark:text-gray-100">
+          <div className="space-y-3 sm:space-y-4">
+            <h1 className="text-xl font-bold text-charcoal dark:text-gray-100 sm:text-2xl md:text-3xl">
               Welcome back, {userName}!
             </h1>
 
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
                 >
-                  <Flame className="w-6 h-6 text-orange-500" />
+                  <Flame className="h-5 w-5 text-orange-500 sm:h-6 sm:w-6" />
                 </motion.div>
-                <div>
-                  <span className="text-lg font-semibold text-charcoal dark:text-gray-100">
+                <div className="min-w-0">
+                  <span className="text-base font-semibold text-charcoal dark:text-gray-100 sm:text-lg">
                     Personal Streak: {streak}
                   </span>
-                  <p className="text-stone-gray dark:text-gray-300 text-sm">Keep up the great work!</p>
+                  <p className="text-xs text-stone-gray dark:text-gray-300 sm:text-sm">Keep up the great work!</p>
                 </div>
               </div>
             </div>
@@ -216,9 +216,9 @@ export default function DashboardContent({
         />
       </motion.section>
 
-      <motion.section variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border-cool-gray dark:border-gray-700 space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xl font-bold text-charcoal dark:text-gray-100">Journal Pulse</h2>
+      <motion.section variants={itemVariants} className="space-y-3 rounded-xl border-cool-gray bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700 sm:space-y-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-charcoal dark:text-gray-100 sm:text-xl">Journal Pulse</h2>
           <button
             type="button"
             onClick={() => router.push("/journal")}
@@ -230,30 +230,30 @@ export default function DashboardContent({
         {isJournalPulseLoading ? (
           <p className="text-sm text-stone-gray dark:text-gray-300">Loading journal insights...</p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-cool-gray px-3 py-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
+            <div className="rounded-lg border border-cool-gray px-2.5 py-2 sm:px-3">
               <p className="text-xs text-stone-gray dark:text-gray-300">Private streak</p>
               <p className="text-base font-semibold text-charcoal dark:text-gray-100">{journalPulse.privateStreakDays} days</p>
             </div>
-            <div className="rounded-lg border border-cool-gray px-3 py-2">
+            <div className="rounded-lg border border-cool-gray px-2.5 py-2 sm:px-3">
               <p className="text-xs text-stone-gray dark:text-gray-300">Shared this week</p>
               <p className="text-base font-semibold text-charcoal dark:text-gray-100">{journalPulse.sharedThisWeek}</p>
             </div>
-            <div className="rounded-lg border border-cool-gray px-3 py-2">
+            <div className="rounded-lg border border-cool-gray px-2.5 py-2 sm:px-3">
               <p className="text-xs text-stone-gray dark:text-gray-300">Waiting on your response</p>
               <p className="text-base font-semibold text-charcoal dark:text-gray-100">{journalPulse.pendingResponseCount}</p>
             </div>
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <h3 className="text-sm font-semibold text-charcoal dark:text-gray-100">Partner Reflections</h3>
           {!isJournalPulseLoading && journalPulse.partnerReflections.length === 0 ? (
             <p className="text-xs text-stone-gray dark:text-gray-300">No partner reflections yet.</p>
           ) : null}
           {journalPulse.partnerReflections.map((entry: any) => (
-            <article key={entry._id} className="rounded-xl border border-cool-gray bg-gray-50 dark:bg-gray-900 p-3">
-              <div className="flex items-start justify-between gap-2">
+            <article key={entry._id} className="rounded-xl border border-cool-gray bg-gray-50 p-2.5 dark:bg-gray-900 sm:p-3">
+              <div className="flex items-start justify-between gap-2.5">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-charcoal dark:text-gray-100">{entry.title}</p>
                   <p className="line-clamp-2 text-xs text-stone-gray dark:text-gray-300">{entry.body}</p>
@@ -283,18 +283,18 @@ export default function DashboardContent({
           <MouseGlowEffect glowColor="#19A1E5" intensity="medium">
             <motion.div
               whileHover={{ scale: 1.01 }}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-cool-gray dark:border-gray-700"
+              className="rounded-xl border border-cool-gray bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700 sm:p-6"
             >
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <motion.div
                   whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="w-12 h-12 bg-primary-blue rounded-full flex items-center justify-center text-white font-semibold cursor-pointer"
+                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-primary-blue text-sm font-semibold text-white sm:h-12 sm:w-12"
                 >
                   {getInitials(partnerName)}
                 </motion.div>
                 <div>
-                  <p className="text-stone-gray dark:text-gray-300 text-sm">Your Partner:</p>
-                  <p className="text-charcoal dark:text-gray-100 font-semibold text-lg">{partnerName}</p>
+                  <p className="text-xs text-stone-gray dark:text-gray-300 sm:text-sm">Your Partner:</p>
+                  <p className="text-base font-semibold text-charcoal dark:text-gray-100 sm:text-lg">{partnerName}</p>
                 </div>
               </div>
             </motion.div>

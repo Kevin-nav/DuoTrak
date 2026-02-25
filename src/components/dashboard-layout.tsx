@@ -14,9 +14,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-        className="px-4 pb-24 pt-20 sm:px-6 lg:px-8"
+        className="px-3 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8"
       >
-        <div className="mx-auto w-full max-w-4xl py-6">{children}</div>
+        <div className="mx-auto w-full max-w-4xl py-3 sm:py-6">{children}</div>
       </motion.main>
     </div>
   )
