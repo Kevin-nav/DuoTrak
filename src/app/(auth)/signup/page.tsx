@@ -16,11 +16,13 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
+  getAdditionalUserInfo,
   signInWithPopup,
 } from 'firebase/auth';
 import { toast } from 'sonner';
 import { persistentLog, clearPersistentLogs } from '@/lib/logger';
 import { auth } from '@/lib/firebase';
+import { trackEvent } from '@/lib/analytics/events';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -116,6 +118,10 @@ export default function SignupPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       persistentLog('Email account created. Updating profile...');
+      await trackEvent('firebase_auth_account_created', {
+        auth_provider: 'password',
+        entry_point: 'signup_page',
+      });
 
       await updateProfile(userCredential.user, {
         displayName: fullName,
@@ -148,7 +154,14 @@ export default function SignupPage() {
     setError('');
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const credential = await signInWithPopup(auth, provider);
+      const additionalUserInfo = getAdditionalUserInfo(credential);
+      if (additionalUserInfo?.isNewUser) {
+        await trackEvent('firebase_auth_account_created', {
+          auth_provider: 'google',
+          entry_point: 'signup_page',
+        });
+      }
 
       await handleAuthSuccess();
     } catch (signupError: any) {

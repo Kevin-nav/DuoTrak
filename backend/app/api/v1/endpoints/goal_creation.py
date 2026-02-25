@@ -19,6 +19,7 @@ from app.services.external_judge_crew import ExternalJudgeCrew
 from app.schemas.agent_crew import DuotrakGoalPlan
 from fastapi import BackgroundTasks
 import json
+from app.observability.convex_ledger import build_ledger_payload, record_convex_ledger_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -303,6 +304,40 @@ async def create_goal_plan(
             overload_percent=overload_percent,
             conflict_count=len(conflict_flags),
             fit_band=fit_band,
+        )
+        cost_usd = float(plan_result.get("cost_usd", 0) or 0)
+        input_tokens = int(plan_result.get("input_tokens", 0) or 0)
+        output_tokens = int(plan_result.get("output_tokens", 0) or 0)
+        model_name = str(plan_result.get("model", settings.PRO_MODEL))
+        provider_name = str(plan_result.get("provider", "google"))
+        latency_ms = float(adapted_result.get("execution_metadata", {}).get("plan_generation_time_ms", 0) or 0)
+        emit_goal_operation_event(
+            "llm_call_completed",
+            session_id=session_id,
+            user_id=effective_user_id,
+            provider=provider_name,
+            model=model_name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            latency_ms=latency_ms,
+            cost_usd=cost_usd,
+            workflow_stage="goal_plan_generation",
+            success=True,
+        )
+        await record_convex_ledger_event(
+            build_ledger_payload(
+                goal_id=None,
+                user_id=effective_user_id,
+                provider=provider_name,
+                model=model_name,
+                cost_usd=cost_usd,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                latency_ms=latency_ms,
+                workflow_stage="goal_plan_generation",
+                success=True,
+                request_id=session_id,
+            )
         )
         if overload_percent > 0 or len(conflict_flags) > 0:
             emit_goal_operation_event(

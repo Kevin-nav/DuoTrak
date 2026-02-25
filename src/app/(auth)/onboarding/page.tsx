@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Rocket, Target, Users } from 'lucide-react';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import FlowShell from '@/components/flow/FlowShell';
 import FlowActionBar from '@/components/flow/FlowActionBar';
+import { trackEvent } from '@/lib/analytics/events';
 
 const onboardingSteps = [
   {
@@ -38,6 +39,11 @@ function OnboardingContent() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const acceptInvitationMutation = useMutation(api.invitations.accept);
+  useEffect(() => {
+    trackEvent('onboarding_started', {
+      entry_point: 'auth_onboarding',
+    });
+  }, []);
 
   const isLastStep = currentStep === onboardingSteps.length - 1;
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;

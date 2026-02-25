@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     AI_ORCHESTRATOR: str = "crewai"
     AI_SHADOW_MODE: bool = False
     AI_SHADOW_ORCHESTRATOR: str = "langgraph"
+    POSTHOG_API_KEY: str | None = None
+    POSTHOG_HOST: str = "https://us.i.posthog.com"
+    CONVEX_LEDGER_ENDPOINT: str | None = None
+    CONVEX_LEDGER_SECRET: str | None = None
 
     class Config:
         # Pydantic-settings will automatically search for a .env file.

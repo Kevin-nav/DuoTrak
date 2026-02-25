@@ -236,6 +236,27 @@ export default defineSchema({
     .index("by_receiver_email", ["receiver_email"])
     .index("by_sender", ["sender_id", "status"]),
 
+  llm_cost_events: defineTable({
+    goal_id: v.optional(v.string()),
+    user_id: v.optional(v.id("users")),
+    provider: v.string(),
+    model: v.string(),
+    workflow_stage: v.optional(v.string()),
+    request_id: v.optional(v.string()),
+    input_tokens: v.number(),
+    output_tokens: v.number(),
+    latency_ms: v.number(),
+    cost_usd: v.number(),
+    success: v.boolean(),
+    error_type: v.optional(v.string()),
+    source: v.string(), // backend | convex
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_goal_created", ["goal_id", "created_at"])
+    .index("by_user_created", ["user_id", "created_at"])
+    .index("by_model_created", ["model", "created_at"]),
+
   // ============================================
   // JOURNAL + DUO WORKSPACE
   // ============================================

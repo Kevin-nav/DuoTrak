@@ -150,6 +150,16 @@ export const markAsViewed = mutation({
           }),
         }
       );
+
+      await ctx.scheduler.runAfter(0, (internal as any).posthog.capture, {
+        event: "invitation_viewed",
+        distinctId: String(invitation.sender_id),
+        properties: {
+          invitation_id: String(invitation._id),
+          sender_user_id: String(invitation.sender_id),
+          receiver_domain: invitation.receiver_email.split("@")[1] ?? "unknown",
+        },
+      });
     }
   },
 });
@@ -271,6 +281,17 @@ export const create = mutation({
       { invitationId, emailType: "invite" }
     );
 
+    await ctx.scheduler.runAfter(0, (internal as any).posthog.capture, {
+      event: "invitation_created",
+      distinctId: String(sender._id),
+      properties: {
+        invitation_id: String(invitationId),
+        sender_user_id: String(sender._id),
+        receiver_domain: args.email.split("@")[1] ?? "unknown",
+        delivery_status: "queued",
+      },
+    });
+
     return { invitationId, invitation_token: token, email_status: "queued" };
   },
 });
@@ -298,6 +319,15 @@ export const withdraw = mutation({
     await ctx.db.patch(args.invitationId, {
       status: "revoked",
       updated_at: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, (internal as any).posthog.capture, {
+      event: "invitation_withdrawn",
+      distinctId: String(user._id),
+      properties: {
+        invitation_id: String(args.invitationId),
+        sender_user_id: String(user._id),
+      },
     });
 
     // Revert user status
@@ -467,6 +497,23 @@ export const accept = mutation({
       }
     );
 
+    const acceptedAt = Date.now();
+    const hoursToAccept = Math.max(
+      0,
+      Math.floor((acceptedAt - (invitation.updated_at ?? acceptedAt)) / (60 * 60 * 1000))
+    );
+    await ctx.scheduler.runAfter(0, (internal as any).posthog.capture, {
+      event: "invitation_accepted",
+      distinctId: String(receiver._id),
+      properties: {
+        invitation_id: String(invitation._id),
+        sender_user_id: String(sender._id),
+        receiver_user_id: String(receiver._id),
+        partnership_id: String(partnershipId),
+        hours_to_accept: hoursToAccept,
+      },
+    });
+
     return partnershipId;
   },
 });
@@ -550,6 +597,15 @@ export const sendEmail = internalAction({
         error: missingKeyError,
       });
       if (args.emailType === "invite") {
+        await ctx.runAction((internal as any).posthog.capture, {
+          event: "invitation_email_failed",
+          distinctId: String(payload.senderId),
+          properties: {
+            invitation_id: String(args.invitationId),
+            delivery_status: "failed",
+            error_type: "missing_api_key",
+          },
+        });
         await ctx.runAction((internal as any).notifications.dispatchEvent, {
           eventType: "invite_email_failed",
           recipientUserId: payload.senderId,
@@ -621,6 +677,15 @@ export const sendEmail = internalAction({
         error: message,
       });
       if (args.emailType === "invite") {
+        await ctx.runAction((internal as any).posthog.capture, {
+          event: "invitation_email_failed",
+          distinctId: String(payload.senderId),
+          properties: {
+            invitation_id: String(args.invitationId),
+            delivery_status: "failed",
+            error_type: "provider_failure",
+          },
+        });
         await ctx.runAction((internal as any).notifications.dispatchEvent, {
           eventType: "invite_email_failed",
           recipientUserId: payload.senderId,

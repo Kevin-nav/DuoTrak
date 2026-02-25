@@ -100,6 +100,7 @@ async def test_create_goal_plan_returns_contract_shape(authed_client: AsyncClien
     event_names = [e["event_name"] for e in events]
     assert "goal_plan_generated" in event_names
     assert "goal_plan_overload_warning" in event_names
+    assert "llm_call_completed" in event_names
     generated = next(e for e in events if e["event_name"] == "goal_plan_generated")
     assert "overload_percent" in generated
     assert "conflict_count" in generated

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
 import { getAuth, signOut as firebaseSignOut } from 'firebase/auth';
 import { Id } from '../../convex/_generated/dataModel';
+import { identifyUser, trackEvent } from '@/lib/analytics/events';
 
 const MASTER_ACCESS_COOKIE_NAME = '__master_access';
 
@@ -111,6 +112,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [isMasterAccess, setIsMasterAccess] = useState(false);
     const [isMockMode, setIsMockMode] = useState(false);
     const [lastTimezoneSynced, setLastTimezoneSynced] = useState<string | null>(null);
+    const trackedProfileCreatedRef = useRef<string | null>(null);
 
     // Convex Mutations
     const updateUserMutation = useMutation(api.users.update);
@@ -177,6 +179,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (!userDetails || typeof window === "undefined") return;
 
+        identifyUser(String(userDetails._id));
+        if (trackedProfileCreatedRef.current !== String(userDetails._id)) {
+            trackedProfileCreatedRef.current = String(userDetails._id);
+            trackEvent("app_user_profile_created", {
+                user_id: String(userDetails._id),
+                auth_provider: "firebase",
+            });
+        }
+
         let detectedTimezone: string | null = null;
         try {
             detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
@@ -234,6 +245,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const sendInvitation = async (email: string, name: string, customMessage?: string): Promise<{ invitation: { invitation_token: string } } | null> => {
         try {
             const result = await sendInvitationMutation({ email, name, message: customMessage });
+            trackEvent("invite_action_taken", {
+                action: "create",
+                receiver_domain: email.split("@")[1] ?? "unknown",
+            });
             toast.success("Invitation created. Email delivery is in progress.");
             return { invitation: { invitation_token: result.invitation_token } };
         } catch (error: any) {
@@ -245,6 +260,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const withdrawInvitation = async (invitationId: string) => {
         try {
             await withdrawInvitationMutation({ invitationId: invitationId as Id<"partner_invitations"> });
+            trackEvent("invite_action_taken", {
+                action: "withdraw",
+                invitation_id: invitationId,
+            });
             toast.success("Invitation withdrawn successfully!");
         } catch (error: any) {
             toast.error(error.message || "Failed to withdraw invitation.");
@@ -255,6 +274,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const nudgePartner = async (invitationId: string) => {
         try {
             await nudgePartnerMutation({ invitationId: invitationId as Id<"partner_invitations"> });
+            trackEvent("invite_action_taken", {
+                action: "nudge",
+                invitation_id: invitationId,
+            });
             toast.success("Nudge sent successfully!");
         } catch (error: any) {
             toast.error(error.message || "Failed to send nudge.");
@@ -265,6 +288,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const retryInviteEmail = async (invitationId: string) => {
         try {
             await retryInviteEmailMutation({ invitationId: invitationId as Id<"partner_invitations"> });
+            trackEvent("invite_action_taken", {
+                action: "retry_email",
+                invitation_id: invitationId,
+            });
             toast.success("Retry queued. We are attempting delivery again.");
         } catch (error: any) {
             toast.error(error.message || "Failed to retry invite email.");

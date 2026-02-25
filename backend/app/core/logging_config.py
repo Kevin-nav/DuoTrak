@@ -2,6 +2,7 @@ import logging
 import sys
 import json
 from logging.handlers import TimedRotatingFileHandler
+from app.observability.posthog_client import capture_posthog_event
 
 # --- Constants ---
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s (%(filename)s:%(lineno)d)"
@@ -62,3 +63,5 @@ def emit_goal_operation_event(event_name: str, **fields):
     """
     event = {"event_name": event_name, **fields}
     logging.getLogger("goal_operation").info("goal_operation_event %s", json.dumps(event, default=str))
+    distinct_id = str(fields.get("user_id") or fields.get("distinct_id") or "system")
+    capture_posthog_event(event_name, distinct_id=distinct_id, properties=fields)
