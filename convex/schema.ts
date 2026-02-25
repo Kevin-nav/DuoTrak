@@ -284,6 +284,9 @@ export default defineSchema({
     entry_date: v.number(),
     is_archived: v.boolean(),
     shared_from_entry_id: v.optional(v.id("journal_entries")),
+    reaction_count: v.optional(v.number()),
+    comment_count: v.optional(v.number()),
+    last_interaction_at: v.optional(v.number()),
     created_by: v.id("users"),
     created_at: v.number(),
     updated_at: v.number(),
@@ -302,6 +305,31 @@ export default defineSchema({
   })
     .index("by_source_entry", ["source_entry_id"])
     .index("by_partnership", ["to_partnership_id", "shared_at"]),
+
+  journal_interactions: defineTable({
+    entry_id: v.id("journal_entries"),
+    user_id: v.id("users"),
+    type: v.string(), // 'reaction' | 'comment'
+    reaction_key: v.optional(v.string()),
+    comment_text: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_entry_created", ["entry_id", "created_at"])
+    .index("by_entry_user_type", ["entry_id", "user_id", "type"]),
+
+  journal_events: defineTable({
+    event_type: v.string(),
+    entry_id: v.optional(v.id("journal_entries")),
+    actor_user_id: v.optional(v.id("users")),
+    target_user_id: v.optional(v.id("users")),
+    partnership_id: v.optional(v.id("partnerships")),
+    metadata_json: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_entry_created", ["entry_id", "created_at"])
+    .index("by_target_created", ["target_user_id", "created_at"])
+    .index("by_partnership_created", ["partnership_id", "created_at"]),
 
   journal_search_index: defineTable({
     entity_type: v.string(), // 'entry' | 'page'

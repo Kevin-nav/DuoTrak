@@ -139,3 +139,77 @@ export function useJournalSearch(params: {
     [canSearch, data]
   );
 }
+
+export function useAddJournalReaction() {
+  const mutation = useMutation((api as any).journal.addReaction);
+  return (entryId: string, reactionKey: string) => mutation({ entryId, reactionKey } as any);
+}
+
+export function useRemoveJournalReaction() {
+  const mutation = useMutation((api as any).journal.removeReaction);
+  return (entryId: string, reactionKey: string) => mutation({ entryId, reactionKey } as any);
+}
+
+export function useAddJournalComment() {
+  const mutation = useMutation((api as any).journal.addComment);
+  return (entryId: string, commentText: string) => mutation({ entryId, commentText } as any);
+}
+
+export function useJournalEntryInteractions(entryId: string) {
+  const data = useQuery((api as any).journal.getEntryInteractions, entryId ? ({ entryId } as any) : "skip") as any[] | undefined;
+  return {
+    interactions: data ?? [],
+    isLoading: data === undefined,
+  };
+}
+
+export function useDashboardJournalPulse() {
+  const data = useQuery((api as any).journal.getDashboardJournalPulse, {}) as
+    | {
+        privateStreakDays: number;
+        sharedThisWeek: number;
+        pendingResponseCount: number;
+        partnerReflections: any[];
+        hasSharedSpace: boolean;
+      }
+    | undefined;
+  return {
+    data: data ?? {
+      privateStreakDays: 0,
+      sharedThisWeek: 0,
+      pendingResponseCount: 0,
+      partnerReflections: [],
+      hasSharedSpace: false,
+    },
+    isLoading: data === undefined,
+  };
+}
+
+export function usePartnerJournalActivity(limit = 12) {
+  const data = useQuery((api as any).journal.getPartnerJournalActivity, { limit }) as
+    | { entries: any[]; total: number }
+    | undefined;
+  return {
+    entries: data?.entries ?? [],
+    total: data?.total ?? 0,
+    isLoading: data === undefined,
+  };
+}
+
+export function useJournalAlerts() {
+  const data = useQuery((api as any).journal.getJournalAlerts, {}) as
+    | {
+        streakAtRisk: boolean;
+        noShareToday: boolean;
+        pendingPartnerResponseCount: number;
+      }
+    | undefined;
+  return {
+    data: data ?? {
+      streakAtRisk: false,
+      noShareToday: false,
+      pendingPartnerResponseCount: 0,
+    },
+    isLoading: data === undefined,
+  };
+}

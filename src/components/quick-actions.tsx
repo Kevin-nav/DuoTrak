@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, Variants } from "framer-motion"
-import { Plus, List, TrendingUp, MessageCircle, UserPlus } from "lucide-react"
+import { Plus, List, TrendingUp, MessageCircle, UserPlus, BookOpenText, Share2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface QuickActionsProps {
@@ -73,6 +73,20 @@ export default function QuickActions({ hasPartner = false }: QuickActionsProps) 
       icon: hasPartner ? MessageCircle : UserPlus,
       description: hasPartner ? "Jump into full-screen chat instantly" : "Add a partner to unlock duo chat",
       path: hasPartner ? "/partner/chat" : "/invite-partner",
+    },
+    {
+      id: "journal-write",
+      label: "Write Journal Entry",
+      icon: BookOpenText,
+      description: "Capture today's reflection quickly",
+      path: "/journal",
+    },
+    {
+      id: "journal-share",
+      label: "Share Reflection",
+      icon: Share2,
+      description: "Open private journal and share with partner",
+      path: "/journal",
     },
   ]
 

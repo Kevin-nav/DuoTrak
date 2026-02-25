@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { Share2, Users, Lock } from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
+import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
 
 interface JournalEntriesListProps {
   entries: any[];
@@ -65,6 +66,10 @@ export default function JournalEntriesList({
                 Share with partner
               </button>
             </div>
+          ) : null}
+
+          {activeSpaceType === "shared" ? (
+            <JournalEntryInteractions entryId={entry._id} />
           ) : null}
         </article>
       ))}

@@ -18,10 +18,13 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "./dashboard-layout";
 import PartnerChatSurface from "@/components/partner/PartnerChatSurface";
 import { useUser } from "@/contexts/UserContext";
 import { api } from "../../convex/_generated/api";
+import { usePartnerJournalActivity } from "@/hooks/useJournal";
+import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
 
 interface Task {
   id: string;
@@ -162,6 +165,7 @@ export default function PartnerView({
   isLoading = false,
   error = null,
 }: PartnerViewProps) {
+  const router = useRouter();
   const { userDetails } = useUser();
   const [activeTab, setActiveTab] = useState<(typeof tabItems)[number]["id"]>("day");
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
@@ -175,6 +179,7 @@ export default function PartnerView({
     partnerConversation?._id ? { conversation_id: partnerConversation._id } : "skip"
   );
   const unreadMessagesCount = typeof liveUnreadCount === "number" ? liveUnreadCount : unreadMessages;
+  const { entries: partnerJournalEntries, isLoading: isPartnerJournalLoading } = usePartnerJournalActivity(6);
 
   const formatPartnerLocalTime = (timezone?: string | null) => {
     if (!timezone) return "Local time unavailable";
@@ -470,6 +475,34 @@ export default function PartnerView({
               exit="exit"
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
+              <article className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-landing-espresso sm:text-base">Journal Activity</h3>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/journal")}
+                    className="text-[11px] font-semibold text-landing-terracotta hover:underline"
+                  >
+                    Open Journal
+                  </button>
+                </div>
+                {isPartnerJournalLoading ? (
+                  <p className="text-xs text-landing-espresso-light">Loading partner journal activity...</p>
+                ) : null}
+                {!isPartnerJournalLoading && partnerJournalEntries.length === 0 ? (
+                  <p className="text-xs text-landing-espresso-light">No shared reflections from your partner yet.</p>
+                ) : null}
+                <div className="space-y-2">
+                  {partnerJournalEntries.map((entry: any) => (
+                    <div key={entry._id} className="rounded-xl border border-landing-clay bg-landing-cream p-3">
+                      <p className="text-sm font-semibold text-landing-espresso">{entry.title}</p>
+                      <p className="mt-1 line-clamp-3 text-xs text-landing-espresso-light">{entry.body}</p>
+                      <JournalEntryInteractions entryId={entry._id} />
+                    </div>
+                  ))}
+                </div>
+              </article>
+
               {activities.map((activity) => (
                 <article key={activity.id} className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">

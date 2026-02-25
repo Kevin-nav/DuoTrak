@@ -6,10 +6,12 @@ import { useNotificationActions, useNotifications } from "@/hooks/useNotificatio
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const categories = ["all", "task", "partner", "chat", "journal", "progress", "system"] as const;
 
 export default function NotificationCenter() {
+  const router = useRouter();
   const [category, setCategory] = useState<(typeof categories)[number]>("all");
   const [showArchived, setShowArchived] = useState(false);
   const { notifications, unreadCount, isLoading } = useNotifications({
@@ -136,6 +138,22 @@ export default function NotificationCenter() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {notification.category === "journal" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const entryId =
+                          notification.related_entity_type === "journal_entry"
+                            ? notification.related_entity_id
+                            : meta?.entryId;
+                        const href = entryId ? `/journal?entryId=${encodeURIComponent(entryId)}` : "/journal";
+                        router.push(href);
+                      }}
+                      className="rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream"
+                    >
+                      Open entry
+                    </button>
+                  ) : null}
                   {!notification.read ? (
                     <button
                       type="button"

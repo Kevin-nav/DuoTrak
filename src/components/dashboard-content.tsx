@@ -14,6 +14,8 @@ import VerificationQueue from './verification-queue';
 import TodaysTasks from './todays-tasks';
 import GoalsHighlights from './goals-highlights';
 import { useUser } from '@/contexts/UserContext';
+import { useDashboardJournalPulse } from '@/hooks/useJournal';
+import JournalEntryInteractions from '@/components/journal/JournalEntryInteractions';
 
 interface DashboardContentProps {
   userName?: string;
@@ -66,6 +68,7 @@ export default function DashboardContent({
   const rawInstances = useConvexQuery(api.taskInstances.listForDate, { date: todayStart });
   const markComplete = useConvexMutation(api.taskInstances.markComplete);
   const submitVerification = useConvexMutation(api.taskInstances.submitVerification);
+  const { data: journalPulse, isLoading: isJournalPulseLoading } = useDashboardJournalPulse();
 
   // Map Convex instances to the Task interface expected by TodaysTasks
   const taskItems = useMemo(() => {
@@ -211,6 +214,62 @@ export default function DashboardContent({
           onTaskComplete={handleTaskComplete}
           onTaskVerificationSubmit={handleTaskVerificationSubmit}
         />
+      </motion.section>
+
+      <motion.section variants={itemVariants} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border-cool-gray dark:border-gray-700 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl font-bold text-charcoal dark:text-gray-100">Journal Pulse</h2>
+          <button
+            type="button"
+            onClick={() => router.push("/journal")}
+            className="text-xs font-semibold text-primary-blue hover:underline"
+          >
+            Open Journal
+          </button>
+        </div>
+        {isJournalPulseLoading ? (
+          <p className="text-sm text-stone-gray dark:text-gray-300">Loading journal insights...</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-cool-gray px-3 py-2">
+              <p className="text-xs text-stone-gray dark:text-gray-300">Private streak</p>
+              <p className="text-base font-semibold text-charcoal dark:text-gray-100">{journalPulse.privateStreakDays} days</p>
+            </div>
+            <div className="rounded-lg border border-cool-gray px-3 py-2">
+              <p className="text-xs text-stone-gray dark:text-gray-300">Shared this week</p>
+              <p className="text-base font-semibold text-charcoal dark:text-gray-100">{journalPulse.sharedThisWeek}</p>
+            </div>
+            <div className="rounded-lg border border-cool-gray px-3 py-2">
+              <p className="text-xs text-stone-gray dark:text-gray-300">Waiting on your response</p>
+              <p className="text-base font-semibold text-charcoal dark:text-gray-100">{journalPulse.pendingResponseCount}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-charcoal dark:text-gray-100">Partner Reflections</h3>
+          {!isJournalPulseLoading && journalPulse.partnerReflections.length === 0 ? (
+            <p className="text-xs text-stone-gray dark:text-gray-300">No partner reflections yet.</p>
+          ) : null}
+          {journalPulse.partnerReflections.map((entry: any) => (
+            <article key={entry._id} className="rounded-xl border border-cool-gray bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-charcoal dark:text-gray-100">{entry.title}</p>
+                  <p className="line-clamp-2 text-xs text-stone-gray dark:text-gray-300">{entry.body}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push("/journal")}
+                  className="text-[11px] font-semibold text-primary-blue hover:underline"
+                >
+                  View
+                </button>
+              </div>
+              <JournalEntryInteractions entryId={entry._id} />
+            </article>
+          ))}
+        </div>
       </motion.section>
 
       <motion.section variants={itemVariants}>

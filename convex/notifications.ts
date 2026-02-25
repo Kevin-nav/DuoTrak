@@ -30,6 +30,14 @@ function isInQuietHours(now: Date, start: string, end: string): boolean {
   return currentMinutes >= startMinutes || currentMinutes < endMinutes;
 }
 
+function toUtcDayKey(ts: number): string {
+  const d = new Date(ts);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 async function getCurrentUserOrThrow(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthorized");
@@ -721,6 +729,60 @@ export const dispatchEvent: any = internalAction({
           sendEmail: false,
         };
         break;
+      case "journal_entry_reacted":
+        payload = {
+          type: "journal_entry_reacted",
+          category: "journal",
+          title: `${actorName} reacted to your entry`,
+          message: context.reactionKey
+            ? `${actorName} reacted with "${context.reactionKey}" on "${context.title || "your journal entry"}".`
+            : `${actorName} reacted to your shared journal entry.`,
+          priority: "medium",
+          actionable: true,
+          related_entity_type: "journal_entry",
+          related_entity_id: context.entryId || undefined,
+          sendEmail: false,
+        };
+        break;
+      case "journal_entry_commented":
+        payload = {
+          type: "journal_entry_commented",
+          category: "journal",
+          title: `${actorName} commented on your entry`,
+          message: context.preview || `${actorName} left a comment on your shared journal entry.`,
+          priority: "high",
+          actionable: true,
+          related_entity_type: "journal_entry",
+          related_entity_id: context.entryId || undefined,
+          sendEmail: false,
+        };
+        break;
+      case "journal_streak_risk":
+        payload = {
+          type: "journal_streak_risk",
+          category: "journal",
+          title: "Journal streak at risk",
+          message: context.message || "Add a quick reflection today to keep your streak alive.",
+          priority: "high",
+          actionable: true,
+          related_entity_type: "journal",
+          related_entity_id: "streak",
+          sendEmail: false,
+        };
+        break;
+      case "journal_partner_silence_nudge":
+        payload = {
+          type: "journal_partner_silence_nudge",
+          category: "journal",
+          title: "Partner response reminder",
+          message: context.message || "Your shared reflection is waiting for a partner response.",
+          priority: "medium",
+          actionable: true,
+          related_entity_type: "journal_entry",
+          related_entity_id: context.entryId || undefined,
+          sendEmail: false,
+        };
+        break;
       case "verification_approved":
         payload = {
           type: "verification_approved",
@@ -872,6 +934,26 @@ export const dispatchEvent: any = internalAction({
         };
     }
 
+    const dedupeCooldownByTypeMs: Record<string, number> = {
+      journal_entry_reacted: 30 * 60 * 1000,
+      journal_entry_commented: 10 * 60 * 1000,
+      journal_streak_risk: 12 * 60 * 60 * 1000,
+      journal_partner_silence_nudge: 12 * 60 * 60 * 1000,
+    };
+    const cooldownMs = dedupeCooldownByTypeMs[payload.type];
+    if (cooldownMs) {
+      const exists = await ctx.runQuery((internal as any).notifications.hasRecentNotification, {
+        userId: args.recipientUserId,
+        type: payload.type,
+        relatedEntityType: payload.related_entity_type,
+        relatedEntityId: payload.related_entity_id,
+        sinceMs: Date.now() - cooldownMs,
+      });
+      if (exists) {
+        return { ok: true, deduped: true };
+      }
+    }
+
     const notificationId: Id<"notifications"> | null = await ctx.runMutation((internal as any).notifications.createInApp, {
       userId: args.recipientUserId,
       type: payload.type,
@@ -944,6 +1026,9 @@ export const runDailyReminderSweep: any = internalAction({
       const workload = await ctx.runQuery((internal as any).notifications.getUserTaskSweepData, {
         userId: user._id,
       });
+      const journalWorkload = await ctx.runQuery((internal as any).notifications.getUserJournalSweepData, {
+        userId: user._id,
+      });
 
       for (const task of (workload?.tasks || []) as any[]) {
         if (!task.due_date) continue;
@@ -987,6 +1072,27 @@ export const runDailyReminderSweep: any = internalAction({
             });
           }
         }
+      }
+
+      if (journalWorkload?.streakAtRisk) {
+        await ctx.runAction((internal as any).notifications.dispatchEvent, {
+          eventType: "journal_streak_risk",
+          recipientUserId: user._id,
+          context: JSON.stringify({
+            message: "You have not journaled recently. Add a quick reflection today.",
+          }),
+        });
+      }
+
+      if (journalWorkload?.pendingPartnerResponseEntryId) {
+        await ctx.runAction((internal as any).notifications.dispatchEvent, {
+          eventType: "journal_partner_silence_nudge",
+          recipientUserId: user._id,
+          context: JSON.stringify({
+            entryId: journalWorkload.pendingPartnerResponseEntryId,
+            message: "A shared reflection is still waiting for your partner response.",
+          }),
+        });
       }
     }
 
@@ -1092,6 +1198,108 @@ export const getUserTaskSweepData = internalQuery({
     }
 
     return { tasks };
+  },
+});
+
+export const getUserJournalSweepData = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    const privateSpace = await ctx.db
+      .query("journal_spaces")
+      .withIndex("by_owner_type", (q: any) => q.eq("owner_user_id", args.userId).eq("type", "private"))
+      .first();
+
+    const latestPrivate = privateSpace
+      ? await ctx.db
+          .query("journal_entries")
+          .withIndex("by_space_updated", (q: any) => q.eq("space_id", privateSpace._id))
+          .order("desc")
+          .first()
+      : null;
+    const streakAtRisk = !latestPrivate || latestPrivate.created_at <= now - oneDayMs;
+
+    const partnershipByUser1 = await ctx.db
+      .query("partnerships")
+      .withIndex("by_user1", (q: any) => q.eq("user1_id", args.userId))
+      .filter((q: any) => q.eq(q.field("status"), "active"))
+      .first();
+    const partnership = partnershipByUser1 ?? await ctx.db
+      .query("partnerships")
+      .withIndex("by_user2", (q: any) => q.eq("user2_id", args.userId))
+      .filter((q: any) => q.eq(q.field("status"), "active"))
+      .first();
+
+    if (!partnership) {
+      return {
+        streakAtRisk,
+        pendingPartnerResponseEntryId: null,
+      };
+    }
+
+    const partnerUserId =
+      partnership.user1_id === args.userId ? partnership.user2_id : partnership.user1_id;
+
+    const sharedSpace = await ctx.db
+      .query("journal_spaces")
+      .withIndex("by_partnership_type", (q: any) => q.eq("partnership_id", partnership._id).eq("type", "shared"))
+      .first();
+
+    if (!sharedSpace) {
+      return {
+        streakAtRisk,
+        pendingPartnerResponseEntryId: null,
+      };
+    }
+
+    const sharedEntries = await ctx.db
+      .query("journal_entries")
+      .withIndex("by_space_updated", (q: any) => q.eq("space_id", sharedSpace._id))
+      .order("desc")
+      .take(120);
+
+    const todayKey = toUtcDayKey(now);
+    const userSharedToday = sharedEntries.some((entry: any) =>
+      entry.created_by === args.userId && toUtcDayKey(entry.created_at) === todayKey
+    );
+
+    if (!userSharedToday) {
+      return {
+        streakAtRisk,
+        pendingPartnerResponseEntryId: null,
+      };
+    }
+
+    const myRecentEntries = sharedEntries.filter((entry: any) => entry.created_by === args.userId);
+    for (const entry of myRecentEntries) {
+      const partnerInteraction = await ctx.db
+        .query("journal_interactions")
+        .withIndex("by_entry_user_type", (q: any) =>
+          q.eq("entry_id", entry._id).eq("user_id", partnerUserId).eq("type", "comment")
+        )
+        .first();
+      const partnerReaction = await ctx.db
+        .query("journal_interactions")
+        .withIndex("by_entry_user_type", (q: any) =>
+          q.eq("entry_id", entry._id).eq("user_id", partnerUserId).eq("type", "reaction")
+        )
+        .first();
+      if (!partnerInteraction && !partnerReaction && entry.created_at <= now - (12 * 60 * 60 * 1000)) {
+        return {
+          streakAtRisk,
+          pendingPartnerResponseEntryId: String(entry._id),
+        };
+      }
+    }
+
+    return {
+      streakAtRisk,
+      pendingPartnerResponseEntryId: null,
+    };
   },
 });
 
