@@ -1,8 +1,35 @@
-import { internalMutation, mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { uploadToR2 } from "./lib/r2";
+import { api } from "./_generated/api";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
+const IMAGE_UPLOAD_LIMIT_BYTES = 10 * 1024 * 1024;
+const VIDEO_UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024;
+const AUDIO_UPLOAD_LIMIT_BYTES = 100 * 1024 * 1024;
+
+function decodeBase64ToBytes(base64Data: string): Uint8Array {
+    if (typeof atob !== "function") {
+        throw new Error("Base64 decoder is unavailable in this runtime");
+    }
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function sanitizeFileName(fileName: string): string {
+    return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function getProofTypeFromMime(mimeType: string): "photo" | "video" | "voice" {
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType.startsWith("audio/")) return "voice";
+    return "photo";
+}
 
 function startOfWeekMonday(timestampMs: number): number {
     const d = new Date(timestampMs);
@@ -293,6 +320,33 @@ export const listForDate = query({
 });
 
 /**
+ * Upload helper query for action authorization.
+ */
+export const getByIdForUpload = query({
+    args: {
+        instance_id: v.id("task_instances"),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return null;
+
+        const instance = await ctx.db.get(args.instance_id);
+        if (!instance) return null;
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .unique();
+
+        return {
+            userId: String(instance.user_id),
+            goalId: String(instance.goal_id),
+            isAuthorized: !!user && instance.user_id === user._id,
+        };
+    },
+});
+
+/**
  * Goal-scoped execution view for weekly and timeline task instance rendering.
  */
 export const getGoalExecutionView = query({
@@ -553,6 +607,52 @@ export const generateForGoal = mutation({
     handler: async (ctx, args) => {
         const goal = await ctx.db.get(args.goal_id);
         return await generateTaskInstancesForGoalDate(ctx, goal, args.date);
+    },
+});
+
+/**
+ * Upload proof media for a task instance and return a permanent URL.
+ */
+export const uploadVerificationAttachment = action({
+    args: {
+        instance_id: v.id("task_instances"),
+        file_name: v.string(),
+        content_type: v.string(),
+        base64_data: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthenticated");
+
+        const instance = await ctx.runQuery((api as any).taskInstances.getByIdForUpload, {
+            instance_id: args.instance_id,
+        });
+        if (!instance) throw new Error("Instance not found");
+        if (!instance.isAuthorized) throw new Error("Unauthorized");
+
+        const fileBytes = decodeBase64ToBytes(args.base64_data);
+        const proofType = getProofTypeFromMime(args.content_type);
+
+        if (proofType === "photo" && fileBytes.byteLength > IMAGE_UPLOAD_LIMIT_BYTES) {
+            throw new Error("Photo exceeds 10MB limit");
+        }
+        if (proofType === "video" && fileBytes.byteLength > VIDEO_UPLOAD_LIMIT_BYTES) {
+            throw new Error("Video exceeds 50MB limit");
+        }
+        if (proofType === "voice" && fileBytes.byteLength > AUDIO_UPLOAD_LIMIT_BYTES) {
+            throw new Error("Audio exceeds 100MB limit");
+        }
+
+        const safeName = sanitizeFileName(args.file_name);
+        const key = `task-proofs/${instance.userId}/${instance.goalId}/${args.instance_id}/${Date.now()}-${safeName}`;
+        const url = await uploadToR2(key, fileBytes, args.content_type);
+
+        return {
+            url,
+            proof_type: proofType,
+            mime_type: args.content_type,
+            size_bytes: fileBytes.byteLength,
+        };
     },
 });
 

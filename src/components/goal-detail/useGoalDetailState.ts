@@ -4,9 +4,11 @@ import { useState } from "react";
 import { DomainGoal } from "../../../packages/domain/src/goals";
 import { validateArchetypeProfile } from "@/lib/goals/archetype-validators";
 import { resolveVerificationMode } from "./utils";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { TabKey } from "./types";
+import { fileToBase64 } from "@/lib/files/base64";
+import { TaskVerificationSubmission, VerificationMode } from "../task-verification-modal";
 
 const defaultProfileDraft = {
   currency: "USD",
@@ -34,12 +36,13 @@ export function useGoalDetailState({
   toast: (payload: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("this-week");
-  const [proofModal, setProofModal] = useState<{ instanceId: string; taskName: string } | null>(null);
+  const [proofModal, setProofModal] = useState<{ instanceId: string; taskName: string; mode: VerificationMode } | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [collapsedMilestones, setCollapsedMilestones] = useState<Record<number, boolean>>({});
   const markInstanceComplete = useMutation((api as any).taskInstances.markComplete);
   const submitInstanceVerification = useMutation((api as any).taskInstances.submitVerification);
+  const uploadVerificationAttachment = useAction((api as any).taskInstances.uploadVerificationAttachment);
 
   const initialProfile = (() => {
     try {
@@ -79,7 +82,7 @@ export function useGoalDetailState({
       } as any,
       goal.accountabilityType || undefined
     );
-    if (mode === "task_completion" || mode === "time-window") {
+    if (mode === "task_completion" || mode === "check_in") {
       const instanceId = task._id;
       if (!instanceId) return;
       try {
@@ -97,21 +100,44 @@ export function useGoalDetailState({
     setProofModal({
       instanceId: String(task._id || task.instance_id || ""),
       taskName: String(task.task_name || task.name || "Task"),
+      mode,
     });
   };
 
-  const handleProofSubmit = async () => {
+  const handleProofSubmit = async (submission: TaskVerificationSubmission) => {
     if (!proofModal?.instanceId) return;
     try {
-      await submitInstanceVerification({ instance_id: proofModal.instanceId } as any);
+      if (
+        submission.mode === "time-window" ||
+        submission.mode === "task_completion" ||
+        submission.mode === "check_in"
+      ) {
+        await markInstanceComplete({ instance_id: proofModal.instanceId } as any);
+      } else {
+        if (!submission.file) {
+          throw new Error("Missing proof file for verification upload.");
+        }
+        const base64Data = await fileToBase64(submission.file);
+        const uploaded = await uploadVerificationAttachment({
+          instance_id: proofModal.instanceId as any,
+          file_name: submission.file.name,
+          content_type: submission.file.type || "application/octet-stream",
+          base64_data: base64Data,
+        });
+        await submitInstanceVerification({
+          instance_id: proofModal.instanceId as any,
+          evidence_url: uploaded?.url,
+        } as any);
+      }
       setProofModal(null);
       triggerCelebration();
     } catch (error: any) {
       toast({
-        title: "Could not submit verification",
+        title: "Could not update task",
         description: error?.message || "Please try again.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 

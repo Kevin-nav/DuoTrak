@@ -129,6 +129,7 @@ export default function GoalDetailView({ goal }: GoalDetailViewProps) {
           isOpen={!!proofModal}
           onClose={() => setProofModal(null)}
           taskName={proofModal?.taskName || ""}
+          mode={proofModal?.mode || "photo"}
           onSubmit={handleProofSubmit}
         />
 

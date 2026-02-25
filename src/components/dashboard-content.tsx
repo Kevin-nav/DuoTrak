@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
 import { Flame, Loader2 } from 'lucide-react';
-import { useQuery as useConvexQuery, useMutation as useConvexMutation } from 'convex/react';
+import { useQuery as useConvexQuery, useMutation as useConvexMutation, useAction as useConvexAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import QuickActions from './quick-actions';
 import DuoStreakHero from './duo-streak-hero';
@@ -16,6 +16,8 @@ import GoalsHighlights from './goals-highlights';
 import { useUser } from '@/contexts/UserContext';
 import { useDashboardJournalPulse } from '@/hooks/useJournal';
 import JournalEntryInteractions from '@/components/journal/JournalEntryInteractions';
+import { fileToBase64 } from '@/lib/files/base64';
+import { TaskVerificationSubmission, VerificationMode } from '@/components/task-verification-modal';
 
 interface DashboardContentProps {
   userName?: string;
@@ -68,7 +70,14 @@ export default function DashboardContent({
   const rawInstances = useConvexQuery(api.taskInstances.listForDate, { date: todayStart });
   const markComplete = useConvexMutation(api.taskInstances.markComplete);
   const submitVerification = useConvexMutation(api.taskInstances.submitVerification);
+  const uploadVerificationAttachment = useConvexAction((api as any).taskInstances.uploadVerificationAttachment);
   const { data: journalPulse, isLoading: isJournalPulseLoading } = useDashboardJournalPulse();
+
+  const normalizeVerificationMode = (mode?: string): VerificationMode => {
+    if (mode === "photo" || mode === "video" || mode === "voice" || mode === "time-window") return mode;
+    if (mode === "check_in" || mode === "task_completion") return mode;
+    return "photo";
+  };
 
   // Map Convex instances to the Task interface expected by TodaysTasks
   const taskItems = useMemo(() => {
@@ -102,6 +111,7 @@ export default function DashboardContent({
         goalProfileJson: inst.goal_profile_json,
         goalType: inst.is_shared ? ("shared" as const) : ("personal" as const),
         accountabilityType,
+        verificationMode: normalizeVerificationMode(verificationMode),
         status,
         timeWindow,
         canComplete: status === "pending" || status === "rejected",
@@ -117,11 +127,25 @@ export default function DashboardContent({
     }
   };
 
-  const handleTaskVerificationSubmit = async (taskId: string, _imageFile?: File) => {
+  const handleTaskVerificationSubmit = async (taskId: string, submission: TaskVerificationSubmission) => {
     try {
-      await submitVerification({ instance_id: taskId as any });
+      if (!submission.file) {
+        throw new Error("Missing proof file for verification upload.");
+      }
+      const base64Data = await fileToBase64(submission.file);
+      const uploadResult = await uploadVerificationAttachment({
+        instance_id: taskId as any,
+        file_name: submission.file.name,
+        content_type: submission.file.type || "application/octet-stream",
+        base64_data: base64Data,
+      });
+      await submitVerification({
+        instance_id: taskId as any,
+        evidence_url: uploadResult?.url,
+      });
     } catch (error) {
       console.error("Failed to submit verification:", error);
+      throw error;
     }
   };
 
