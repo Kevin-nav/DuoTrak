@@ -10,13 +10,14 @@ function buildTaskStartWeeks(aiPlanJson: string | undefined, totalTasks: number)
     const milestones = Array.isArray(parsed?.milestones) ? parsed.milestones : [];
     let cursor = 0;
 
-    for (const milestone of milestones) {
+    for (let mIdx = 0; mIdx < milestones.length; mIdx += 1) {
+      const milestone = milestones[mIdx];
       const count = Number(milestone?.task_count ?? 0);
-      const targetWeek = Math.max(1, Math.floor(Number(milestone?.target_week ?? 1)));
+      const startWeek = mIdx + 1;
       if (!Number.isFinite(count) || count <= 0) continue;
 
       for (let i = 0; i < count && cursor < startWeeks.length; i += 1) {
-        startWeeks[cursor] = targetWeek;
+        startWeeks[cursor] = startWeek;
         cursor += 1;
       }
     }
@@ -210,9 +211,8 @@ export const create = mutation({
       today.setHours(0, 0, 0, 0);
       const todayTs = today.getTime();
       const dow = today.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
-      const taskStartWeeks = buildTaskStartWeeks(args.ai_plan_json, args.tasks.length);
 
-      for (const [idx, task] of args.tasks.entries()) {
+      for (const task of args.tasks) {
         const taskId = await ctx.db.insert("tasks", {
           name: task.name,
           description: task.description,
@@ -355,8 +355,9 @@ export const createWithInstances = mutation({
       today.setHours(0, 0, 0, 0);
       const todayTs = today.getTime();
       const dow = today.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+      const taskStartWeeks = buildTaskStartWeeks(args.ai_plan_json, args.tasks.length);
 
-      for (const task of args.tasks) {
+      for (const [idx, task] of args.tasks.entries()) {
         const taskId = await ctx.db.insert("tasks", {
           name: task.name,
           description: task.description,

@@ -1,5 +1,8 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 
 function startOfWeekMonday(timestampMs: number): number {
     const d = new Date(timestampMs);
@@ -17,7 +20,160 @@ function startOfDay(timestampMs: number): number {
 }
 
 function endOfDay(timestampMs: number): number {
-    return startOfDay(timestampMs) + (24 * 60 * 60 * 1000) - 1;
+    return startOfDay(timestampMs) + DAY_MS - 1;
+}
+
+function normalizeTimeZone(timeZone?: string): string {
+    const candidate = (timeZone || "").trim();
+    if (!candidate) return "UTC";
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date());
+        return candidate;
+    } catch {
+        return "UTC";
+    }
+}
+
+function getDateTimePartsInTimeZone(timestampMs: number, timeZone: string) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+    }).formatToParts(new Date(timestampMs));
+
+    const valueFor = (partName: Intl.DateTimeFormatPartTypes) =>
+        Number(parts.find((p) => p.type === partName)?.value ?? 0);
+
+    return {
+        year: valueFor("year"),
+        month: valueFor("month"),
+        day: valueFor("day"),
+        hour: valueFor("hour"),
+        minute: valueFor("minute"),
+        second: valueFor("second"),
+    };
+}
+
+function getTimeZoneOffsetMs(timestampMs: number, timeZone: string): number {
+    const parts = getDateTimePartsInTimeZone(timestampMs, timeZone);
+    const asUtc = Date.UTC(
+        parts.year,
+        parts.month - 1,
+        parts.day,
+        parts.hour,
+        parts.minute,
+        parts.second
+    );
+    return asUtc - timestampMs;
+}
+
+function startOfDayInTimeZone(timestampMs: number, timeZone: string): number {
+    const parts = getDateTimePartsInTimeZone(timestampMs, timeZone);
+    const utcMidnightForLocalDate = Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0);
+    const offset = getTimeZoneOffsetMs(utcMidnightForLocalDate, timeZone);
+    return utcMidnightForLocalDate - offset;
+}
+
+function getDayOfWeekInTimeZone(timestampMs: number, timeZone: string): string {
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        weekday: "short",
+    })
+        .format(new Date(timestampMs))
+        .toLowerCase()
+        .slice(0, 3);
+}
+
+function extractDaysFromText(value?: string): string[] {
+    if (!value) return [];
+    const text = value.toLowerCase();
+    const dayMap: Array<[string, string]> = [
+        ["monday", "mon"],
+        ["mon", "mon"],
+        ["tuesday", "tue"],
+        ["tue", "tue"],
+        ["wednesday", "wed"],
+        ["wed", "wed"],
+        ["thursday", "thu"],
+        ["thu", "thu"],
+        ["friday", "fri"],
+        ["fri", "fri"],
+        ["saturday", "sat"],
+        ["sat", "sat"],
+        ["sunday", "sun"],
+        ["sun", "sun"],
+    ];
+
+    const days = new Set<string>();
+    for (const [needle, day] of dayMap) {
+        if (text.includes(needle)) days.add(day);
+    }
+    if (text.includes("weekend")) {
+        days.add("sat");
+        days.add("sun");
+    }
+    if (text.includes("weekday")) {
+        days.add("mon");
+        days.add("tue");
+        days.add("wed");
+        days.add("thu");
+        days.add("fri");
+    }
+    return [...days];
+}
+
+function normalizeCadenceDays(cadenceDays: unknown): string[] {
+    if (!Array.isArray(cadenceDays)) return [];
+    const normalized = new Set<string>();
+    for (const item of cadenceDays) {
+        if (typeof item !== "string") continue;
+        const parsed = extractDaysFromText(item);
+        for (const day of parsed) normalized.add(day);
+    }
+    return [...normalized];
+}
+
+function inferCadenceType(task: any): "daily" | "weekly" | "custom" {
+    if (task.cadence_type === "daily" || task.cadence_type === "weekly" || task.cadence_type === "custom") {
+        return task.cadence_type;
+    }
+    const freq = String(task.repeat_frequency || "").toLowerCase();
+    if (freq.includes("week")) return "weekly";
+    if (freq.includes("month")) return "weekly";
+    return "daily";
+}
+
+function inferCadenceDays(task: any): string[] {
+    const fromCadenceArray = normalizeCadenceDays(task.cadence_days);
+    if (fromCadenceArray.length > 0) {
+        return fromCadenceArray;
+    }
+    const fromWindow = extractDaysFromText(task.time_window);
+    if (fromWindow.length > 0) return fromWindow;
+    const fromTaskText = extractDaysFromText(`${String(task.name || "")} ${String(task.description || "")}`);
+    if (fromTaskText.length > 0) return fromTaskText;
+    const freq = String(task.repeat_frequency || "").toLowerCase();
+    return extractDaysFromText(freq);
+}
+
+function shouldTaskRunOnDay(task: any, dayOfWeek: string): boolean {
+    const cadenceType = inferCadenceType(task);
+    const cadenceDays = inferCadenceDays(task);
+
+    if (cadenceType === "daily") {
+        // Allow "daily but weekdays" by honoring parsed day constraints when provided.
+        return cadenceDays.length > 0 ? cadenceDays.includes(dayOfWeek) : true;
+    }
+    if (cadenceDays.length > 0) {
+        return cadenceDays.includes(dayOfWeek);
+    }
+    // Weekly/custom tasks without explicit day default to Sunday.
+    return dayOfWeek === "sun";
 }
 
 function getTaskStartWeekByTaskId(goal: any, tasks: any[]): Map<string, number> {
@@ -32,13 +188,14 @@ function getTaskStartWeekByTaskId(goal: any, tasks: any[]): Map<string, number> 
         const sortedTasks = [...tasks].sort((a, b) => a._creationTime - b._creationTime);
         let cursor = 0;
 
-        for (const milestone of milestones) {
+        for (let mIdx = 0; mIdx < milestones.length; mIdx += 1) {
+            const milestone = milestones[mIdx];
             const count = Number(milestone?.task_count ?? 0);
-            const targetWeek = Number(milestone?.target_week ?? 1);
+            const startWeek = mIdx + 1;
             if (!Number.isFinite(count) || count <= 0) continue;
 
             for (let i = 0; i < count && cursor < sortedTasks.length; i += 1) {
-                map.set(String(sortedTasks[cursor]._id), Math.max(1, Math.floor(targetWeek)));
+                map.set(String(sortedTasks[cursor]._id), Math.max(1, Math.floor(startWeek)));
                 cursor += 1;
             }
         }
@@ -309,6 +466,81 @@ export const submitVerification = mutation({
     },
 });
 
+async function generateTaskInstancesForGoalDate(ctx: any, goal: any, date: number, timeZone?: string) {
+    if (!goal || goal.is_archived) return [];
+
+    const user = await ctx.db.get(goal.user_id);
+    const goalTimeZone = normalizeTimeZone(timeZone || user?.timezone);
+
+    // Keep the exact provided instance_date for dedupe and UI consistency.
+    const targetDate = date;
+
+    // Get template tasks (blueprint tasks, not instances)
+    const allTasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_goal", (q: any) => q.eq("goal_id", goal._id))
+        .collect();
+
+    const templateTasks = allTasks.filter(
+        (t: any) => t.is_template_task === true
+    );
+
+    // If no template tasks, treat all tasks as templates (backward compat)
+    const tasksToSchedule = templateTasks.length > 0 ? templateTasks : allTasks;
+    const startWeekByTaskId = getTaskStartWeekByTaskId(goal, tasksToSchedule);
+
+    const dayOfWeek = getDayOfWeekInTimeZone(targetDate, goalTimeZone);
+    const goalStartDay = startOfDayInTimeZone(goal._creationTime ?? goal.updated_at ?? targetDate, goalTimeZone);
+    const currentDay = startOfDayInTimeZone(targetDate, goalTimeZone);
+    const currentWeek = Math.floor((currentDay - goalStartDay) / WEEK_MS) + 1;
+
+    const createdIds = [];
+
+    for (const task of tasksToSchedule) {
+        // Check if instance already exists for this date
+        const existing = await ctx.db
+            .query("task_instances")
+            .withIndex("by_task_date", (q: any) =>
+                q.eq("task_id", task._id).eq("instance_date", targetDate)
+            )
+            .first();
+
+        if (existing) continue;
+
+        // Check cadence: should this task run today?
+        const startWeek = startWeekByTaskId.get(String(task._id)) ?? 1;
+
+        let shouldRun = shouldTaskRunOnDay(task, dayOfWeek);
+
+        // Check cadence duration
+        if (shouldRun && task.cadence_duration_weeks) {
+            const weeksSinceTaskStart = currentWeek - startWeek;
+            if (weeksSinceTaskStart >= task.cadence_duration_weeks) {
+                shouldRun = false;
+            }
+        }
+
+        if (shouldRun && currentWeek < startWeek) {
+            shouldRun = false;
+        }
+
+        if (shouldRun) {
+            const id = await ctx.db.insert("task_instances", {
+                task_id: task._id,
+                goal_id: goal._id,
+                user_id: goal.user_id,
+                instance_date: targetDate,
+                status: "pending",
+                created_at: Date.now(),
+                updated_at: Date.now(),
+            });
+            createdIds.push(id);
+        }
+    }
+
+    return createdIds;
+}
+
 /**
  * Generate task instances for a goal on a given date.
  * Called after goal creation and by the daily scheduler.
@@ -320,92 +552,60 @@ export const generateForGoal = mutation({
     },
     handler: async (ctx, args) => {
         const goal = await ctx.db.get(args.goal_id);
-        if (!goal || goal.is_archived) return [];
+        return await generateTaskInstancesForGoalDate(ctx, goal, args.date);
+    },
+});
 
-        // Get template tasks (blueprint tasks, not instances)
-        const allTasks = await ctx.db
-            .query("tasks")
-            .withIndex("by_goal", (q) => q.eq("goal_id", args.goal_id))
-            .collect();
+/**
+ * Hourly maintenance:
+ * 1) Generate today's instances in each user's timezone.
+ * 2) Mark prior-day pending/rejected instances as missed.
+ */
+export const runHourlyMaintenance = internalMutation({
+    args: {},
+    handler: async (ctx) => {
+        const now = Date.now();
+        const allGoals = await ctx.db.query("goals").collect();
+        const activeGoals = allGoals.filter((goal: any) => !goal.is_archived);
 
-        const templateTasks = allTasks.filter(
-            (t) => t.is_template_task === true
-        );
+        const userCache = new Map<string, any>();
+        let generatedCount = 0;
+        let missedCount = 0;
 
-        // If no template tasks, treat all tasks as templates (backward compat)
-        const tasksToSchedule = templateTasks.length > 0 ? templateTasks : allTasks;
-        const startWeekByTaskId = getTaskStartWeekByTaskId(goal, tasksToSchedule);
+        for (const goal of activeGoals) {
+            const userId = String(goal.user_id);
+            if (!userCache.has(userId)) {
+                const user = await ctx.db.get(goal.user_id);
+                userCache.set(userId, user);
+            }
+            const user = userCache.get(userId);
+            const timeZone = normalizeTimeZone(user?.timezone);
+            const todayStart = startOfDayInTimeZone(now, timeZone);
 
-        const dayOfWeek = new Date(args.date)
-            .toLocaleDateString("en-US", { weekday: "short" })
-            .toLowerCase();
-        const goalStartDay = startOfDay(goal._creationTime ?? goal.updated_at ?? args.date);
-        const currentWeek = Math.floor((startOfDay(args.date) - goalStartDay) / (7 * 24 * 60 * 60 * 1000)) + 1;
-
-        const createdIds = [];
-
-        for (const task of tasksToSchedule) {
-            // Check if instance already exists for this date
-            const existing = await ctx.db
+            const overdue = await ctx.db
                 .query("task_instances")
-                .withIndex("by_task_date", (q) =>
-                    q.eq("task_id", task._id).eq("instance_date", args.date)
+                .withIndex("by_goal_date", (q: any) =>
+                    q.eq("goal_id", goal._id).lt("instance_date", todayStart)
                 )
-                .first();
+                .collect();
 
-            if (existing) continue;
-
-            // Check cadence: should this task run today?
-            const cadenceType = task.cadence_type || "daily";
-            const cadenceDays = task.cadence_days || [];
-            const startWeek = startWeekByTaskId.get(String(task._id)) ?? 1;
-
-            let shouldRun = false;
-
-            if (cadenceType === "daily") {
-                shouldRun = true;
-            } else if (cadenceType === "weekly" && cadenceDays.length > 0) {
-                shouldRun = cadenceDays.includes(dayOfWeek);
-            } else if (cadenceType === "custom" && cadenceDays.length > 0) {
-                shouldRun = cadenceDays.includes(dayOfWeek);
-            } else {
-                // Fallback: check repeat_frequency string
-                const freq = (task.repeat_frequency || "daily").toLowerCase();
-                if (freq === "daily") {
-                    shouldRun = true;
-                } else if (freq.includes("weekday")) {
-                    shouldRun = !["sat", "sun"].includes(dayOfWeek);
-                } else {
-                    shouldRun = true; // Default to running
-                }
-            }
-
-            // Check cadence duration
-            if (shouldRun && task.cadence_duration_weeks) {
-                const weeksSinceTaskStart = currentWeek - startWeek;
-                if (weeksSinceTaskStart >= task.cadence_duration_weeks) {
-                    shouldRun = false;
-                }
-            }
-
-            if (shouldRun && currentWeek < startWeek) {
-                shouldRun = false;
-            }
-
-            if (shouldRun) {
-                const id = await ctx.db.insert("task_instances", {
-                    task_id: task._id,
-                    goal_id: args.goal_id,
-                    user_id: goal.user_id,
-                    instance_date: args.date,
-                    status: "pending",
-                    created_at: Date.now(),
-                    updated_at: Date.now(),
+            for (const instance of overdue) {
+                if (instance.status !== "pending" && instance.status !== "rejected") continue;
+                await ctx.db.patch(instance._id, {
+                    status: "missed",
+                    updated_at: now,
                 });
-                createdIds.push(id);
+                missedCount += 1;
             }
+
+            const created = await generateTaskInstancesForGoalDate(ctx, goal, todayStart, timeZone);
+            generatedCount += created.length;
         }
 
-        return createdIds;
+        return {
+            active_goals: activeGoals.length,
+            generated_instances: generatedCount,
+            marked_missed: missedCount,
+        };
     },
 });

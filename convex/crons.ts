@@ -25,9 +25,9 @@ crons.cron(
 );
 
 crons.cron(
-  "generate-daily-task-instances",
-  "0 0 * * *",
-  internal.taskScheduler.generateDailyInstances,
+  "hourly-task-maintenance",
+  "5 * * * *",
+  internal.taskInstances.runHourlyMaintenance,
   {}
 );
 
