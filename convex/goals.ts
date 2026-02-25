@@ -1,6 +1,32 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+function buildTaskStartWeeks(aiPlanJson: string | undefined, totalTasks: number): number[] {
+  const startWeeks = Array.from({ length: totalTasks }, () => 1);
+  if (!aiPlanJson) return startWeeks;
+
+  try {
+    const parsed = JSON.parse(aiPlanJson);
+    const milestones = Array.isArray(parsed?.milestones) ? parsed.milestones : [];
+    let cursor = 0;
+
+    for (const milestone of milestones) {
+      const count = Number(milestone?.task_count ?? 0);
+      const targetWeek = Math.max(1, Math.floor(Number(milestone?.target_week ?? 1)));
+      if (!Number.isFinite(count) || count <= 0) continue;
+
+      for (let i = 0; i < count && cursor < startWeeks.length; i += 1) {
+        startWeeks[cursor] = targetWeek;
+        cursor += 1;
+      }
+    }
+  } catch {
+    // Ignore malformed ai_plan_json and fall back to week 1 defaults.
+  }
+
+  return startWeeks;
+}
+
 /**
  * List all non-archived goals for the current user, including their tasks.
  */
@@ -184,8 +210,9 @@ export const create = mutation({
       today.setHours(0, 0, 0, 0);
       const todayTs = today.getTime();
       const dow = today.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+      const taskStartWeeks = buildTaskStartWeeks(args.ai_plan_json, args.tasks.length);
 
-      for (const task of args.tasks) {
+      for (const [idx, task] of args.tasks.entries()) {
         const taskId = await ctx.db.insert("tasks", {
           name: task.name,
           description: task.description,
@@ -360,7 +387,8 @@ export const createWithInstances = mutation({
         // Day-one: generate today's instance
         const ct = task.cadence_type || "daily";
         const cd = task.cadence_days || [];
-        const shouldRun = ct === "daily" || cd.includes(dow);
+        const startWeek = taskStartWeeks[idx] ?? 1;
+        const shouldRun = (ct === "daily" || cd.includes(dow)) && startWeek <= 1;
         if (shouldRun) {
           await ctx.db.insert("task_instances", {
             task_id: taskId,
@@ -530,11 +558,14 @@ export const createSharedGoal = mutation({
       .query("tasks")
       .withIndex("by_goal", (q) => q.eq("goal_id", creatorGoalId))
       .collect();
+    const creatorTaskStartWeeks = buildTaskStartWeeks(args.ai_plan_json, creatorTasks.length);
+    const sortedCreatorTasks = [...creatorTasks].sort((a, b) => a._creationTime - b._creationTime);
 
-    for (const t of creatorTasks) {
+    for (const [idx, t] of sortedCreatorTasks.entries()) {
       const ct = t.cadence_type || "daily";
       const cd = t.cadence_days || [];
-      if (ct === "daily" || cd.includes(dow)) {
+      const startWeek = creatorTaskStartWeeks[idx] ?? 1;
+      if ((ct === "daily" || cd.includes(dow)) && startWeek <= 1) {
         await ctx.db.insert("task_instances", {
           task_id: t._id,
           goal_id: creatorGoalId,

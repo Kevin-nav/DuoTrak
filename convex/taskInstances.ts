@@ -20,6 +20,35 @@ function endOfDay(timestampMs: number): number {
     return startOfDay(timestampMs) + (24 * 60 * 60 * 1000) - 1;
 }
 
+function getTaskStartWeekByTaskId(goal: any, tasks: any[]): Map<string, number> {
+    const map = new Map<string, number>();
+    if (!goal?.ai_plan_json || !Array.isArray(tasks) || tasks.length === 0) return map;
+
+    try {
+        const parsed = JSON.parse(goal.ai_plan_json);
+        const milestones = Array.isArray(parsed?.milestones) ? parsed.milestones : [];
+        if (milestones.length === 0) return map;
+
+        const sortedTasks = [...tasks].sort((a, b) => a._creationTime - b._creationTime);
+        let cursor = 0;
+
+        for (const milestone of milestones) {
+            const count = Number(milestone?.task_count ?? 0);
+            const targetWeek = Number(milestone?.target_week ?? 1);
+            if (!Number.isFinite(count) || count <= 0) continue;
+
+            for (let i = 0; i < count && cursor < sortedTasks.length; i += 1) {
+                map.set(String(sortedTasks[cursor]._id), Math.max(1, Math.floor(targetWeek)));
+                cursor += 1;
+            }
+        }
+    } catch {
+        // Ignore malformed ai_plan_json and run fallback scheduling.
+    }
+
+    return map;
+}
+
 /**
  * List today's task instances for the current user.
  */
@@ -45,9 +74,42 @@ export const listForDate = query({
             )
             .collect();
 
+        const goalCache = new Map<string, any>();
+        const phaseMapByGoal = new Map<string, Map<string, number>>();
+
+        const phaseFilteredInstances = [];
+        for (const instance of instances) {
+            const goalIdKey = String(instance.goal_id);
+            let goal = goalCache.get(goalIdKey);
+            if (!goal) {
+                goal = await ctx.db.get(instance.goal_id);
+                goalCache.set(goalIdKey, goal);
+            }
+            if (!goal) continue;
+
+            let phaseMap = phaseMapByGoal.get(goalIdKey);
+            if (!phaseMap) {
+                const goalTasks = await ctx.db
+                    .query("tasks")
+                    .withIndex("by_goal", (q) => q.eq("goal_id", instance.goal_id))
+                    .collect();
+                phaseMap = getTaskStartWeekByTaskId(goal, goalTasks);
+                phaseMapByGoal.set(goalIdKey, phaseMap);
+            }
+
+            const startWeek = phaseMap.get(String(instance.task_id)) ?? 1;
+            const goalStartDay = startOfDay(goal._creationTime ?? goal.updated_at ?? args.date);
+            const instanceWeek =
+                Math.floor((startOfDay(instance.instance_date) - goalStartDay) / (7 * 24 * 60 * 60 * 1000)) + 1;
+
+            if (instanceWeek >= startWeek) {
+                phaseFilteredInstances.push(instance);
+            }
+        }
+
         // Enrich with template task and goal data
         const enriched = await Promise.all(
-            instances.map(async (instance) => {
+            phaseFilteredInstances.map(async (instance) => {
                 const task = await ctx.db.get(instance.task_id);
                 const goal = await ctx.db.get(instance.goal_id);
                 return {
@@ -107,6 +169,19 @@ export const getGoalExecutionView = query({
             .query("task_instances")
             .withIndex("by_goal_date", (q) => q.eq("goal_id", args.goal_id))
             .collect();
+        const goalTasks = await ctx.db
+            .query("tasks")
+            .withIndex("by_goal", (q) => q.eq("goal_id", args.goal_id))
+            .collect();
+        const startWeekByTaskId = getTaskStartWeekByTaskId(goal, goalTasks);
+        const goalStartDay = startOfDay(goal._creationTime ?? goal.updated_at ?? Date.now());
+
+        const phaseFilteredInstances = goalInstances.filter((instance) => {
+            const startWeek = startWeekByTaskId.get(String(instance.task_id)) ?? 1;
+            const instanceWeek =
+                Math.floor((startOfDay(instance.instance_date) - goalStartDay) / (7 * 24 * 60 * 60 * 1000)) + 1;
+            return instanceWeek >= startWeek;
+        });
 
         const taskCache = new Map<string, any>();
         const getTask = async (taskId: any) => {
@@ -132,12 +207,12 @@ export const getGoalExecutionView = query({
             };
         };
 
-        const weekInstancesRaw = goalInstances
+        const weekInstancesRaw = phaseFilteredInstances
             .filter((instance) => instance.instance_date >= weekStart && instance.instance_date <= weekEnd)
             .sort((a, b) => a.instance_date - b.instance_date || a.created_at - b.created_at);
         const weekInstances = await Promise.all(weekInstancesRaw.map(enrich));
 
-        const allInstancesRaw = goalInstances
+        const allInstancesRaw = phaseFilteredInstances
             .sort((a, b) => b.instance_date - a.instance_date || b.created_at - a.created_at)
             .slice(0, timelineLimit);
         const allInstances = await Promise.all(allInstancesRaw.map(enrich));
@@ -259,10 +334,13 @@ export const generateForGoal = mutation({
 
         // If no template tasks, treat all tasks as templates (backward compat)
         const tasksToSchedule = templateTasks.length > 0 ? templateTasks : allTasks;
+        const startWeekByTaskId = getTaskStartWeekByTaskId(goal, tasksToSchedule);
 
         const dayOfWeek = new Date(args.date)
             .toLocaleDateString("en-US", { weekday: "short" })
             .toLowerCase();
+        const goalStartDay = startOfDay(goal._creationTime ?? goal.updated_at ?? args.date);
+        const currentWeek = Math.floor((startOfDay(args.date) - goalStartDay) / (7 * 24 * 60 * 60 * 1000)) + 1;
 
         const createdIds = [];
 
@@ -280,6 +358,7 @@ export const generateForGoal = mutation({
             // Check cadence: should this task run today?
             const cadenceType = task.cadence_type || "daily";
             const cadenceDays = task.cadence_days || [];
+            const startWeek = startWeekByTaskId.get(String(task._id)) ?? 1;
 
             let shouldRun = false;
 
@@ -303,13 +382,14 @@ export const generateForGoal = mutation({
 
             // Check cadence duration
             if (shouldRun && task.cadence_duration_weeks) {
-                const goalCreatedAt = goal.updated_at; // Closest to creation time
-                const weeksSinceCreation = Math.floor(
-                    (args.date - goalCreatedAt) / (7 * 24 * 60 * 60 * 1000)
-                );
-                if (weeksSinceCreation >= task.cadence_duration_weeks) {
+                const weeksSinceTaskStart = currentWeek - startWeek;
+                if (weeksSinceTaskStart >= task.cadence_duration_weeks) {
                     shouldRun = false;
                 }
+            }
+
+            if (shouldRun && currentWeek < startWeek) {
+                shouldRun = false;
             }
 
             if (shouldRun) {
