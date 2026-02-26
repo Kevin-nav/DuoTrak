@@ -755,7 +755,7 @@ export const heartbeat = mutation({
             .first();
 
         if (!currentUser) {
-            throw new Error("User not found");
+            return { success: false, reason: "user_not_found" as const };
         }
 
         const now = Date.now();

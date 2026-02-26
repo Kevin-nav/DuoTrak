@@ -61,6 +61,13 @@ async function getOrCreatePrivateSpace(ctx: any, userId: Id<"users">) {
   return await ctx.db.get(id);
 }
 
+async function getPrivateSpace(ctx: any, userId: Id<"users">) {
+  return await ctx.db
+    .query("journal_spaces")
+    .withIndex("by_owner_type", (q: any) => q.eq("owner_user_id", userId).eq("type", "private"))
+    .first();
+}
+
 async function getOrCreateSharedSpace(ctx: any, userId: Id<"users">) {
   const partnership = await getActivePartnershipForUser(ctx, userId);
   if (!partnership) return null;
@@ -84,6 +91,18 @@ async function getOrCreateSharedSpace(ctx: any, userId: Id<"users">) {
     updated_at: now,
   });
   return await ctx.db.get(id);
+}
+
+async function getSharedSpace(ctx: any, userId: Id<"users">) {
+  const partnership = await getActivePartnershipForUser(ctx, userId);
+  if (!partnership) return null;
+
+  return await ctx.db
+    .query("journal_spaces")
+    .withIndex("by_partnership_type", (q: any) =>
+      q.eq("partnership_id", partnership._id).eq("type", "shared")
+    )
+    .first();
 }
 
 async function canAccessSpace(ctx: any, userId: Id<"users">, space: any) {
@@ -184,9 +203,9 @@ export const getHome = query({
 
     let space: any = null;
     if (normalizedType === "private") {
-      space = await getOrCreatePrivateSpace(ctx, user._id);
+      space = await getPrivateSpace(ctx, user._id);
     } else {
-      space = await getOrCreateSharedSpace(ctx, user._id);
+      space = await getSharedSpace(ctx, user._id);
       if (!space) {
         return {
           space: null,
@@ -194,6 +213,14 @@ export const getHome = query({
           message: "No active partner yet. Shared journal will appear once partnership is active.",
         };
       }
+    }
+
+    if (!space) {
+      return {
+        space: null,
+        entries: [],
+        message: null,
+      };
     }
 
     const allowed = await canAccessSpace(ctx, user._id, space);
@@ -236,16 +263,17 @@ export const getEntriesPage = query({
 
     let space: any = null;
     if (normalizedType === "private") {
-      space = await getOrCreatePrivateSpace(ctx, user._id);
+      space = await getPrivateSpace(ctx, user._id);
     } else {
-      space = await getOrCreateSharedSpace(ctx, user._id);
-      if (!space) {
-        return {
-          page: [],
-          isDone: true,
-          continueCursor: "",
-        };
-      }
+      space = await getSharedSpace(ctx, user._id);
+    }
+
+    if (!space) {
+      return {
+        page: [],
+        isDone: true,
+        continueCursor: "",
+      };
     }
 
     const allowed = await canAccessSpace(ctx, user._id, space);
@@ -347,8 +375,8 @@ export const listPages = query({
     const normalizedType = (args.spaceType === "shared" ? "shared" : "private") as SpaceType;
     const space =
       normalizedType === "shared"
-        ? await getOrCreateSharedSpace(ctx, user._id)
-        : await getOrCreatePrivateSpace(ctx, user._id);
+        ? await getSharedSpace(ctx, user._id)
+        : await getPrivateSpace(ctx, user._id);
 
     if (!space) return [];
     const allowed = await canAccessSpace(ctx, user._id, space);
@@ -789,8 +817,8 @@ export const getDashboardJournalPulse = query({
     const user = await getCurrentUserOrThrow(ctx);
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
-    const privateSpace = await getOrCreatePrivateSpace(ctx, user._id);
-    const sharedSpace = await getOrCreateSharedSpace(ctx, user._id);
+    const privateSpace = await getPrivateSpace(ctx, user._id);
+    const sharedSpace = await getSharedSpace(ctx, user._id);
     const partnership = sharedSpace?.partnership_id
       ? ((await ctx.db.get(sharedSpace.partnership_id)) as any)
       : null;
@@ -874,7 +902,7 @@ export const getPartnerJournalActivity = query({
   },
   handler: async (ctx, args) => {
     const user = await getCurrentUserOrThrow(ctx);
-    const sharedSpace = await getOrCreateSharedSpace(ctx, user._id);
+    const sharedSpace = await getSharedSpace(ctx, user._id);
     if (!sharedSpace) return { entries: [], total: 0 };
     const partnership = (await ctx.db.get(sharedSpace.partnership_id)) as any;
     if (!partnership || partnership.status !== "active") return { entries: [], total: 0 };
@@ -912,8 +940,8 @@ export const getJournalAlerts = query({
     const user = await getCurrentUserOrThrow(ctx);
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
-    const privateSpace = await getOrCreatePrivateSpace(ctx, user._id);
-    const sharedSpace = await getOrCreateSharedSpace(ctx, user._id);
+    const privateSpace = await getPrivateSpace(ctx, user._id);
+    const sharedSpace = await getSharedSpace(ctx, user._id);
     const partnership = sharedSpace?.partnership_id
       ? ((await ctx.db.get(sharedSpace.partnership_id)) as any)
       : null;
@@ -985,8 +1013,8 @@ export const search = query({
       return { results: [], total: 0 };
     }
 
-    const privateSpace = await getOrCreatePrivateSpace(ctx, user._id);
-    const sharedSpace = await getOrCreateSharedSpace(ctx, user._id);
+    const privateSpace = await getPrivateSpace(ctx, user._id);
+    const sharedSpace = await getSharedSpace(ctx, user._id);
     const accessibleSpaceIds = [privateSpace?._id, sharedSpace?._id].filter(Boolean);
     const limit = Math.min(args.limit ?? 50, 100);
 

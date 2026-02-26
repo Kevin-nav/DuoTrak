@@ -1,42 +1,61 @@
 "use client";
 
 import { useConvexAuth, useMutation } from "convex/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../convex/_generated/api";
 
 export function UserSync() {
   const { isAuthenticated } = useConvexAuth();
   const storeUser = useMutation(api.users.store);
   const heartbeat = useMutation((api as any).chat.heartbeat);
+  const [isUserSynced, setIsUserSynced] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function sync() {
-      if (isAuthenticated) {
-        // We need the email to store it. 
-        // In a real app, we might get this from the ID token claims or a separate Firebase call.
-        // For now, let's assume the mutation handles extraction from the identity, 
-        // BUT my mutation args require `email`.
-        // The `useAuth` hook from Convex doesn't give me the user object directly.
-        // I need to get the user from Firebase Auth to get the email.
-        
-        // Let's use the firebase auth directly here or pass it down.
-        // Importing `getAuth` here is fine.
-        const { getAuth } = await import("firebase/auth");
-        const { app } = await import("@/lib/firebase");
-        const auth = getAuth(app);
+      if (!isAuthenticated) {
+        setIsUserSynced(false);
+        return;
+      }
+
+      const { getAuth } = await import("firebase/auth");
+      const { app } = await import("@/lib/firebase");
+      const auth = getAuth(app);
+
+      for (let attempt = 0; attempt < 6 && !cancelled; attempt += 1) {
         const user = auth.currentUser;
-        
-        if (user && user.email) {
+        if (user?.email) {
           await storeUser({ email: user.email });
+          if (!cancelled) {
+            setIsUserSynced(true);
+          }
+          return;
         }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      if (!cancelled) {
+        console.error("UserSync: authenticated but Firebase user/email not ready.");
+        setIsUserSynced(false);
       }
     }
 
-    sync();
+    sync().catch((error) => {
+      if (!cancelled) {
+        console.error("UserSync failed:", error);
+        setIsUserSynced(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, storeUser]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !isUserSynced) {
       return;
     }
 
@@ -61,7 +80,13 @@ export function UserSync() {
       window.removeEventListener("online", sendHeartbeat);
       document.removeEventListener("visibilitychange", sendHeartbeat);
     };
-  }, [isAuthenticated, heartbeat]);
+  }, [isAuthenticated, isUserSynced, heartbeat]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsUserSynced(false);
+    }
+  }, [isAuthenticated]);
 
   return null;
 }
