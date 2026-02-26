@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: default
+data:
+  config.yaml: |
+    ingress:
+      - hostname: duotrak.org
+        service: http://duotrak-frontend.default.svc.cluster.local:80
+      - hostname: api.duotrak.org
+        service: http://duotrak-backend.default.svc.cluster.local:8000
+      - service: http_status:404

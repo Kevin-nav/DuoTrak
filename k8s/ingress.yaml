@@ -1,3 +1,5 @@
+# NOTE: Production traffic should use Cloudflare Tunnel manifests instead of this ingress.
+# Keep this file only as an optional fallback for non-tunnel environments.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -8,7 +10,7 @@ metadata:
     # cert-manager.io/cluster-issuer: "letsencrypt-prod" # Uncomment if using cert-manager
 spec:
   rules:
-    - host: duotrak.com # Update to your domain
+    - host: duotrak.org
       http:
         paths:
           - path: /
@@ -20,5 +22,5 @@ spec:
                   number: 80
   # tls: # Uncomment for HTTPS
   #   - hosts:
-  #       - duotrak.com
+  #       - duotrak.org
   #     secretName: duotrak-tls
