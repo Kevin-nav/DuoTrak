@@ -9,11 +9,11 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lock* ./
 RUN \
-  if [ -f bun.lock ]; then \
-    npm install -g bun && bun install --frozen-lockfile; \
+  if [ -f package-lock.json ]; then npm ci; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f bun.lock ]; then \
+    npm install -g bun && bun install --frozen-lockfile; \
   else echo "Lockfile not found." && exit 1; \
   fi
 
@@ -41,11 +41,11 @@ ENV FASTAPI_URL=http://mock-fastapi-url.com
 RUN touch /tmp/mock-firebase.json
 
 RUN \
-  if [ -f bun.lock ]; then \
-    npm install -g bun && bun run build; \
+  if [ -f package-lock.json ]; then npm run build; \
   elif [ -f yarn.lock ]; then yarn build; \
-  elif [ -f package-lock.json ]; then npm run build; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+  elif [ -f bun.lock ]; then \
+    npm install -g bun && bun run build; \
   else npm run build; \
   fi
 
