@@ -1,21 +1,19 @@
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lock* ./
-RUN \
-  if [ -f package-lock.json ]; then npm install --legacy-peer-deps --no-audit --no-fund; \
-  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  elif [ -f bun.lock ]; then \
-    npm install -g bun && bun install --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+# Use npm deterministically in CI (repo is package-lock based).
+COPY package.json package-lock.json* ./
+RUN npm install -g npm@10.9.2
+RUN npm install --legacy-peer-deps --no-audit --no-fund --verbose
 
 
 # Rebuild the source code only when needed
@@ -40,14 +38,7 @@ ENV FASTAPI_URL=http://mock-fastapi-url.com
 # Create mock file for build validation
 RUN touch /tmp/mock-firebase.json
 
-RUN \
-  if [ -f package-lock.json ]; then npm run build; \
-  elif [ -f yarn.lock ]; then yarn build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
-  elif [ -f bun.lock ]; then \
-    npm install -g bun && bun run build; \
-  else npm run build; \
-  fi
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
