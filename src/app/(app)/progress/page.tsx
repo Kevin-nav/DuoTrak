@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 
 import { useProgressMetrics } from "@/hooks/useProgressMetrics";
@@ -36,24 +36,36 @@ export default function ProgressPage() {
     includePartner: includePartner && hasPartner,
   });
 
-  if (isLoading) {
+  const [stableData, setStableData] = useState<typeof data>(undefined);
+
+  useEffect(() => {
+    if (data !== undefined) {
+      setStableData(data);
+    }
+  }, [data]);
+
+  const displayData = data ?? stableData;
+  const isRefreshing = isLoading && !!stableData;
+
+  if (!displayData && isLoading) {
     return <ProgressLoadingState />;
   }
 
-  if (!data) {
+  if (!displayData) {
     return <ProgressErrorState onRetry={() => setRetryNonce((value) => value + 1)} />;
   }
 
-  if (data.summary.totalTasks === 0 && data.goalBreakdown.length === 0) {
+  if (displayData.summary.totalTasks === 0 && displayData.goalBreakdown.length === 0) {
     return (
       <div className="space-y-5">
-        <ProgressHeader partnerName={data.partnerComparison?.partnerName || userDetails?.partner_full_name} />
+        <ProgressHeader partnerName={displayData.partnerComparison?.partnerName || userDetails?.partner_full_name} />
         <ProgressFilters
           selectedPreset={preset}
           onPresetChange={setPreset}
           includePartner={includePartner && hasPartner}
           onIncludePartnerChange={setIncludePartner}
           partnerToggleDisabled={!hasPartner}
+          isUpdating={isRefreshing}
         />
         <ProgressEmptyState onSelectPreset={setPreset} />
       </div>
@@ -62,7 +74,7 @@ export default function ProgressPage() {
 
   return (
     <div className="space-y-5 pb-8">
-      <ProgressHeader partnerName={data.partnerComparison?.partnerName || userDetails?.partner_full_name} />
+      <ProgressHeader partnerName={displayData.partnerComparison?.partnerName || userDetails?.partner_full_name} />
 
       <ProgressFilters
         selectedPreset={preset}
@@ -70,34 +82,35 @@ export default function ProgressPage() {
         includePartner={includePartner && hasPartner}
         onIncludePartnerChange={setIncludePartner}
         partnerToggleDisabled={!hasPartner}
+        isUpdating={isRefreshing}
       />
 
-      {data.warnings.length > 0 ? (
+      {displayData.warnings.length > 0 ? (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Partner comparison is limited</AlertTitle>
-          <AlertDescription>{data.warnings[0]}</AlertDescription>
+          <AlertDescription>{displayData.warnings[0]}</AlertDescription>
         </Alert>
       ) : null}
 
       <ProgressKpiGrid
-        summary={data.summary}
-        partnerComparison={data.partnerComparison}
+        summary={displayData.summary}
+        partnerComparison={displayData.partnerComparison}
         showPartnerComparison={includePartner && hasPartner}
       />
 
       <ProgressTrendChart
-        trends={data.trends}
-        partnerComparison={data.partnerComparison}
+        trends={displayData.trends}
+        partnerComparison={displayData.partnerComparison}
         showPartnerComparison={includePartner && hasPartner}
       />
 
-      <ProgressConsistencyChart consistency={data.consistency} />
+      <ProgressConsistencyChart consistency={displayData.consistency} />
 
-      <GoalProgressCards goals={data.goalBreakdown} />
-      <GoalProgressTable goals={data.goalBreakdown} />
+      <GoalProgressCards goals={displayData.goalBreakdown} />
+      <GoalProgressTable goals={displayData.goalBreakdown} />
 
-      <AchievementPanel achievements={data.achievements} />
+      <AchievementPanel achievements={displayData.achievements} />
     </div>
   );
 }

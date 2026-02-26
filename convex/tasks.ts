@@ -360,6 +360,74 @@ export const partnerReviewVerification = mutation({
   },
 });
 
+export const partnerReviewVerificationByPartner = mutation({
+  args: {
+    id: v.id("tasks"),
+    decision: v.union(v.literal("approved"), v.literal("rejected")),
+    rejection_reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const reviewer = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q: any) => q.eq("firebase_uid", identity.subject))
+      .unique();
+    if (!reviewer) throw new Error("User not found");
+
+    const task = await ctx.db.get(args.id);
+    if (!task) throw new Error("Task not found");
+
+    const goal = await ctx.db.get(task.goal_id);
+    if (!goal) throw new Error("Goal not found");
+
+    const owner = await ctx.db.get(goal.user_id);
+    if (!owner) throw new Error("Task owner not found");
+
+    const isPartnerReviewer =
+      owner.current_partner_id === reviewer._id && reviewer.current_partner_id === owner._id;
+    if (!isPartnerReviewer) throw new Error("Unauthorized");
+
+    if (task.status !== "pending-verification" && task.status !== "pending_verification") {
+      throw new Error("Task is not awaiting verification");
+    }
+
+    const approved = args.decision === "approved";
+    const now = Date.now();
+    await ctx.db.patch(args.id, {
+      status: approved ? "verified" : "rejected",
+      verification_reviewed_at: now,
+      verification_reviewer_type: "partner",
+      verification_outcome: args.decision,
+      verification_rejection_reason: approved ? undefined : args.rejection_reason,
+      updated_at: now,
+    });
+
+    await ctx.scheduler.runAfter(
+      0,
+      (internal as any).notifications.dispatchEvent,
+      {
+        eventType: approved ? "verification_approved" : "verification_rejected",
+        recipientUserId: owner._id,
+        actorUserId: reviewer._id,
+        context: JSON.stringify({
+          taskId: String(task._id),
+          goalId: String(task.goal_id),
+          taskName: task.name,
+          rejectionReason: args.rejection_reason,
+        }),
+      }
+    );
+
+    if (approved && !isTaskCompletedLike(task.status)) {
+      await emitGoalProgressNotifications(ctx, task.goal_id, owner._id);
+    }
+
+    return { ok: true };
+  },
+});
+
 export const tryAutoApproveTimeWindow = mutation({
   args: {
     id: v.id("tasks"),

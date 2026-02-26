@@ -25,6 +25,7 @@ import type * as llmCostLedger from "../llmCostLedger.js";
 import type * as notifications from "../notifications.js";
 import type * as onboarding from "../onboarding.js";
 import type * as posthog from "../posthog.js";
+import type * as progress from "../progress.js";
 import type * as taskInstances from "../taskInstances.js";
 import type * as taskScheduler from "../taskScheduler.js";
 import type * as tasks from "../tasks.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   onboarding: typeof onboarding;
   posthog: typeof posthog;
+  progress: typeof progress;
   taskInstances: typeof taskInstances;
   taskScheduler: typeof taskScheduler;
   tasks: typeof tasks;

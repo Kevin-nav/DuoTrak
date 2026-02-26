@@ -9,6 +9,7 @@ type ProgressFiltersProps = {
   includePartner: boolean;
   onIncludePartnerChange: (next: boolean) => void;
   partnerToggleDisabled?: boolean;
+  isUpdating?: boolean;
 };
 
 const PRESETS: DatePreset[] = ["7d", "30d", "90d"];
@@ -25,6 +26,7 @@ export default function ProgressFilters({
   includePartner,
   onIncludePartnerChange,
   partnerToggleDisabled = false,
+  isUpdating = false,
 }: ProgressFiltersProps) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-landing-clay bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
@@ -52,8 +54,8 @@ export default function ProgressFilters({
           />
           Compare with partner
         </label>
+        {isUpdating ? <span className="ml-3 text-xs text-landing-espresso-light">Updating...</span> : null}
       </div>
     </div>
   );
 }
-

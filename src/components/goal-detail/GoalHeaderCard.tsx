@@ -23,7 +23,7 @@ export default function GoalHeaderCard({
         <div className="flex items-center gap-2 sm:gap-2.5">
           <button
             onClick={onBack}
-            className="mr-1 rounded-lg p-1.5 transition-colors hover:bg-background sm:-ml-1.5"
+            className="mr-1 hidden rounded-lg p-1.5 transition-colors hover:bg-background sm:inline-flex sm:-ml-1.5"
           >
             <ArrowLeft className="h-4.5 w-4.5 text-muted-foreground" />
           </button>
