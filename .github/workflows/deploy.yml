@@ -53,7 +53,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.BACKEND_IMAGE }}:latest
 
   deploy:
-    runs-on: [self-hosted, linux, duotrak-vps]
+    runs-on: [self-hosted, linux, duotrak]
     needs: build-and-push
     permissions:
       actions: read

@@ -56,7 +56,7 @@ chmod +x scripts/vps/install-github-runner.sh
   --github-owner "<YOUR_GITHUB_OWNER>" \
   --github-repo "<YOUR_REPO_NAME>" \
   --runner-token "<ONE_TIME_RUNNER_TOKEN>" \
-  --runner-labels "duotrak-vps"
+  --runner-labels "duotrak"
 ```
 
 You can also do this in one go through the main setup script:
