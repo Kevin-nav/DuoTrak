@@ -50,6 +50,5 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Run the command to start the application with OpenTelemetry
-# We assume the OTEL variables will be passed via docker-compose
-CMD ["opentelemetry-instrument", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start backend directly; OpenTelemetry wrapper is optional and not installed by default.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
