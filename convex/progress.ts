@@ -242,7 +242,7 @@ async function collectUserMetrics(
     }));
 
   const goalBreakdown: GoalBreakdownItem[] = activeGoals
-    .map((goal: any) => {
+    .map((goal: any): GoalBreakdownItem => {
       const agg = goalAccumulator.get(String(goal._id)) || { completed: 0, total: 0 };
       const completionRate = ratio(agg.completed, agg.total);
       const status: GoalBreakdownItem["status"] =
@@ -260,7 +260,7 @@ async function collectUserMetrics(
         status,
       };
     })
-    .sort((a, b) => b.completionRate - a.completionRate);
+    .sort((a: GoalBreakdownItem, b: GoalBreakdownItem) => b.completionRate - a.completionRate);
 
   const totalTasks = taskInstances.length;
   const completedTasks = taskInstances.filter((instance: any) => isCompletedStatus(instance.status)).length;
