@@ -54,7 +54,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
-    "convex": "^1.31.7",
+    "convex": "1.31.7",
     "cookies-next": "^4.2.1",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.1",
