@@ -4,16 +4,21 @@ import { capturePosthogEvent, identifyPosthogUser } from "@/lib/analytics/postho
 
 export type AnalyticsProps = Record<string, unknown>;
 
-export function buildEventPayload(
+type EventPayload<T extends AnalyticsProps> = {
+  event: string;
+  properties: { platform: string } & T;
+};
+
+export function buildEventPayload<T extends AnalyticsProps = Record<string, never>>(
   event: string,
-  properties: AnalyticsProps = {},
-) {
+  properties: T = {} as T,
+): EventPayload<T> {
   return {
     event,
     properties: {
       platform: "web",
       ...properties,
-    },
+    } as { platform: string } & T,
   };
 }
 
@@ -25,4 +30,3 @@ export function trackEvent(event: string, properties: AnalyticsProps = {}) {
 export function identifyUser(userId: string) {
   return identifyPosthogUser(userId);
 }
-

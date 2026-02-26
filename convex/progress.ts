@@ -323,11 +323,12 @@ export const getDashboardMetrics = query({
       if (!user.current_partner_id) {
         warnings.push("Partner comparison unavailable because no active partner was found.");
       } else {
-        const partner = await ctx.db.get(user.current_partner_id);
+        const partnerId = user.current_partner_id as Id<"users">;
+        const partner = await ctx.db.get(partnerId);
         if (!partner) {
           warnings.push("Partner comparison unavailable because partner profile could not be loaded.");
         } else {
-          const partnerMetrics = await collectUserMetrics(ctx, partner._id, rangeStart, rangeEnd);
+          const partnerMetrics = await collectUserMetrics(ctx, partnerId, rangeStart, rangeEnd);
           partnerComparison = {
             partnerName: partner.full_name || partner.nickname || "Partner",
             partnerSummary: partnerMetrics.summary,

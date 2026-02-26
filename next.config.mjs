@@ -6,7 +6,7 @@ import dotenv from "dotenv";
  * In CI/prod, env vars may be injected by the runtime, so missing .env.local
  * should not fail startup.
  */
-const dotenvResult = dotenv.config({ path: "./.env.local" });
+const dotenvResult = dotenv.config({ path: "./.env.local", quiet: true });
 if (dotenvResult.error && dotenvResult.error.code !== "ENOENT") {
   console.warn("[next.config.mjs] dotenv load warning:", dotenvResult.error.message);
 }

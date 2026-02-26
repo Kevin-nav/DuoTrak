@@ -317,7 +317,7 @@ export default function TaskVerificationModal({
               </div>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={() => handleClose()}
                 className="rounded p-1 text-stone-gray transition-colors hover:bg-gray-100 hover:text-charcoal dark:text-gray-400 dark:hover:bg-gray-700"
                 aria-label="Close verification modal"
               >
@@ -548,7 +548,7 @@ export default function TaskVerificationModal({
               <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={handleClose}
+                  onClick={() => handleClose()}
                   className="rounded-lg border border-cool-gray px-4 py-2.5 text-sm font-semibold text-charcoal hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
                 >
                   Cancel
