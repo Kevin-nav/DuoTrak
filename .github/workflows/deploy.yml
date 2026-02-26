@@ -2,12 +2,15 @@ name: Build and Deploy to K8s
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_OWNER: ${{ github.repository_owner }}
+  FRONTEND_IMAGE: duotrak-frontend
+  BACKEND_IMAGE: duotrak-backend
+  K8S_NAMESPACE: default
 
 jobs:
   build-and-push:
@@ -27,24 +30,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha
-            type=raw,value=latest
-
-      - name: Build and push Docker image
+      - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.FRONTEND_IMAGE }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.FRONTEND_IMAGE }}:latest
           build-args: |
-             NEXT_PUBLIC_API_BASE_URL=https://api.duotrak.com # Can be overridden here if needed
+            NEXT_PUBLIC_API_BASE_URL=https://api.duotrak.org
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.BACKEND_IMAGE }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.BACKEND_IMAGE }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,7 +58,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,27 +66,75 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: 'latest'
+          version: latest
 
-      - name: Deploy to Kubernetes
+      - name: Configure kubeconfig
         env:
           KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-          REGISTRY: ${{ env.REGISTRY }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Apply base manifests
+        run: |
+          kubectl apply -f k8s/deployment.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f k8s/service.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f k8s/backend-deployment.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f k8s/backend-service.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f k8s/cloudflared-configmap.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f k8s/cloudflared-deployment.yaml -n ${{ env.K8S_NAMESPACE }}
+
+      - name: Update frontend image
+        env:
           SHA: ${{ github.sha }}
         run: |
-          mkdir -p $HOME/.kube
-          echo "$KUBE_CONFIG" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-          
-          # Update the image tag in deployment.yaml dynamically
-          cd k8s
-          sed -i "s|image: .*|image: $REGISTRY/$IMAGE_NAME:sha-$SHA|g" deployment.yaml
-          
-          # Apply manifests
-          kubectl apply -f deployment.yaml
-          kubectl apply -f service.yaml
-          kubectl apply -f ingress.yaml
-          
-          # Verify deployment
-          kubectl rollout status deployment/duotrak-frontend
+          kubectl set image deployment/duotrak-frontend \
+            duotrak-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.FRONTEND_IMAGE }}:sha-$SHA \
+            -n ${{ env.K8S_NAMESPACE }}
+
+      - name: Update backend image
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/duotrak-backend \
+            duotrak-backend=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.BACKEND_IMAGE }}:sha-$SHA \
+            -n ${{ env.K8S_NAMESPACE }}
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/duotrak-frontend -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/duotrak-backend -n ${{ env.K8S_NAMESPACE }}
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy]
+    if: always()
+
+    steps:
+      - name: Add deployment summary
+        run: |
+          echo "## DuoTrak Deploy Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deploy result: \`${{ needs.deploy.result }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Send webhook notification
+        if: ${{ secrets.DEPLOY_WEBHOOK_URL != '' }}
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+        run: |
+          if [ "$DEPLOY_RESULT" = "success" ]; then
+            STATUS_TEXT="SUCCESS"
+          else
+            STATUS_TEXT="FAILED"
+          fi
+
+          curl -X POST "$DEPLOY_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"DuoTrak deploy ${STATUS_TEXT} on ${BRANCH} (${SHA}). Run: ${RUN_URL}\"}"
