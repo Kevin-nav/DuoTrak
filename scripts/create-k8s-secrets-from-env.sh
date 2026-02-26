@@ -154,7 +154,15 @@ require_cmd awk
 require_cmd mktemp
 
 [[ -f "$BACKEND_ENV_FILE" ]] || { echo "Backend env file not found: $BACKEND_ENV_FILE" >&2; exit 1; }
-[[ -f "$FIREBASE_JSON_PATH" ]] || { echo "Firebase JSON file not found: $FIREBASE_JSON_PATH" >&2; exit 1; }
+if [[ ! -f "$FIREBASE_JSON_PATH" ]]; then
+  if [[ "$FIREBASE_JSON_PATH" == "firebase-adminsdk.json" && -f "backend/firebase-adminsdk.json" ]]; then
+    FIREBASE_JSON_PATH="backend/firebase-adminsdk.json"
+    echo "firebase-adminsdk.json not found at repo root; using backend/firebase-adminsdk.json"
+  else
+    echo "Firebase JSON file not found: $FIREBASE_JSON_PATH" >&2
+    exit 1
+  fi
+fi
 
 echo "Loading values from env files..."
 

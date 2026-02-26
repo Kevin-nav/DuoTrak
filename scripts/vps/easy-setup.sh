@@ -5,10 +5,16 @@ NAMESPACE="default"
 SKIP_K3S_INSTALL=false
 SKIP_SECRETS=false
 SKIP_ROLLOUT_WAIT=false
+INSTALL_RUNNER=false
 FRONTEND_ENV_FILE=".env.local"
 BACKEND_ENV_FILE="backend/.env"
 FIREBASE_JSON_PATH="firebase-adminsdk.json"
 CLOUDFLARE_TUNNEL_TOKEN="${CF_TUNNEL_TOKEN:-}"
+GITHUB_OWNER=""
+GITHUB_REPO=""
+GITHUB_RUNNER_TOKEN="${GITHUB_RUNNER_TOKEN:-}"
+GITHUB_RUNNER_NAME="$(hostname)-duotrak"
+GITHUB_RUNNER_LABELS="duotrak-vps"
 
 usage() {
   cat <<'EOF'
@@ -29,6 +35,12 @@ Options:
   --skip-k3s-install                 Skip k3s installation check
   --skip-secrets                     Skip secret creation/update step
   --skip-rollout-wait                Skip rollout wait checks
+  --install-runner                   Install GitHub self-hosted runner
+  --github-owner <owner>             GitHub owner for runner registration
+  --github-repo <repo>               GitHub repository for runner registration
+  --github-runner-token <token>      One-time runner registration token
+  --github-runner-name <name>        Runner name (default: <hostname>-duotrak)
+  --github-runner-labels <labels>    Runner labels (default: duotrak-vps)
   -h, --help                         Show help
 EOF
 }
@@ -66,6 +78,30 @@ while [[ $# -gt 0 ]]; do
     --skip-rollout-wait)
       SKIP_ROLLOUT_WAIT=true
       shift
+      ;;
+    --install-runner)
+      INSTALL_RUNNER=true
+      shift
+      ;;
+    --github-owner)
+      GITHUB_OWNER="$2"
+      shift 2
+      ;;
+    --github-repo)
+      GITHUB_REPO="$2"
+      shift 2
+      ;;
+    --github-runner-token)
+      GITHUB_RUNNER_TOKEN="$2"
+      shift 2
+      ;;
+    --github-runner-name)
+      GITHUB_RUNNER_NAME="$2"
+      shift 2
+      ;;
+    --github-runner-labels)
+      GITHUB_RUNNER_LABELS="$2"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -135,6 +171,22 @@ if [[ "$SKIP_SECRETS" == false ]]; then
     "${secret_args[@]}"
 fi
 
+if [[ "$INSTALL_RUNNER" == true ]]; then
+  chmod +x ./scripts/vps/install-github-runner.sh
+  if [[ -z "$GITHUB_OWNER" || -z "$GITHUB_REPO" || -z "$GITHUB_RUNNER_TOKEN" ]]; then
+    echo "Runner install requires: --github-owner, --github-repo, and --github-runner-token" >&2
+    exit 1
+  fi
+
+  echo "Installing GitHub self-hosted runner..."
+  ./scripts/vps/install-github-runner.sh \
+    --github-owner "$GITHUB_OWNER" \
+    --github-repo "$GITHUB_REPO" \
+    --runner-token "$GITHUB_RUNNER_TOKEN" \
+    --runner-name "$GITHUB_RUNNER_NAME" \
+    --runner-labels "$GITHUB_RUNNER_LABELS"
+fi
+
 echo "Applying Kubernetes manifests..."
 kubectl apply -f k8s/service.yaml -n "$NAMESPACE"
 kubectl apply -f k8s/deployment.yaml -n "$NAMESPACE"
@@ -156,3 +208,6 @@ echo "Next:"
 echo "1) Verify: https://duotrak.org and https://api.duotrak.org/"
 echo "2) Push to main to trigger auto-deploy workflow."
 echo "3) Keep using GitHub push; no manual frontend/backend copy is needed after this."
+if [[ "$INSTALL_RUNNER" == true ]]; then
+  echo "4) Confirm runner is online in GitHub: Settings -> Actions -> Runners."
+fi
