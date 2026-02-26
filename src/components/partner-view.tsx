@@ -14,7 +14,6 @@ import {
   Target,
   Timer,
   UserCircle2,
-  WifiOff,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -45,7 +44,7 @@ interface Task {
 interface ActivityItem {
   id: string;
   type: "task-completion" | "reflection" | "system-update" | "achievement" | "duo-challenge";
-  timestamp: Date;
+  timestamp: number;
   summary: string;
   details?: {
     notes?: string;
@@ -61,16 +60,6 @@ interface PartnerInfo {
   localTime: string;
   initials: string;
   lastActive?: Date;
-}
-
-interface PartnerViewProps {
-  partner?: PartnerInfo;
-  tasks?: Task[];
-  activities?: ActivityItem[];
-  unreadMessages?: number;
-  isOnline?: boolean;
-  isLoading?: boolean;
-  error?: string | null;
 }
 
 const tabItems = [
@@ -92,84 +81,29 @@ const tabPanelMotion = {
   exit: { opacity: 0, y: -8, filter: "blur(3px)" },
 };
 
-export default function PartnerView({
-  partner = {
-    id: "partner-1",
-    username: "John",
-    profilePicture: "/placeholder.svg?height=60&width=60",
-    timezone: "GMT-7",
-    localTime: "4:15 PM",
-    initials: "JD",
-    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  },
-  tasks = [
-    {
-      id: "task-1",
-      description: "Morning Run (5km)",
-      scheduledTime: "7:00 AM",
-      status: "awaiting-verification",
-      attachments: {
-        photos: ["/placeholder.svg?height=300&width=400"],
-        notes: "Completed full route and felt great.",
-      },
-    },
-    {
-      id: "task-2",
-      description: "Work Session: Project X",
-      scheduledTime: "9:00 AM - 11:00 AM",
-      status: "completed",
-      progress: { current: 2, total: 2, unit: "hours" },
-    },
-    {
-      id: "task-3",
-      description: "Language Learning - Spanish",
-      scheduledTime: "2:00 PM",
-      status: "completed",
-      progress: { current: 3, total: 5, unit: "lessons" },
-    },
-    {
-      id: "task-4",
-      description: "Read 20 pages",
-      scheduledTime: "8:00 PM",
-      status: "todo",
-    },
-  ],
-  activities = [
-    {
-      id: "activity-1",
-      type: "achievement",
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      summary: "Achievement unlocked: Streak Starter",
-      details: { notes: "Five-day consistency streak reached." },
-    },
-    {
-      id: "activity-2",
-      type: "task-completion",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      summary: "Completed Morning Run (5km)",
-      details: {
-        notes: "New personal best pace.",
-        photo: "/placeholder.svg?height=240&width=320",
-      },
-    },
-    {
-      id: "activity-3",
-      type: "reflection",
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      summary: "Posted a daily reflection",
-      details: { notes: "Consistency feels easier with shared accountability." },
-    },
-  ],
-  unreadMessages = 3,
-  isOnline = true,
-  isLoading = false,
-  error = null,
-}: PartnerViewProps) {
+const getInitials = (name: string = "") =>
+  name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+export default function PartnerView() {
   const router = useRouter();
   const { userDetails } = useUser();
   const [activeTab, setActiveTab] = useState<(typeof tabItems)[number]["id"]>("day");
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isFullscreenOverlayOpen, setIsFullscreenOverlayOpen] = useState(false);
+  const partnerViewData = useQuery(
+    (api as any).taskInstances.getPartnerViewData,
+    userDetails?.partner_id ? { activity_limit: 24, activity_days: 7 } : "skip"
+  ) as
+    | {
+        day_tasks: Task[];
+        activities: ActivityItem[];
+      }
+    | undefined;
   const partnerConversation = useQuery(
     api.chat.getConversationByPartnerId,
     userDetails?.partner_id ? { partner_id: userDetails.partner_id } : "skip"
@@ -178,7 +112,17 @@ export default function PartnerView({
     api.chat.getUnreadCount,
     partnerConversation?._id ? { conversation_id: partnerConversation._id } : "skip"
   );
-  const unreadMessagesCount = typeof liveUnreadCount === "number" ? liveUnreadCount : unreadMessages;
+  const partnerPresence = useQuery(
+    (api as any).chat.getPartnerPresence,
+    userDetails?.partner_id ? { partner_id: userDetails.partner_id } : "skip"
+  ) as { is_online: boolean; last_seen_at?: number } | undefined;
+
+  const tasks = partnerViewData?.day_tasks ?? [];
+  const activities = partnerViewData?.activities ?? [];
+  const unreadMessagesCount = typeof liveUnreadCount === "number" ? liveUnreadCount : 0;
+  const isOnline = partnerPresence?.is_online ?? false;
+  const partnerLastSeen = partnerPresence?.last_seen_at ? new Date(partnerPresence.last_seen_at) : undefined;
+  const isLoading = !!userDetails?.partner_id && partnerViewData === undefined;
   const { entries: partnerJournalEntries, isLoading: isPartnerJournalLoading } = usePartnerJournalActivity(6);
 
   const formatPartnerLocalTime = (timezone?: string | null) => {
@@ -209,18 +153,13 @@ export default function PartnerView({
   const goToChat = () => setActiveTab("chat");
 
   const resolvedPartner: PartnerInfo = {
-    ...partner,
-    username: userDetails?.partner_nickname || userDetails?.partner_full_name || partner.username,
-    profilePicture: userDetails?.partner_profile_picture_url || partner.profilePicture,
-    timezone: userDetails?.partner_timezone || partner.timezone,
-    localTime: formatPartnerLocalTime(userDetails?.partner_timezone || partner.timezone),
-    initials:
-      (userDetails?.partner_nickname || userDetails?.partner_full_name || partner.username)
-        .split(" ")
-        .map((part) => part[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase() || partner.initials,
+    id: String(userDetails?.partner_id ?? "partner"),
+    username: userDetails?.partner_nickname || userDetails?.partner_full_name || "Partner",
+    profilePicture: userDetails?.partner_profile_picture_url || "/placeholder.svg?height=60&width=60",
+    timezone: userDetails?.partner_timezone || "UTC",
+    localTime: formatPartnerLocalTime(userDetails?.partner_timezone || "UTC"),
+    initials: getInitials(userDetails?.partner_nickname || userDetails?.partner_full_name || "Partner"),
+    lastActive: partnerLastSeen,
   };
 
   if (isLoading) {
@@ -231,18 +170,6 @@ export default function PartnerView({
             <Clock3 className="mx-auto mb-3 h-7 w-7 animate-pulse text-landing-terracotta" />
             <p className="text-sm text-landing-espresso-light">Loading partner information...</p>
           </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <WifiOff className="mx-auto mb-3 h-8 w-8 text-red-600" />
-          <h2 className="text-lg font-bold text-red-700">Could not load partner page</h2>
-          <p className="mt-2 text-sm text-red-700/80">Please refresh and try again.</p>
         </div>
       </DashboardLayout>
     );
@@ -414,6 +341,12 @@ export default function PartnerView({
                 <p className="mt-2 text-sm text-landing-espresso-light">{completionSummary.percent}% tasks completed today</p>
               </article>
 
+              {tasks.length === 0 ? (
+                <article className="rounded-2xl border border-landing-clay bg-white p-4 text-sm text-landing-espresso-light shadow-sm">
+                  No scheduled partner tasks for today yet.
+                </article>
+              ) : null}
+
               {tasks.map((task) => (
                 <motion.article
                   key={task.id}
@@ -502,6 +435,12 @@ export default function PartnerView({
                   ))}
                 </div>
               </article>
+
+              {activities.length === 0 ? (
+                <article className="rounded-2xl border border-landing-clay bg-white p-4 text-sm text-landing-espresso-light shadow-sm">
+                  No recent partner task activity yet.
+                </article>
+              ) : null}
 
               {activities.map((activity) => (
                 <article key={activity.id} className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">

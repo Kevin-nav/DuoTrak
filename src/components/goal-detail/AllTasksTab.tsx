@@ -30,7 +30,7 @@ export default function AllTasksTab({
 
   const statusLabel = (row: any) => {
     if (row.status === "completed" || row.status === "verified") return "Completed";
-    if (row.status === "pending-verification") return "Awaiting review";
+    if (row.status === "pending-verification" || row.status === "pending_verification") return "Awaiting review";
     if (row.status === "missed" || row.status === "skipped" || row.status === "failed") return "Not completed";
     if (row.status === "rejected") return "Rejected";
     return "Pending";
@@ -100,7 +100,7 @@ export default function AllTasksTab({
                     <CheckCircle2 className="h-3 w-3" />
                   ) : row.status === "missed" || row.status === "skipped" || row.status === "failed" ? (
                     <XCircle className="h-3 w-3" />
-                  ) : row.status === "pending-verification" ? (
+                  ) : row.status === "pending-verification" || row.status === "pending_verification" ? (
                     <CalendarClock className="h-3 w-3" />
                   ) : (
                     <Clock3 className="h-3 w-3" />

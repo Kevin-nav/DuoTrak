@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
 import { Flame, Loader2 } from 'lucide-react';
 import { useQuery as useConvexQuery, useMutation as useConvexMutation, useAction as useConvexAction } from 'convex/react';
+import { toast } from 'sonner';
 import { api } from '../../convex/_generated/api';
 import QuickActions from './quick-actions';
 import DuoStreakHero from './duo-streak-hero';
@@ -12,7 +13,7 @@ import MouseGlowEffect from './mouse-glow-effect';
 import ProgressViewerCard from './progress-viewer-card';
 import VerificationQueue from './verification-queue';
 import TodaysTasks from './todays-tasks';
-import GoalsHighlights from './goals-highlights';
+import GoalsHighlights, { type GoalHighlightsItem } from './goals-highlights';
 import { useUser } from '@/contexts/UserContext';
 import { useDashboardJournalPulse } from '@/hooks/useJournal';
 import JournalEntryInteractions from '@/components/journal/JournalEntryInteractions';
@@ -90,12 +91,15 @@ export default function DashboardContent({
   }, []);
 
   const rawInstances = useConvexQuery(api.taskInstances.listForDate, { date: todayStart });
+  const dashboardGoals = useConvexQuery(api.goals.list);
   const partnerPendingVerificationInstances = useConvexQuery(
     (api as any).taskInstances.listPartnerPendingVerification,
     hasPartner ? { limit: 25 } : "skip"
   );
   const markComplete = useConvexMutation(api.taskInstances.markComplete);
   const submitVerification = useConvexMutation(api.taskInstances.submitVerification);
+  const reviewInstanceVerification = useConvexMutation((api as any).taskInstances.partnerReviewVerification);
+  const reviewLegacyTaskVerification = useConvexMutation((api as any).tasks.partnerReviewVerificationByPartner);
   const uploadVerificationAttachment = useConvexAction((api as any).taskInstances.uploadVerificationAttachment);
   const { data: journalPulse, isLoading: isJournalPulseLoading } = useDashboardJournalPulse();
 
@@ -122,6 +126,7 @@ export default function DashboardContent({
         switch (inst.status) {
           case "completed": return "completed" as const;
           case "pending-verification": return "pending-verification" as const;
+          case "pending_verification": return "pending-verification" as const;
           case "missed": return "failed" as const;
           case "skipped": return "failed" as const;
           case "rejected": return "rejected" as const;
@@ -145,6 +150,92 @@ export default function DashboardContent({
     });
   }, [rawInstances]);
 
+  const goalTodayStats = useMemo(() => {
+    const stats = new Map<string, { completed: number; total: number; pendingVerification: number }>();
+    if (!rawInstances) return stats;
+
+    for (const instance of rawInstances as any[]) {
+      const key = String(instance.goal_id);
+      const current = stats.get(key) || { completed: 0, total: 0, pendingVerification: 0 };
+      const normalizedStatus = String(instance.status || "");
+
+      current.total += 1;
+      if (normalizedStatus === "completed" || normalizedStatus === "verified") {
+        current.completed += 1;
+      }
+      if (normalizedStatus === "pending-verification" || normalizedStatus === "pending_verification") {
+        current.pendingVerification += 1;
+      }
+
+      stats.set(key, current);
+    }
+
+    return stats;
+  }, [rawInstances]);
+
+  const goalHighlights = useMemo<GoalHighlightsItem[] | undefined>(() => {
+    if (!dashboardGoals) return undefined;
+
+    return (dashboardGoals as any[]).map((goal) => {
+      const total = typeof goal.total === "number" ? goal.total : Array.isArray(goal.tasks) ? goal.tasks.length : 0;
+      const progress = typeof goal.progress === "number" ? goal.progress : 0;
+      const normalizedTotal = Math.max(0, total);
+      const normalizedProgress = normalizedTotal > 0 ? Math.max(0, Math.min(progress, normalizedTotal)) : 0;
+      const progressRatio = normalizedTotal > 0 ? normalizedProgress / normalizedTotal : 0;
+
+      const isShared = !!goal.shared_goal_group_id;
+      const today = goalTodayStats.get(String(goal._id)) || { completed: 0, total: 0, pendingVerification: 0 };
+      const pendingVerifications = today.pendingVerification > 0 ? today.pendingVerification : undefined;
+      const recentActivityText = today.total > 0 ? `${today.completed}/${today.total} done today` : undefined;
+
+      const status: GoalHighlightsItem["status"] =
+        normalizedTotal === 0
+          ? "on-track"
+          : normalizedProgress >= normalizedTotal
+          ? "completed"
+          : progressRatio >= 0.8
+            ? "ahead"
+            : progressRatio >= 0.45
+              ? "on-track"
+              : "needs-attention";
+
+      const hasTimeBoundTask = Array.isArray(goal.tasks)
+        ? goal.tasks.some(
+          (task: any) =>
+            task?.verification_mode === "time-window" || task?.accountability_type === "time_bound_action"
+        )
+        : false;
+
+      const priority: GoalHighlightsItem["priority"] =
+        pendingVerifications || status === "needs-attention"
+          ? "high"
+          : status === "on-track"
+            ? "medium"
+            : "low";
+
+      const color =
+        typeof goal.color === "string" && goal.color.trim().length > 0
+          ? goal.color
+          : isShared
+            ? "#19A1E5"
+            : "#10B981";
+
+      return {
+        id: String(goal._id),
+        name: typeof goal.name === "string" ? goal.name : "Untitled Goal",
+        type: isShared ? "shared" : "personal",
+        progress: normalizedProgress,
+        total: normalizedTotal,
+        status,
+        priority,
+        accountabilityType: hasTimeBoundTask || goal.accountability_type === "time_bound_action" ? "time-bound" : "visual",
+        pendingVerifications,
+        color,
+        recentActivityText,
+      };
+    });
+  }, [dashboardGoals, goalTodayStats]);
+
   const verificationQueueItems = useMemo(() => {
     if (!partnerPendingVerificationInstances) return [];
     return partnerPendingVerificationInstances.map((inst: any) => {
@@ -153,6 +244,7 @@ export default function DashboardContent({
       const evidenceUrl = typeof inst.verification_evidence_url === "string" ? inst.verification_evidence_url : undefined;
       return {
         id: String(inst._id),
+        sourceType: inst.source_type === "task" ? "task" : "task_instance",
         taskName: inst.task_name || "Task",
         partnerName: resolvedPartnerName,
         partnerInitials: getInitials(resolvedPartnerName),
@@ -165,7 +257,7 @@ export default function DashboardContent({
     });
   }, [partnerPendingVerificationInstances, partnerName]);
 
-  const pendingVerificationCount = verificationQueueItems.length || pendingVerifications;
+  const isPartnerQueueLoading = !!hasPartner && partnerPendingVerificationInstances === undefined;
 
   const handleTaskComplete = async (taskId: string) => {
     try {
@@ -198,11 +290,53 @@ export default function DashboardContent({
   };
 
   const handleVerify = (itemId: string) => {
-    console.log("Verified item:", itemId);
+    const item = verificationQueueItems.find((row: any) => row.id === itemId);
+    if (!item) return;
+
+    (async () => {
+      try {
+        if (item.sourceType === "task") {
+          await reviewLegacyTaskVerification({
+            id: itemId as any,
+            decision: "approved",
+          });
+        } else {
+          await reviewInstanceVerification({
+            instance_id: itemId as any,
+            decision: "approved",
+          });
+        }
+        toast.success("Task approved.");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to approve task.");
+      }
+    })();
   };
 
   const handleReject = (itemId: string, reason: string) => {
-    console.log("Rejected item:", itemId, "Reason:", reason);
+    const item = verificationQueueItems.find((row: any) => row.id === itemId);
+    if (!item) return;
+
+    (async () => {
+      try {
+        if (item.sourceType === "task") {
+          await reviewLegacyTaskVerification({
+            id: itemId as any,
+            decision: "rejected",
+            rejection_reason: reason,
+          });
+        } else {
+          await reviewInstanceVerification({
+            instance_id: itemId as any,
+            decision: "rejected",
+            rejection_reason: reason,
+          });
+        }
+        toast.success("Task rejected. Feedback sent.");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to reject task.");
+      }
+    })();
   };
 
   if (isLoading) {
@@ -274,9 +408,15 @@ export default function DashboardContent({
         </motion.section>
       </MouseGlowEffect>
 
-      {pendingVerificationCount > 0 && (
+      {hasPartner && (
         <motion.section variants={itemVariants}>
-          <VerificationQueue items={verificationQueueItems} onVerify={handleVerify} onReject={handleReject} />
+          {isPartnerQueueLoading ? (
+            <div className="rounded-xl border border-cool-gray bg-white p-4 text-sm text-stone-gray shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 sm:p-6">
+              Loading verification queue...
+            </div>
+          ) : (
+            <VerificationQueue items={verificationQueueItems} onVerify={handleVerify} onReject={handleReject} />
+          )}
         </motion.section>
       )}
 
@@ -345,7 +485,7 @@ export default function DashboardContent({
       </motion.section>
 
       <motion.section variants={itemVariants}>
-        <GoalsHighlights />
+        <GoalsHighlights goals={goalHighlights} />
       </motion.section>
 
       <motion.section variants={itemVariants}>

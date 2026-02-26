@@ -48,7 +48,7 @@ export default function ThisWeekTab({
   const statusBadge = (task: any) => {
     const status = String(task.status || "pending");
     if (status === "completed" || status === "verified") return "Completed";
-    if (status === "pending-verification") return "Awaiting review";
+    if (status === "pending-verification" || status === "pending_verification") return "Awaiting review";
     if (status === "rejected") return "Rejected";
     if (status === "missed" || status === "skipped" || status === "failed") return "Not completed";
     return "Pending";

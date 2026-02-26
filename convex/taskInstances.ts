@@ -203,6 +203,11 @@ function shouldTaskRunOnDay(task: any, dayOfWeek: string): boolean {
     return dayOfWeek === "sun";
 }
 
+function isAwaitingVerificationStatus(status?: string): boolean {
+    const normalized = String(status || "");
+    return normalized === "pending-verification" || normalized === "pending_verification";
+}
+
 function getTaskStartWeekByTaskId(goal: any, tasks: any[]): Map<string, number> {
     const map = new Map<string, number>();
     if (!goal?.ai_plan_json || !Array.isArray(tasks) || tasks.length === 0) return map;
@@ -433,7 +438,7 @@ export const getGoalExecutionView = query({
                 const status = instance.status;
                 if (status === "completed" || status === "verified") {
                     acc.completed += 1;
-                } else if (status === "pending-verification") {
+                } else if (isAwaitingVerificationStatus(status)) {
                     acc.awaitingReview += 1;
                 } else if (status === "missed" || status === "skipped" || status === "failed") {
                     acc.notCompleted += 1;
@@ -488,11 +493,43 @@ export const listPartnerPendingVerification = query({
             .order("desc")
             .take(300);
 
-        const pendingVerification = partnerInstances
-            .filter((instance: any) => instance.status === "pending-verification")
+        const pendingVerificationInstances = partnerInstances
+            .filter((instance: any) => {
+                return isAwaitingVerificationStatus(instance.status);
+            });
+
+        const partnerGoals = await ctx.db
+            .query("goals")
+            .withIndex("by_user", (q) => q.eq("user_id", user.current_partner_id!))
+            .filter((q) => q.eq(q.field("is_archived"), false))
+            .collect();
+
+        const pendingVerificationTasks: any[] = [];
+        for (const goal of partnerGoals) {
+            const goalTasks = await ctx.db
+                .query("tasks")
+                .withIndex("by_goal", (q) => q.eq("goal_id", goal._id))
+                .collect();
+            for (const task of goalTasks) {
+                if (!isAwaitingVerificationStatus(task.status)) continue;
+                pendingVerificationTasks.push({
+                    _id: task._id,
+                    task_id: task._id,
+                    goal_id: goal._id,
+                    user_id: user.current_partner_id,
+                    status: "pending-verification",
+                    verification_submitted_at: task.verification_submitted_at,
+                    verification_evidence_url: undefined,
+                    updated_at: task.updated_at,
+                    source_type: "task",
+                });
+            }
+        }
+
+        const pendingVerification = [...pendingVerificationInstances, ...pendingVerificationTasks]
             .sort(
                 (a: any, b: any) =>
-                    (b.verification_submitted_at ?? b.updated_at) - (a.verification_submitted_at ?? a.updated_at)
+                    (b.verification_submitted_at ?? b.updated_at ?? 0) - (a.verification_submitted_at ?? a.updated_at ?? 0)
             )
             .slice(0, safeLimit);
 
@@ -529,6 +566,275 @@ export const listPartnerPendingVerification = query({
                 };
             })
         );
+    },
+});
+
+/**
+ * Partner page data: partner day tasks + recent partner activity.
+ */
+export const getPartnerViewData = query({
+    args: {
+        activity_limit: v.optional(v.number()),
+        activity_days: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            return {
+                day_tasks: [],
+                activities: [],
+                timezone: "UTC",
+                day_start: 0,
+                day_end: 0,
+            };
+        }
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .unique();
+
+        if (!user?.current_partner_id) {
+            return {
+                day_tasks: [],
+                activities: [],
+                timezone: "UTC",
+                day_start: 0,
+                day_end: 0,
+            };
+        }
+
+        const partner = await ctx.db.get(user.current_partner_id);
+        const partnerTimeZone = normalizeTimeZone(partner?.timezone);
+        const dayStart = startOfDayInTimeZone(Date.now(), partnerTimeZone);
+        const dayEnd = dayStart + DAY_MS - 1;
+        const activityLimit = Math.max(1, Math.min(args.activity_limit ?? 20, 100));
+        const activityDays = Math.max(1, Math.min(args.activity_days ?? 7, 30));
+        const activityStart = dayStart - (activityDays - 1) * DAY_MS;
+
+        const dayInstances = await ctx.db
+            .query("task_instances")
+            .withIndex("by_user_date", (q) =>
+                q.eq("user_id", user.current_partner_id!).gte("instance_date", dayStart).lte("instance_date", dayEnd)
+            )
+            .collect();
+
+        const recentInstances = await ctx.db
+            .query("task_instances")
+            .withIndex("by_user_date", (q) =>
+                q.eq("user_id", user.current_partner_id!).gte("instance_date", activityStart).lte("instance_date", dayEnd)
+            )
+            .collect();
+
+        const partnerGoals = await ctx.db
+            .query("goals")
+            .withIndex("by_user", (q) => q.eq("user_id", user.current_partner_id!))
+            .filter((q) => q.eq(q.field("is_archived"), false))
+            .collect();
+
+        const goalCache = new Map<string, any>();
+        for (const goal of partnerGoals) {
+            goalCache.set(String(goal._id), goal);
+        }
+
+        const goalTasks: any[] = [];
+        for (const goal of partnerGoals) {
+            const rows = await ctx.db
+                .query("tasks")
+                .withIndex("by_goal", (q) => q.eq("goal_id", goal._id))
+                .collect();
+            goalTasks.push(...rows);
+        }
+
+        const taskCache = new Map<string, any>();
+        for (const task of goalTasks) {
+            taskCache.set(String(task._id), task);
+        }
+
+        const getTask = async (taskId: any) => {
+            const key = String(taskId);
+            if (taskCache.has(key)) return taskCache.get(key);
+            const row = await ctx.db.get(taskId);
+            taskCache.set(key, row);
+            return row;
+        };
+
+        const getGoal = async (goalId: any) => {
+            const key = String(goalId);
+            if (goalCache.has(key)) return goalCache.get(key);
+            const row = await ctx.db.get(goalId);
+            goalCache.set(key, row);
+            return row;
+        };
+
+        const toUiStatus = (status?: string): "todo" | "completed" | "skipped" | "awaiting-verification" => {
+            if (isAwaitingVerificationStatus(status)) return "awaiting-verification";
+            if (status === "completed" || status === "verified") return "completed";
+            if (status === "pending") return "todo";
+            return "skipped";
+        };
+
+        const toTimeWindowLabel = (task: any): string | undefined => {
+            if (!task) return undefined;
+            if (task.time_window_start && task.time_window_end) {
+                return `${task.time_window_start} - ${task.time_window_end}`;
+            }
+            if (task.time_window_start) return `${task.time_window_start}`;
+            if (task.time_window_end) return `${task.time_window_end}`;
+            return undefined;
+        };
+
+        const isImageUrl = (value?: string) => {
+            if (!value) return false;
+            return /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)(\?|$)/i.test(value);
+        };
+
+        const dayTaskRows = await Promise.all(
+            dayInstances.map(async (instance: any) => {
+                const task = await getTask(instance.task_id);
+                return {
+                    id: `instance:${String(instance._id)}`,
+                    description: task?.name ?? "Task",
+                    scheduledTime: toTimeWindowLabel(task),
+                    status: toUiStatus(instance.status),
+                    progress: undefined,
+                    attachments: {
+                        photos: isImageUrl(instance.verification_evidence_url) ? [instance.verification_evidence_url] : [],
+                        notes: undefined,
+                    },
+                    source_type: "task_instance",
+                    source_id: String(instance._id),
+                    timestamp: instance.updated_at ?? instance.instance_date ?? 0,
+                    raw_status: instance.status,
+                };
+            })
+        );
+
+        const legacyTodayRows = goalTasks
+            .filter((task: any) => {
+                if (task.is_template_task === true) return false;
+                const due = Number(task.due_date ?? 0);
+                return due >= dayStart && due <= dayEnd;
+            })
+            .map((task: any) => ({
+                id: `task:${String(task._id)}`,
+                description: task.name ?? "Task",
+                scheduledTime: toTimeWindowLabel(task),
+                status: toUiStatus(task.status),
+                progress: undefined,
+                attachments: { photos: [], notes: undefined },
+                source_type: "task",
+                source_id: String(task._id),
+                timestamp: task.updated_at ?? task.due_date ?? 0,
+                raw_status: task.status,
+            }));
+
+        const dayTaskMap = new Map<string, any>();
+        for (const row of dayTaskRows) {
+            dayTaskMap.set(row.id, row);
+        }
+        for (const row of legacyTodayRows) {
+            const duplicate = Array.from(dayTaskMap.values()).find((item) => item.source_id === row.source_id);
+            if (!duplicate) dayTaskMap.set(row.id, row);
+        }
+        const dayTasks = Array.from(dayTaskMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+
+        const recentActivityFromInstances = await Promise.all(
+            recentInstances
+                .filter((instance: any) => {
+                    const s = String(instance.status || "");
+                    return s !== "pending";
+                })
+                .map(async (instance: any) => {
+                    const task = await getTask(instance.task_id);
+                    const goal = await getGoal(instance.goal_id);
+                    const status = String(instance.status || "");
+                    const timestamp =
+                        instance.verification_submitted_at ??
+                        instance.completed_at ??
+                        instance.updated_at ??
+                        instance.instance_date ??
+                        0;
+
+                    let summary = `Updated "${task?.name ?? "Task"}"`;
+                    let type: "task-completion" | "reflection" | "system-update" | "achievement" | "duo-challenge" = "system-update";
+                    if (isAwaitingVerificationStatus(status)) {
+                        summary = `Submitted "${task?.name ?? "Task"}" for verification`;
+                        type = "task-completion";
+                    } else if (status === "verified" || status === "completed") {
+                        summary = `Completed "${task?.name ?? "Task"}"`;
+                        type = "task-completion";
+                    } else if (status === "rejected") {
+                        summary = `Verification rejected for "${task?.name ?? "Task"}"`;
+                        type = "system-update";
+                    } else if (status === "missed" || status === "skipped" || status === "failed") {
+                        summary = `Did not complete "${task?.name ?? "Task"}"`;
+                        type = "system-update";
+                    }
+
+                    return {
+                        id: `activity-instance:${String(instance._id)}`,
+                        type,
+                        timestamp,
+                        summary,
+                        details: {
+                            notes: goal?.name ? `Goal: ${goal.name}` : undefined,
+                            photo: isImageUrl(instance.verification_evidence_url) ? instance.verification_evidence_url : undefined,
+                        },
+                    };
+                })
+        );
+
+        const recentLegacyActivity = goalTasks
+            .filter((task: any) => {
+                const updatedAt = Number(task.updated_at ?? 0);
+                const status = String(task.status || "");
+                if (updatedAt < activityStart || updatedAt > dayEnd) return false;
+                if (task.is_template_task === true) return false;
+                return status !== "pending";
+            })
+            .map((task: any) => {
+                const status = String(task.status || "");
+                const goal = goalCache.get(String(task.goal_id));
+                let summary = `Updated "${task.name ?? "Task"}"`;
+                let type: "task-completion" | "reflection" | "system-update" | "achievement" | "duo-challenge" = "system-update";
+                if (isAwaitingVerificationStatus(status)) {
+                    summary = `Submitted "${task.name ?? "Task"}" for verification`;
+                    type = "task-completion";
+                } else if (status === "verified" || status === "completed") {
+                    summary = `Completed "${task.name ?? "Task"}"`;
+                    type = "task-completion";
+                } else if (status === "rejected") {
+                    summary = `Verification rejected for "${task.name ?? "Task"}"`;
+                    type = "system-update";
+                } else if (status === "missed" || status === "skipped" || status === "failed") {
+                    summary = `Did not complete "${task.name ?? "Task"}"`;
+                    type = "system-update";
+                }
+
+                return {
+                    id: `activity-task:${String(task._id)}`,
+                    type,
+                    timestamp: Number(task.updated_at ?? 0),
+                    summary,
+                    details: {
+                        notes: goal?.name ? `Goal: ${goal.name}` : undefined,
+                        photo: undefined,
+                    },
+                };
+            });
+
+        const activities = [...recentActivityFromInstances, ...recentLegacyActivity]
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, activityLimit);
+
+        return {
+            day_tasks: dayTasks,
+            activities,
+            timezone: partnerTimeZone,
+            day_start: dayStart,
+            day_end: dayEnd,
+        };
     },
 });
 
@@ -608,6 +914,70 @@ export const submitVerification = mutation({
                 }
             );
         }
+    },
+});
+
+/**
+ * Partner review for a submitted task instance verification.
+ */
+export const partnerReviewVerification = mutation({
+    args: {
+        instance_id: v.id("task_instances"),
+        decision: v.union(v.literal("approved"), v.literal("rejected")),
+        rejection_reason: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthenticated");
+
+        const instance = await ctx.db.get(args.instance_id);
+        if (!instance) throw new Error("Instance not found");
+
+        const reviewer = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .unique();
+        if (!reviewer) throw new Error("User not found");
+
+        const owner = await ctx.db.get(instance.user_id);
+        if (!owner) throw new Error("Task owner not found");
+
+        const isPartnerReviewer =
+            owner.current_partner_id === reviewer._id && reviewer.current_partner_id === owner._id;
+        if (!isPartnerReviewer) throw new Error("Unauthorized");
+
+        if (!isAwaitingVerificationStatus(instance.status)) {
+            throw new Error("Task instance is not awaiting verification");
+        }
+
+        const approved = args.decision === "approved";
+        const now = Date.now();
+        await ctx.db.patch(args.instance_id, {
+            status: approved ? "verified" : "rejected",
+            verification_outcome: args.decision,
+            verification_reviewer_type: "partner",
+            verification_rejection_reason: approved ? undefined : args.rejection_reason,
+            updated_at: now,
+        });
+
+        const task = await ctx.db.get(instance.task_id);
+        await ctx.scheduler.runAfter(
+            0,
+            (internal as any).notifications.dispatchEvent,
+            {
+                eventType: approved ? "verification_approved" : "verification_rejected",
+                recipientUserId: owner._id,
+                actorUserId: reviewer._id,
+                context: JSON.stringify({
+                    taskId: String(instance.task_id),
+                    goalId: String(instance.goal_id),
+                    taskName: task?.name,
+                    rejectionReason: args.rejection_reason,
+                }),
+            }
+        );
+
+        return { ok: true };
     },
 });
 
