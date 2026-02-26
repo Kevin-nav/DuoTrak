@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
+from urllib.parse import urlparse
 
 from app.core.config import settings
 from app.api.v1.router import api_router
@@ -41,31 +42,29 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
 
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# Set up CORS middleware
-# Define allowed origins for local development to handle both localhost and 127.0.0.1
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+def _normalize_origin(url: str | None) -> str | None:
+    if not url:
+        return None
+    parsed = urlparse(url.strip())
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}"
 
-# In a production environment, you would fetch this from settings
-# if os.environ.get("ENV") == "production":
-#     allowed_origins = [settings.CLIENT_URL]
 
-# Set up CORS middleware
-# Define allowed origins for local development to handle both localhost and 127.0.0.1
-allowed_origins = [
+allowed_origins = {
     "http://127.0.0.1:3000",
     "http://localhost:3000",
-]
+    "https://duotrak.org",
+    "https://www.duotrak.org",
+}
 
-# In a production environment, you would fetch this from settings
-# if os.environ.get("ENV") == "production":
-#     allowed_origins = [settings.CLIENT_URL]
+client_origin = _normalize_origin(getattr(settings, "CLIENT_ORIGIN_URL", None))
+if client_origin:
+    allowed_origins.add(client_origin)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=sorted(allowed_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
