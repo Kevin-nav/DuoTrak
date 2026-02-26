@@ -15,6 +15,7 @@ import VerificationQueue from './verification-queue';
 import TodaysTasks from './todays-tasks';
 import GoalsHighlights, { type GoalHighlightsItem } from './goals-highlights';
 import { useUser } from '@/contexts/UserContext';
+import BirthdayLaunchWelcome from '@/components/dashboard/BirthdayLaunchWelcome';
 import { useDashboardJournalPulse } from '@/hooks/useJournal';
 import JournalEntryInteractions from '@/components/journal/JournalEntryInteractions';
 import { fileToBase64 } from '@/lib/files/base64';
@@ -60,6 +61,9 @@ const isLikelyImageUrl = (url?: string): boolean => {
   return /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)(\?|$)/i.test(url);
 };
 
+const SPECIAL_BIRTHDAY_EMAIL = "charlenelaar26@gmail.com";
+const SPECIAL_BIRTHDAY_WELCOME_STORAGE_PREFIX = "duotrak:birthday-welcome:seen:v1";
+
 export default function DashboardContent({
   userName,
   streak,
@@ -72,6 +76,7 @@ export default function DashboardContent({
   const { userDetails } = useUser();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [showBirthdayWelcome, setShowBirthdayWelcome] = useState(false);
 
   useEffect(() => {
     if (userDetails) {
@@ -82,6 +87,23 @@ export default function DashboardContent({
       }
     }
   }, [userDetails, router]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const normalizedEmail = userDetails?.email?.trim().toLowerCase();
+    if (!normalizedEmail || normalizedEmail !== SPECIAL_BIRTHDAY_EMAIL) {
+      setShowBirthdayWelcome(false);
+      return;
+    }
+
+    const storageKey = `${SPECIAL_BIRTHDAY_WELCOME_STORAGE_PREFIX}:${normalizedEmail}`;
+    const hasSeenWelcome = window.localStorage.getItem(storageKey);
+    if (hasSeenWelcome) return;
+
+    window.localStorage.setItem(storageKey, new Date().toISOString());
+    setShowBirthdayWelcome(true);
+  }, [userDetails?.email]);
 
   // ── Real task instance data ──
   const todayStart = useMemo(() => {
@@ -367,7 +389,10 @@ export default function DashboardContent({
   };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
+    <>
+      <BirthdayLaunchWelcome open={showBirthdayWelcome} onClose={() => setShowBirthdayWelcome(false)} />
+
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <DuoStreakHero
         streakCount={streak}
         partnerName={partnerName}
@@ -515,6 +540,7 @@ export default function DashboardContent({
       </motion.section>
 
       <QuickActions hasPartner={!!hasPartner} />
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
