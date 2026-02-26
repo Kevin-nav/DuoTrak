@@ -69,13 +69,17 @@ jobs:
           version: latest
 
       - name: Configure kubeconfig (optional)
-        if: ${{ secrets.KUBE_CONFIG != '' }}
         env:
           KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         run: |
-          mkdir -p "$HOME/.kube"
-          echo "$KUBE_CONFIG" > "$HOME/.kube/config"
-          chmod 600 "$HOME/.kube/config"
+          if [ -n "$KUBE_CONFIG" ]; then
+            mkdir -p "$HOME/.kube"
+            echo "$KUBE_CONFIG" > "$HOME/.kube/config"
+            chmod 600 "$HOME/.kube/config"
+            echo "Using kubeconfig from GitHub secret."
+          else
+            echo "KUBE_CONFIG secret not set. Using local runner kubeconfig."
+          fi
 
       - name: Verify cluster access
         run: |
@@ -126,7 +130,6 @@ jobs:
           echo "- Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Send webhook notification
-        if: ${{ secrets.DEPLOY_WEBHOOK_URL != '' }}
         env:
           DEPLOY_RESULT: ${{ needs.deploy.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -134,6 +137,11 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
         run: |
+          if [ -z "$DEPLOY_WEBHOOK_URL" ]; then
+            echo "DEPLOY_WEBHOOK_URL not set. Skipping webhook notification."
+            exit 0
+          fi
+
           if [ "$DEPLOY_RESULT" = "success" ]; then
             STATUS_TEXT="SUCCESS"
           else
