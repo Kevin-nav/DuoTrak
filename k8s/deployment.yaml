@@ -33,6 +33,11 @@ spec:
                 secretKeyRef:
                   name: duotrak-secrets
                   key: secret-key
+            - name: INTERNAL_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: duotrak-secrets
+                  key: internal-api-secret
             - name: FIREBASE_SERVICE_ACCOUNT_JSON_PATH
               value: "/etc/secrets/firebase-adminsdk.json"
           volumeMounts:
