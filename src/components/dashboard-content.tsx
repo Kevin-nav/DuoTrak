@@ -37,12 +37,34 @@ const getInitials = (name: string = "") => {
     .toUpperCase();
 };
 
+const formatRelativeTime = (timestamp?: number): string => {
+  if (!timestamp) return "Just now";
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 60_000) return "Just now";
+  if (diffMs < 3_600_000) return `${Math.max(1, Math.floor(diffMs / 60_000))} min ago`;
+  if (diffMs < 86_400_000) return `${Math.max(1, Math.floor(diffMs / 3_600_000))}h ago`;
+  return `${Math.max(1, Math.floor(diffMs / 86_400_000))}d ago`;
+};
+
+const getProofTypeLabel = (mode?: string): string => {
+  if (mode === "photo") return "Photo";
+  if (mode === "video") return "Video";
+  if (mode === "voice") return "Audio";
+  if (mode === "time-window") return "Timer";
+  return "Proof";
+};
+
+const isLikelyImageUrl = (url?: string): boolean => {
+  if (!url) return false;
+  return /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)(\?|$)/i.test(url);
+};
+
 export default function DashboardContent({
   userName,
   streak,
   hasPartner,
   partnerName,
-  pendingVerifications = 2,
+  pendingVerifications = 0,
   userProgress,
   partnerProgress,
 }: DashboardContentProps) {
@@ -68,6 +90,10 @@ export default function DashboardContent({
   }, []);
 
   const rawInstances = useConvexQuery(api.taskInstances.listForDate, { date: todayStart });
+  const partnerPendingVerificationInstances = useConvexQuery(
+    (api as any).taskInstances.listPartnerPendingVerification,
+    hasPartner ? { limit: 25 } : "skip"
+  );
   const markComplete = useConvexMutation(api.taskInstances.markComplete);
   const submitVerification = useConvexMutation(api.taskInstances.submitVerification);
   const uploadVerificationAttachment = useConvexAction((api as any).taskInstances.uploadVerificationAttachment);
@@ -118,6 +144,28 @@ export default function DashboardContent({
       };
     });
   }, [rawInstances]);
+
+  const verificationQueueItems = useMemo(() => {
+    if (!partnerPendingVerificationInstances) return [];
+    return partnerPendingVerificationInstances.map((inst: any) => {
+      const resolvedPartnerName = inst.partner_display_name || partnerName || "Partner";
+      const proofType = getProofTypeLabel(inst.task_verification_mode || undefined);
+      const evidenceUrl = typeof inst.verification_evidence_url === "string" ? inst.verification_evidence_url : undefined;
+      return {
+        id: String(inst._id),
+        taskName: inst.task_name || "Task",
+        partnerName: resolvedPartnerName,
+        partnerInitials: getInitials(resolvedPartnerName),
+        imageUrl: isLikelyImageUrl(evidenceUrl) ? evidenceUrl : undefined,
+        submittedAt: formatRelativeTime(inst.verification_submitted_at ?? inst.updated_at),
+        goalName: inst.goal_name || "Goal",
+        goalType: inst.goal_type === "shared" ? "shared" : "personal",
+        proofType,
+      };
+    });
+  }, [partnerPendingVerificationInstances, partnerName]);
+
+  const pendingVerificationCount = verificationQueueItems.length || pendingVerifications;
 
   const handleTaskComplete = async (taskId: string) => {
     try {
@@ -226,9 +274,9 @@ export default function DashboardContent({
         </motion.section>
       </MouseGlowEffect>
 
-      {pendingVerifications > 0 && (
+      {pendingVerificationCount > 0 && (
         <motion.section variants={itemVariants}>
-          <VerificationQueue onVerify={handleVerify} onReject={handleReject} />
+          <VerificationQueue items={verificationQueueItems} onVerify={handleVerify} onReject={handleReject} />
         </motion.section>
       )}
 

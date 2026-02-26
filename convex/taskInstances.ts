@@ -1,7 +1,7 @@
 import { action, internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { uploadToR2 } from "./lib/r2";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -461,6 +461,78 @@ export const getGoalExecutionView = query({
 });
 
 /**
+ * List partner task instances currently awaiting verification review.
+ */
+export const listPartnerPendingVerification = query({
+    args: {
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return [];
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_firebase_uid", (q) => q.eq("firebase_uid", identity.subject))
+            .unique();
+
+        if (!user?.current_partner_id) return [];
+
+        const safeLimit = Math.max(1, Math.min(args.limit ?? 20, 100));
+        const partner = await ctx.db.get(user.current_partner_id);
+        const partnerDisplayName = partner?.full_name || partner?.nickname || "Partner";
+
+        const partnerInstances = await ctx.db
+            .query("task_instances")
+            .withIndex("by_user_date", (q) => q.eq("user_id", user.current_partner_id!))
+            .order("desc")
+            .take(300);
+
+        const pendingVerification = partnerInstances
+            .filter((instance: any) => instance.status === "pending-verification")
+            .sort(
+                (a: any, b: any) =>
+                    (b.verification_submitted_at ?? b.updated_at) - (a.verification_submitted_at ?? a.updated_at)
+            )
+            .slice(0, safeLimit);
+
+        const taskCache = new Map<string, any>();
+        const goalCache = new Map<string, any>();
+
+        const getTask = async (taskId: any) => {
+            const key = String(taskId);
+            if (!taskCache.has(key)) {
+                taskCache.set(key, await ctx.db.get(taskId));
+            }
+            return taskCache.get(key);
+        };
+
+        const getGoal = async (goalId: any) => {
+            const key = String(goalId);
+            if (!goalCache.has(key)) {
+                goalCache.set(key, await ctx.db.get(goalId));
+            }
+            return goalCache.get(key);
+        };
+
+        return await Promise.all(
+            pendingVerification.map(async (instance: any) => {
+                const task = await getTask(instance.task_id);
+                const goal = await getGoal(instance.goal_id);
+                return {
+                    ...instance,
+                    task_name: task?.name ?? "Unknown task",
+                    task_verification_mode: task?.verification_mode ?? null,
+                    goal_name: goal?.name ?? "Unknown goal",
+                    goal_type: goal?.shared_goal_group_id ? "shared" : "personal",
+                    partner_display_name: partnerDisplayName,
+                };
+            })
+        );
+    },
+});
+
+/**
  * Mark a task instance as completed.
  */
 export const markComplete = mutation({
@@ -511,12 +583,31 @@ export const submitVerification = mutation({
 
         if (!user || instance.user_id !== user._id) throw new Error("Unauthorized");
 
+        const now = Date.now();
         await ctx.db.patch(args.instance_id, {
             status: "pending-verification",
-            verification_submitted_at: Date.now(),
+            verification_submitted_at: now,
             verification_evidence_url: args.evidence_url,
-            updated_at: Date.now(),
+            updated_at: now,
         });
+
+        if (user.current_partner_id) {
+            const task = await ctx.db.get(instance.task_id);
+            await ctx.scheduler.runAfter(
+                0,
+                (internal as any).notifications.dispatchEvent,
+                {
+                    eventType: "verification_requested",
+                    recipientUserId: user.current_partner_id,
+                    actorUserId: user._id,
+                    context: JSON.stringify({
+                        taskId: String(instance.task_id),
+                        goalId: String(instance.goal_id),
+                        taskName: task?.name,
+                    }),
+                }
+            );
+        }
     },
 });
 

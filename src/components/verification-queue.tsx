@@ -10,10 +10,11 @@ interface VerificationItem {
   taskName: string;
   partnerName: string;
   partnerInitials: string;
-  imageUrl: string;
+  imageUrl?: string;
   submittedAt: string;
   goalName: string;
   goalType: "personal" | "shared";
+  proofType?: string;
 }
 
 interface VerificationQueueProps {
@@ -23,28 +24,7 @@ interface VerificationQueueProps {
 }
 
 export default function VerificationQueue({
-  items = [
-    {
-      id: "1",
-      taskName: "Morning Workout",
-      partnerName: "John",
-      partnerInitials: "JD",
-      imageUrl: "/placeholder.svg?height=200&width=300",
-      submittedAt: "2 hours ago",
-      goalName: "Fitness Journey",
-      goalType: "shared",
-    },
-    {
-      id: "2",
-      taskName: "Healthy Breakfast",
-      partnerName: "John",
-      partnerInitials: "JD",
-      imageUrl: "/placeholder.svg?height=200&width=300",
-      submittedAt: "5 minutes ago",
-      goalName: "Nutrition Goals",
-      goalType: "shared",
-    },
-  ],
+  items = [],
   onVerify,
   onReject,
 }: VerificationQueueProps) {
@@ -173,19 +153,25 @@ export default function VerificationQueue({
                     </div>
                     <div className="flex items-center space-x-1 text-xs">
                       <Camera className="h-3 w-3 text-stone-gray dark:text-gray-400" />
-                      <span className="text-stone-gray dark:text-gray-400">Photo</span>
+                      <span className="text-stone-gray dark:text-gray-400">{item.proofType || "Proof"}</span>
                     </div>
                   </div>
 
-                  <div className="mb-3">
-                    <motion.img
-                      whileHover={{ scale: 1.01 }}
-                      src={item.imageUrl}
-                      alt={`${item.taskName} verification`}
-                      className="h-28 w-full cursor-pointer rounded-lg border border-cool-gray object-cover dark:border-gray-600 sm:h-32"
-                      onClick={() => setExpandedImage(item.imageUrl)}
-                    />
-                  </div>
+                  {item.imageUrl ? (
+                    <div className="mb-3">
+                      <motion.img
+                        whileHover={{ scale: 1.01 }}
+                        src={item.imageUrl}
+                        alt={`${item.taskName} verification`}
+                        className="h-28 w-full cursor-pointer rounded-lg border border-cool-gray object-cover dark:border-gray-600 sm:h-32"
+                        onClick={() => setExpandedImage(item.imageUrl || null)}
+                      />
+                    </div>
+                  ) : (
+                    <p className="mb-3 rounded-lg border border-cool-gray bg-gray-50 px-3 py-2 text-xs text-stone-gray dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                      Proof submitted. Open the task details for full review.
+                    </p>
+                  )}
 
                   <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
                     <MouseGlowEffect glowColor="#10B981" intensity="medium">

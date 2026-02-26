@@ -713,6 +713,10 @@ export const dispatchEvent: any = internalAction({
           actionable: true,
           related_entity_type: "task",
           related_entity_id: context.taskId || undefined,
+          metadata_json: JSON.stringify({
+            actorUserId: args.actorUserId ? String(args.actorUserId) : undefined,
+            goalId: context.goalId || undefined,
+          }),
           sendEmail: true,
         };
         break;
@@ -954,6 +958,18 @@ export const dispatchEvent: any = internalAction({
       }
     }
 
+    let shouldSendEmail = !!payload.sendEmail;
+    if (payload.type === "verification_requested" && shouldSendEmail) {
+      const hasAnyPriorVerificationRequest = await ctx.runQuery((internal as any).notifications.hasRecentNotification, {
+        userId: args.recipientUserId,
+        type: payload.type,
+        relatedEntityType: undefined,
+        relatedEntityId: undefined,
+        sinceMs: 0,
+      });
+      shouldSendEmail = !hasAnyPriorVerificationRequest;
+    }
+
     const notificationId: Id<"notifications"> | null = await ctx.runMutation((internal as any).notifications.createInApp, {
       userId: args.recipientUserId,
       type: payload.type,
@@ -967,7 +983,7 @@ export const dispatchEvent: any = internalAction({
       metadata_json: payload.metadata_json,
     });
 
-    if (payload.sendEmail && notificationId) {
+    if (shouldSendEmail && notificationId) {
       await ctx.scheduler.runAfter(0, (internal as any).notifications.sendEmailForNotification, {
         notificationId,
       });
