@@ -9,7 +9,7 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lock* ./
 RUN \
-  if [ -f package-lock.json ]; then npm install --no-audit --no-fund; \
+  if [ -f package-lock.json ]; then npm install --legacy-peer-deps --no-audit --no-fund; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
   elif [ -f bun.lock ]; then \
