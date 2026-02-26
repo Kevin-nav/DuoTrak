@@ -6,10 +6,12 @@ import uuid
 from typing import Any, Dict, List
 
 from app.core.config import settings
+from app.core.redis_config import redis_client
 from app.services.goal_chat.conversation_manager import ConversationManager
 from app.services.goal_chat.plan_validator import PlanValidator
 from app.services.goal_chat.profile_engine import ProfileEngine
 from app.services.goal_chat.slot_tracker import SlotTracker
+from redis.exceptions import RedisError
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +21,46 @@ class GoalChatSessionService:
         self._ttl_seconds = int(ttl_seconds or settings.GOAL_CHAT_SESSION_TTL_SECONDS)
         self._sessions: Dict[str, Dict[str, Any]] = {}
         self._lock = asyncio.Lock()
+        self._redis = redis_client
+        self._key_prefix = "goal_chat_session"
 
         slot_tracker = SlotTracker()
         profile_engine = ProfileEngine()
         self._conversation_manager = ConversationManager(slot_tracker=slot_tracker, profile_engine=profile_engine)
         self._profile_engine = profile_engine
         self._plan_validator = PlanValidator(slot_tracker=slot_tracker)
+
+    def _key(self, session_id: str) -> str:
+        return f"{self._key_prefix}:{session_id}"
+
+    async def _redis_get_session(self, session_id: str) -> Dict[str, Any] | None:
+        try:
+            raw = await self._redis.get(self._key(session_id))
+        except RedisError as exc:
+            logger.warning("Goal chat Redis read failed for session %s: %s", session_id, exc)
+            return None
+
+        if not raw:
+            return None
+
+        try:
+            return _json.loads(raw)
+        except Exception:
+            logger.warning("Goal chat Redis payload is invalid JSON for session %s", session_id)
+            return None
+
+    async def _redis_set_session(self, session_id: str, session: Dict[str, Any]) -> None:
+        ttl = max(1, int(float(session["expires_at"]) - time.monotonic()))
+        try:
+            await self._redis.setex(self._key(session_id), ttl, _json.dumps(session))
+        except RedisError as exc:
+            logger.warning("Goal chat Redis write failed for session %s: %s", session_id, exc)
+
+    async def _redis_delete_session(self, session_id: str) -> None:
+        try:
+            await self._redis.delete(self._key(session_id))
+        except RedisError as exc:
+            logger.warning("Goal chat Redis delete failed for session %s: %s", session_id, exc)
 
     async def create_session(self, user_id: str | None, behavioral_summary: str | None) -> Dict[str, Any]:
         session_id = str(uuid.uuid4())
@@ -41,13 +77,19 @@ class GoalChatSessionService:
         }
         async with self._lock:
             self._sessions[session_id] = session_data
+            await self._redis_set_session(session_id, session_data)
         return session_data
 
     async def get_session(self, session_id: str) -> Dict[str, Any]:
         async with self._lock:
             session = self._sessions.get(session_id)
+            if session is None:
+                session = await self._redis_get_session(session_id)
+                if session is not None:
+                    self._sessions[session_id] = session
             if session is None or float(session["expires_at"]) <= time.monotonic():
                 self._sessions.pop(session_id, None)
+                await self._redis_delete_session(session_id)
                 raise KeyError("Goal chat session not found or expired.")
             return dict(session)
 
@@ -60,8 +102,13 @@ class GoalChatSessionService:
     ) -> Dict[str, Any]:
         async with self._lock:
             session = self._sessions.get(session_id)
+            if session is None:
+                session = await self._redis_get_session(session_id)
+                if session is not None:
+                    self._sessions[session_id] = session
             if session is None or float(session["expires_at"]) <= time.monotonic():
                 self._sessions.pop(session_id, None)
+                await self._redis_delete_session(session_id)
                 raise KeyError("Goal chat session not found or expired.")
 
             use_ai = (
@@ -99,6 +146,7 @@ class GoalChatSessionService:
             session["status"] = "ready" if conversation_complete else "collecting"
             session["expires_at"] = time.monotonic() + self._ttl_seconds
             self._sessions[session_id] = session
+            await self._redis_set_session(session_id, session)
 
             # Also run the old slot-based system for backward compat
             merged_slot_updates = self._conversation_manager._slot_tracker.merge_slots(
@@ -109,6 +157,7 @@ class GoalChatSessionService:
                 session.get("slots", {}), merged_slot_updates
             )
             self._sessions[session_id] = session
+            await self._redis_set_session(session_id, session)
 
             missing = self._conversation_manager._slot_tracker.missing_slots(session.get("slots", {}))
 
@@ -228,6 +277,7 @@ class GoalChatSessionService:
             if session_id in self._sessions:
                 self._sessions[session_id]["generated_plan"] = plan
                 self._sessions[session_id]["expires_at"] = time.monotonic() + self._ttl_seconds
+                await self._redis_set_session(session_id, self._sessions[session_id])
 
         return {"session_id": session_id, "plan": plan}
 
@@ -254,13 +304,19 @@ class GoalChatSessionService:
     async def patch_summary(self, session_id: str, summary_patch: Dict[str, Any]) -> Dict[str, Any]:
         async with self._lock:
             session = self._sessions.get(session_id)
+            if session is None:
+                session = await self._redis_get_session(session_id)
+                if session is not None:
+                    self._sessions[session_id] = session
             if session is None or float(session["expires_at"]) <= time.monotonic():
                 self._sessions.pop(session_id, None)
+                await self._redis_delete_session(session_id)
                 raise KeyError("Goal chat session not found or expired.")
 
             session["slots"] = self._conversation_manager._slot_tracker.merge_slots(session.get("slots", {}), summary_patch)
             session["expires_at"] = time.monotonic() + self._ttl_seconds
             self._sessions[session_id] = session
+            await self._redis_set_session(session_id, session)
 
         return await self.get_summary(session_id)
 
@@ -290,6 +346,7 @@ class GoalChatSessionService:
             if session_id in self._sessions:
                 self._sessions[session_id]["status"] = "finalized"
                 self._sessions[session_id]["expires_at"] = time.monotonic() + self._ttl_seconds
+                await self._redis_set_session(session_id, self._sessions[session_id])
 
         return {
             "session_id": session_id,
