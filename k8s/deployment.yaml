@@ -25,7 +25,7 @@ spec:
             - name: PORT
               value: "3000"
             - name: NEXT_PUBLIC_API_BASE_URL
-              value: "https://api.duotrak.com" # Update this
+              value: "https://api.duotrak.org"
             - name: FASTAPI_URL
               value: "http://duotrak-backend:8000" # Internal Cluster URL
             - name: SECRET_KEY

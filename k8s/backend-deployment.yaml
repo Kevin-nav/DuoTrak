@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duotrak-backend
+  namespace: default
+  labels:
+    app: duotrak-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: duotrak-backend
+  template:
+    metadata:
+      labels:
+        app: duotrak-backend
+    spec:
+      containers:
+        - name: duotrak-backend
+          image: ghcr.io/kevinnchorbuno/duotrak-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: CLIENT_ORIGIN_URL
+              value: "https://duotrak.org"
+          envFrom:
+            - secretRef:
+                name: duotrak-backend-env
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
