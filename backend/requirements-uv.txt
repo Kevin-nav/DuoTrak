@@ -12,7 +12,7 @@ google-genai==1.64.0
 httpx
 langchain-google-genai==4.2.1
 numpy
-pinecone-client
+pinecone>=8.1.0
 psycopg2-binary
 pydantic-settings
 PyJWT
