@@ -173,13 +173,15 @@ export default function JournalCalendarPanel({ spaceType }: JournalCalendarPanel
         </div>
       )}
 
-      <JournalDaySheet
-        date={selectedDay}
-        items={selectedItems}
-        isMobile={isMobile}
-        isOpen={isMobile && isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-      />
+      {isMobile ? (
+        <JournalDaySheet
+          date={selectedDay}
+          items={selectedItems}
+          isMobile
+          isOpen={isSheetOpen}
+          onClose={() => setIsSheetOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }
