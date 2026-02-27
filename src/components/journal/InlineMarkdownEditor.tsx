@@ -137,17 +137,20 @@ export default function InlineMarkdownEditor({
       <div
         ref={overlayRef}
         aria-hidden
-        className="pointer-events-none h-full overflow-auto px-3 py-2 text-sm leading-relaxed"
+        className="pointer-events-none h-full overflow-auto px-3 py-2 text-sm leading-6 font-sans"
       >
         {value.trim().length > 0 ? (
-          <div className="prose prose-sm max-w-none text-landing-espresso prose-p:my-1.5 prose-headings:my-2 prose-headings:text-landing-espresso">
+          <div className="max-w-none text-landing-espresso">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                p: ({ children }) => <p className="my-1.5 whitespace-pre-wrap">{children}</p>,
-                ul: ({ children }) => <ul className="my-1.5 list-disc pl-5">{children}</ul>,
-                ol: ({ children }) => <ol className="my-1.5 list-decimal pl-5">{children}</ol>,
-                li: ({ children }) => <li className="my-0.5">{children}</li>,
+                p: ({ children }) => <p className="m-0 whitespace-pre-wrap leading-6">{children}</p>,
+                h1: ({ children }) => <h1 className="m-0 text-base font-black leading-6">{children}</h1>,
+                h2: ({ children }) => <h2 className="m-0 text-[15px] font-extrabold leading-6">{children}</h2>,
+                h3: ({ children }) => <h3 className="m-0 text-sm font-bold leading-6">{children}</h3>,
+                ul: ({ children }) => <ul className="m-0 list-disc pl-5 leading-6">{children}</ul>,
+                ol: ({ children }) => <ol className="m-0 list-decimal pl-5 leading-6">{children}</ol>,
+                li: ({ children }) => <li className="m-0 leading-6">{children}</li>,
                 strong: ({ children }) => <strong className="font-black text-landing-espresso">{children}</strong>,
                 em: ({ children }) => <em className="italic text-landing-espresso">{children}</em>,
                 input: ({ checked }) => (
@@ -155,7 +158,7 @@ export default function InlineMarkdownEditor({
                     type="checkbox"
                     checked={!!checked}
                     readOnly
-                    className="mr-1.5 h-3.5 w-3.5 align-middle accent-landing-terracotta"
+                    className="mr-1.5 h-3.5 w-3.5 translate-y-[1px] align-middle accent-landing-terracotta"
                   />
                 ),
               }}
@@ -175,7 +178,7 @@ export default function InlineMarkdownEditor({
         onKeyDown={handleKeyDown}
         onScroll={handleScroll}
         spellCheck
-        className="absolute inset-0 h-full w-full resize-none bg-transparent px-3 py-2 text-sm leading-relaxed text-transparent caret-landing-espresso outline-none selection:bg-landing-terracotta/25"
+        className="absolute inset-0 h-full w-full resize-none bg-transparent px-3 py-2 text-sm leading-6 font-sans text-transparent caret-landing-espresso outline-none selection:bg-landing-terracotta/25"
       />
     </div>
   );
