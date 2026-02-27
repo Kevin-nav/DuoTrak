@@ -212,6 +212,98 @@ async function createJournalEvent(ctx: any, payload: {
   });
 }
 
+export const getActiveDuoPrompt = query({
+  args: { timezone: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const partnership = await getActivePartnershipForUser(ctx, user._id);
+    if (!partnership) return null;
+
+    const tz = args.timezone || "UTC";
+    const dayKey = new Date().toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
+
+    const active = await ctx.db
+      .query("journal_active_prompts")
+      .withIndex("by_partnership_day", (q) =>
+        q.eq("partnership_id", partnership._id).eq("day_key", dayKey)
+      )
+      .first();
+
+    if (active) {
+      const prompt = await ctx.db.get(active.prompt_id);
+      return {
+        ...active,
+        prompt_text: prompt?.text || "What's on your mind today?",
+      };
+    }
+
+    return null;
+  },
+});
+
+export const ensureActiveDuoPrompt = mutation({
+  args: { timezone: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const partnership = await getActivePartnershipForUser(ctx, user._id);
+    if (!partnership) return null;
+
+    const tz = args.timezone || "UTC";
+    const dayKey = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+
+    const existing = await ctx.db
+      .query("journal_active_prompts")
+      .withIndex("by_partnership_day", (q) =>
+        q.eq("partnership_id", partnership._id).eq("day_key", dayKey)
+      )
+      .first();
+
+    if (existing) return existing._id;
+
+    const allPrompts = await ctx.db
+      .query("journal_prompts")
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .take(50);
+
+    if (allPrompts.length === 0) return null;
+
+    const randomPrompt = allPrompts[Math.floor(Math.random() * allPrompts.length)];
+    const id = await ctx.db.insert("journal_active_prompts", {
+      partnership_id: partnership._id,
+      prompt_id: randomPrompt._id,
+      day_key: dayKey,
+      revealed_for_user1: false,
+      revealed_for_user2: false,
+      created_at: Date.now(),
+    });
+
+    return id;
+  },
+});
+
+export const revealDuoPrompt = mutation({
+  args: { activePromptId: v.id("journal_active_prompts") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const active = await ctx.db.get(args.activePromptId);
+    if (!active) throw new Error("Not found");
+
+    const partnership = await ctx.db.get(active.partnership_id);
+    if (!partnership) throw new Error("Partnership not found");
+
+    const isUser1 = partnership.user1_id === user._id;
+    const isUser2 = partnership.user2_id === user._id;
+
+    if (!isUser1 && !isUser2) throw new Error("Forbidden");
+
+    if (isUser1) {
+      await ctx.db.patch(args.activePromptId, { revealed_for_user1: true });
+    } else {
+      await ctx.db.patch(args.activePromptId, { revealed_for_user2: true });
+    }
+  },
+});
+
 export const ensureSpaces = mutation({
   args: {},
   handler: async (ctx) => {
@@ -346,6 +438,7 @@ export const createEntry = mutation({
     body: v.string(),
     mood: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    goal_id: v.optional(v.id("goals")),
     entry_date: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -375,6 +468,7 @@ export const createEntry = mutation({
       body: args.body,
       mood: args.mood,
       tags,
+      goal_id: args.goal_id,
       entry_date: entryDate,
       is_archived: false,
       reaction_count: 0,

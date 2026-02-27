@@ -1,9 +1,45 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Plus, Save } from "lucide-react";
+import { 
+  Plus, 
+  Save, 
+  Smile, 
+  Target, 
+  Bold, 
+  Italic, 
+  List, 
+  Heading2, 
+  Type 
+} from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
+import { useGoals } from "@/hooks/useGoals";
 import { motion, useReducedMotion } from "framer-motion";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const MOODS = [
+  { label: "Happy", emoji: "😊", color: "bg-yellow-100 border-yellow-200 text-yellow-700" },
+  { label: "Grateful", emoji: "🙏", color: "bg-emerald-100 border-emerald-200 text-emerald-700" },
+  { label: "Excited", emoji: "🤩", color: "bg-orange-100 border-orange-200 text-orange-700" },
+  { label: "Peaceful", emoji: "😌", color: "bg-blue-100 border-blue-200 text-blue-700" },
+  { label: "Productive", emoji: "💪", color: "bg-purple-100 border-purple-200 text-purple-700" },
+  { label: "Tired", emoji: "😴", color: "bg-slate-100 border-slate-200 text-slate-700" },
+  { label: "Stressed", emoji: "😫", color: "bg-rose-100 border-rose-200 text-rose-700" },
+  { label: "Sad", emoji: "😢", color: "bg-indigo-100 border-indigo-200 text-indigo-700" },
+];
 
 interface JournalComposerProps {
   spaceType: JournalSpaceType;
@@ -13,6 +49,7 @@ interface JournalComposerProps {
     body: string;
     mood?: string;
     tags?: string[];
+    goal_id?: string;
   }) => Promise<any>;
 }
 
@@ -22,7 +59,13 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
   const [body, setBody] = useState("");
   const [mood, setMood] = useState("");
   const [tags, setTags] = useState("");
+  const [goalId, setGoalId] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
+
+  const { data: goals } = useGoals();
+  const activeGoals = goals?.filter(g => !g.isArchived) || [];
+
+  const selectedMood = MOODS.find((m) => m.label === mood);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -39,11 +82,13 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
+        goal_id: goalId,
       });
       setTitle("");
       setBody("");
       setMood("");
       setTags("");
+      setGoalId(undefined);
     } finally {
       setIsSaving(false);
     }
@@ -57,54 +102,142 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="rounded-2xl border border-landing-clay bg-white p-3 shadow-sm sm:p-4"
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
         <h2 className="text-base font-bold text-landing-espresso">
           <span className="inline-flex items-center gap-2">
             <Plus className="h-4 w-4" />
             New {spaceType === "shared" ? "Shared" : "Private"} Entry
           </span>
         </h2>
+        
+        {/* Goal Selector */}
+        <div className="flex items-center gap-2">
+          <Target className="h-3.5 w-3.5 text-landing-espresso-light" />
+          <Select value={goalId || "none"} onValueChange={(v) => setGoalId(v === "none" ? undefined : v)}>
+            <SelectTrigger className="h-8 w-[180px] rounded-lg border-landing-clay bg-landing-cream/30 text-[11px] font-semibold text-landing-espresso-light">
+              <SelectValue placeholder="Link to a goal..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" className="text-xs">No goal linked</SelectItem>
+              {activeGoals.map((goal) => (
+                <SelectItem key={goal.id} value={goal.id} className="text-xs">
+                  {goal.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-3">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Entry title"
-          className="w-full rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+          placeholder="Give your entry a title..."
+          className="w-full bg-transparent text-lg font-black tracking-tight text-landing-espresso placeholder:text-landing-espresso-light/30 outline-none"
         />
+
+        {/* Pseudo-Rich Text Toolbar */}
+        <div className="flex items-center gap-1 border-b border-t border-landing-clay/30 py-1.5">
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+            <Type className="h-3.5 w-3.5" />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+            <Heading2 className="h-3.5 w-3.5" />
+          </Button>
+          <div className="mx-1 h-4 w-px bg-landing-clay/30" />
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+            <Bold className="h-3.5 w-3.5" />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+            <Italic className="h-3.5 w-3.5" />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+            <List className="h-3.5 w-3.5" />
+          </Button>
+          <div className="ml-auto flex items-center gap-1">
+             <p className="text-[10px] font-bold text-landing-espresso-light/40 italic mr-2">Markdown supported</p>
+          </div>
+        </div>
+
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          rows={6}
-          placeholder="Write your journal entry..."
-          className="w-full rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+          rows={8}
+          placeholder="How was your day? What did you learn together?"
+          className="w-full resize-none bg-transparent py-2 text-sm leading-relaxed text-landing-espresso placeholder:text-landing-espresso-light/30 outline-none"
         />
+
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <input
-            value={mood}
-            onChange={(e) => setMood(e.target.value)}
-            placeholder="Mood (optional)"
-            className="w-full rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
-          />
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "w-full justify-start gap-2 rounded-xl border-landing-clay px-3 py-2 font-normal",
+                    selectedMood && selectedMood.color
+                  )}
+                >
+                  {selectedMood ? (
+                    <>
+                      <span>{selectedMood.emoji}</span>
+                      <span>{selectedMood.label}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Smile className="h-4 w-4" />
+                      <span>How are you feeling?</span>
+                    </>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-60 p-2" align="start">
+                <div className="grid grid-cols-2 gap-1">
+                  {MOODS.map((m) => (
+                    <button
+                      key={m.label}
+                      type="button"
+                      onClick={() => setMood(m.label)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg p-2 text-xs transition hover:bg-landing-cream",
+                        mood === m.label ? "bg-landing-cream font-bold" : ""
+                      )}
+                    >
+                      <span>{m.emoji}</span>
+                      <span>{m.label}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setMood("")}
+                    className="col-span-2 mt-1 rounded-lg border border-dashed border-landing-clay py-1 text-[10px] text-landing-espresso-light hover:bg-landing-cream"
+                  >
+                    Clear Mood
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <input
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            placeholder="Tags (comma separated)"
+            placeholder="Add tags (focus, travel, health...)"
             className="w-full rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
           />
         </div>
       </div>
 
-      <div className="mt-3 flex justify-end">
+      <div className="mt-4 flex justify-end">
         <motion.button
           type="submit"
           disabled={isSaving}
           whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-landing-espresso px-3 py-2 text-sm font-semibold text-landing-cream disabled:opacity-70 sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-landing-espresso px-4 py-2.5 text-sm font-black text-landing-cream shadow-lg shadow-landing-espresso/20 transition hover:bg-landing-espresso-light disabled:opacity-70 sm:w-auto"
         >
           <Save className="h-4 w-4" />
-          {isSaving ? "Saving..." : "Save Entry"}
+          {isSaving ? "Saving Entry..." : "Save Journal Entry"}
         </motion.button>
       </div>
     </motion.form>

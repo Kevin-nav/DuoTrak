@@ -316,6 +316,7 @@ export default defineSchema({
     body: v.string(),
     mood: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    goal_id: v.optional(v.id("goals")),
     entry_date: v.number(),
     is_archived: v.boolean(),
     shared_from_entry_id: v.optional(v.id("journal_entries")),
@@ -381,6 +382,23 @@ export default defineSchema({
     .index("by_entry_created", ["entry_id", "created_at"])
     .index("by_target_created", ["target_user_id", "created_at"])
     .index("by_partnership_created", ["partnership_id", "created_at"]),
+
+  journal_prompts: defineTable({
+    text: v.string(),
+    category: v.optional(v.string()), // 'relationship' | 'reflection' | 'fun' | 'goals'
+    is_active: v.boolean(),
+    created_at: v.number(),
+  }),
+
+  journal_active_prompts: defineTable({
+    partnership_id: v.id("partnerships"),
+    prompt_id: v.id("journal_prompts"),
+    day_key: v.string(), // YYYY-MM-DD
+    revealed_for_user1: v.boolean(),
+    revealed_for_user2: v.boolean(),
+    created_at: v.number(),
+  })
+    .index("by_partnership_day", ["partnership_id", "day_key"]),
 
   journal_search_index: defineTable({
     entity_type: v.string(), // 'entry' | 'page'

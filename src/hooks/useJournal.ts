@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { JournalCalendarItem, JournalCalendarQueryParams, JournalTaskStatus } from "@/lib/journal/calendarTypes";
@@ -53,7 +53,8 @@ export function useCreateJournalEntry() {
     body: string;
     mood?: string;
     tags?: string[];
-  }) => mutation(payload);
+    goal_id?: string;
+  }) => mutation(payload as any);
 }
 
 export function useJournalPages(spaceType: JournalSpaceType) {
@@ -264,4 +265,41 @@ export function useToggleJournalTaskStatus() {
 export function useArchiveJournalTask() {
   const mutation = useMutation((api as any).journal.archiveJournalTask);
   return (taskId: string) => mutation({ taskId } as any);
+}
+
+export function useActiveDuoPrompt() {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const data = useQuery((api as any).journal.getActiveDuoPrompt, { timezone }) as
+    | {
+        _id: string;
+        prompt_id: string;
+        prompt_text: string;
+        day_key: string;
+        revealed_for_user1: boolean;
+        revealed_for_user2: boolean;
+        is_user1: boolean;
+      }
+    | null
+    | undefined;
+
+  const ensure = useMutation((api as any).journal.ensureActiveDuoPrompt);
+
+  const [isEnsuring, setIsEnsuring] = useState(false);
+
+  useEffect(() => {
+    if (data === null && !isEnsuring) {
+      setIsEnsuring(true);
+      ensure({ timezone }).finally(() => setIsEnsuring(false));
+    }
+  }, [data, ensure, isEnsuring, timezone]);
+
+  return {
+    prompt: data ?? null,
+    isLoading: data === undefined || isEnsuring,
+  };
+}
+
+export function useRevealDuoPrompt() {
+  const mutation = useMutation((api as any).journal.revealDuoPrompt);
+  return (activePromptId: string) => mutation({ activePromptId } as any);
 }
