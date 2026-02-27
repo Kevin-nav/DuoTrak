@@ -69,3 +69,29 @@ export type ProgressMetrics = {
   generatedAt: number;
 };
 
+export type StreakDayStatus = "done" | "missed" | "no_plan";
+
+export type StreakDayActor = {
+  status: StreakDayStatus;
+  completedTasks: number;
+  totalTasks: number;
+};
+
+export type StreakHistoryDay = {
+  date: number;
+  label: string;
+  user: StreakDayActor;
+  partner: StreakDayActor | null;
+};
+
+export type StreakHistoryCalendarData = {
+  range: {
+    startDate: number;
+    endDate: number;
+    dayCount: number;
+  };
+  days: StreakHistoryDay[];
+  partnerName: string | null;
+  warnings: string[];
+  generatedAt: number;
+};

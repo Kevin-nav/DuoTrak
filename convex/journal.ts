@@ -119,6 +119,40 @@ async function canAccessSpace(ctx: any, userId: Id<"users">, space: any) {
   return false;
 }
 
+async function validateTaskAssigneeOrThrow(
+  ctx: any,
+  userId: Id<"users">,
+  space: any,
+  assigneeUserId?: Id<"users">
+) {
+  if (!assigneeUserId) return;
+
+  if (space.type === "private") {
+    if (assigneeUserId !== userId) {
+      throw new Error("Invalid assignee");
+    }
+    return;
+  }
+
+  if (space.type === "shared") {
+    if (!space.partnership_id) {
+      throw new Error("Invalid assignee");
+    }
+    const partnership = (await ctx.db.get(space.partnership_id)) as any;
+    if (!partnership || partnership.status !== "active") {
+      throw new Error("Invalid assignee");
+    }
+    const partnerUserId =
+      partnership.user1_id === userId ? partnership.user2_id : partnership.user1_id;
+    if (assigneeUserId !== userId && assigneeUserId !== partnerUserId) {
+      throw new Error("Invalid assignee");
+    }
+    return;
+  }
+
+  throw new Error("Invalid assignee");
+}
+
 function toDayKey(ts: number) {
   const d = new Date(ts);
   const y = d.getUTCFullYear();
@@ -447,6 +481,34 @@ export const getPageWithBlocks = query({
   },
 });
 
+export const listPageTasks = query({
+  args: {
+    pageId: v.id("journal_pages"),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const page = await ctx.db.get(args.pageId);
+    if (!page) throw new Error("Not found");
+
+    const space = await ctx.db.get(page.space_id);
+    if (!space) throw new Error("Not found");
+
+    const allowed = await canAccessSpace(ctx, user._id, space);
+    if (!allowed) throw new Error("Forbidden");
+
+    const tasks = await ctx.db
+      .query("journal_tasks")
+      .withIndex("by_page_updated", (q: any) => q.eq("page_id", page._id))
+      .order("desc")
+      .collect();
+
+    return {
+      spaceType: space.type as SpaceType,
+      tasks: tasks.filter((task) => !task.is_archived),
+    };
+  },
+});
+
 export const replacePageBlocks = mutation({
   args: {
     pageId: v.id("journal_pages"),
@@ -497,6 +559,273 @@ export const replacePageBlocks = mutation({
     });
     await recordUserActivity(ctx, user._id, now);
     return { success: true };
+  },
+});
+
+export const createJournalTask = mutation({
+  args: {
+    spaceType: v.string(),
+    title: v.string(),
+    dueDate: v.optional(v.number()),
+    assigneeUserId: v.optional(v.id("users")),
+    pageId: v.optional(v.id("journal_pages")),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const normalizedType = (args.spaceType === "shared" ? "shared" : "private") as SpaceType;
+    const space =
+      normalizedType === "shared"
+        ? await getOrCreateSharedSpace(ctx, user._id)
+        : await getOrCreatePrivateSpace(ctx, user._id);
+
+    if (!space) throw new Error("Partnership required");
+    const allowed = await canAccessSpace(ctx, user._id, space);
+    if (!allowed) throw new Error("Forbidden");
+
+    if (args.pageId) {
+      const page = await ctx.db.get(args.pageId);
+      if (!page || page.space_id !== space._id) throw new Error("Not found");
+    }
+
+    const assigneeUserId = args.assigneeUserId ?? user._id;
+    await validateTaskAssigneeOrThrow(ctx, user._id, space, assigneeUserId);
+
+    const now = Date.now();
+    const taskId = await ctx.db.insert("journal_tasks", {
+      space_id: space._id,
+      page_id: args.pageId,
+      title: args.title.trim() || "Untitled Task",
+      status: "todo",
+      due_date: args.dueDate,
+      assignee_user_id: assigneeUserId,
+      is_archived: false,
+      created_by: user._id,
+      created_at: now,
+      updated_at: now,
+    });
+
+    await ctx.db.patch(space._id, { updated_at: now });
+    await recordUserActivity(ctx, user._id, now);
+    return taskId;
+  },
+});
+
+export const updateJournalTask = mutation({
+  args: {
+    taskId: v.id("journal_tasks"),
+    title: v.optional(v.string()),
+    dueDate: v.optional(v.number()),
+    assigneeUserId: v.optional(v.id("users")),
+    pageId: v.optional(v.id("journal_pages")),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Not found");
+
+    const space = await ctx.db.get(task.space_id);
+    if (!space) throw new Error("Not found");
+    const allowed = await canAccessSpace(ctx, user._id, space);
+    if (!allowed) throw new Error("Forbidden");
+
+    if (args.pageId) {
+      const page = await ctx.db.get(args.pageId);
+      if (!page || page.space_id !== space._id) throw new Error("Not found");
+    }
+
+    const assigneeUserId = args.assigneeUserId ?? task.assignee_user_id;
+    await validateTaskAssigneeOrThrow(ctx, user._id, space, assigneeUserId);
+
+    const now = Date.now();
+    await ctx.db.patch(task._id, {
+      title: args.title ?? task.title,
+      due_date: args.dueDate ?? task.due_date,
+      assignee_user_id: assigneeUserId,
+      page_id: args.pageId ?? task.page_id,
+      updated_at: now,
+    });
+
+    await ctx.db.patch(space._id, { updated_at: now });
+    await recordUserActivity(ctx, user._id, now);
+    return { success: true };
+  },
+});
+
+export const toggleJournalTaskStatus = mutation({
+  args: {
+    taskId: v.id("journal_tasks"),
+    status: v.union(v.literal("todo"), v.literal("in_progress"), v.literal("done")),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Not found");
+
+    const space = await ctx.db.get(task.space_id);
+    if (!space) throw new Error("Not found");
+    const allowed = await canAccessSpace(ctx, user._id, space);
+    if (!allowed) throw new Error("Forbidden");
+
+    const now = Date.now();
+    await ctx.db.patch(task._id, {
+      status: args.status,
+      updated_at: now,
+    });
+
+    await ctx.db.patch(space._id, { updated_at: now });
+    await recordUserActivity(ctx, user._id, now);
+    return { success: true };
+  },
+});
+
+export const archiveJournalTask = mutation({
+  args: {
+    taskId: v.id("journal_tasks"),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Not found");
+
+    const space = await ctx.db.get(task.space_id);
+    if (!space) throw new Error("Not found");
+    const allowed = await canAccessSpace(ctx, user._id, space);
+    if (!allowed) throw new Error("Forbidden");
+
+    const now = Date.now();
+    await ctx.db.patch(task._id, {
+      is_archived: true,
+      updated_at: now,
+    });
+    await ctx.db.patch(space._id, { updated_at: now });
+    await recordUserActivity(ctx, user._id, now);
+    return { success: true };
+  },
+});
+
+export const listJournalCalendarItems = query({
+  args: {
+    startDate: v.number(),
+    endDate: v.number(),
+    spaceType: v.optional(v.union(v.literal("private"), v.literal("shared"), v.literal("all"))),
+    includeEntries: v.optional(v.boolean()),
+    includeTasks: v.optional(v.boolean()),
+    assigneeFilter: v.optional(v.union(v.literal("all"), v.literal("me"), v.literal("partner"))),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    const includeEntries = args.includeEntries ?? true;
+    const includeTasks = args.includeTasks ?? true;
+    const normalizedSpaceType = args.spaceType ?? "all";
+    const assigneeFilter = args.assigneeFilter ?? "all";
+
+    if (args.endDate < args.startDate) {
+      return [];
+    }
+
+    const privateSpace = await getPrivateSpace(ctx, user._id);
+    const sharedSpace = await getSharedSpace(ctx, user._id);
+
+    const accessibleSpaces: Array<{ _id: Id<"journal_spaces">; type: SpaceType; partnership_id?: Id<"partnerships"> }> = [];
+    if (privateSpace && normalizedSpaceType !== "shared") {
+      const allowed = await canAccessSpace(ctx, user._id, privateSpace);
+      if (!allowed) throw new Error("Forbidden");
+      accessibleSpaces.push(privateSpace);
+    }
+    if (sharedSpace && normalizedSpaceType !== "private") {
+      const allowed = await canAccessSpace(ctx, user._id, sharedSpace);
+      if (!allowed) throw new Error("Forbidden");
+      accessibleSpaces.push(sharedSpace);
+    }
+
+    let partnerUserId: Id<"users"> | null = null;
+    if (assigneeFilter === "partner" && sharedSpace?.partnership_id) {
+      const partnership = (await ctx.db.get(sharedSpace.partnership_id)) as any;
+      if (partnership?.status === "active") {
+        partnerUserId = partnership.user1_id === user._id ? partnership.user2_id : partnership.user1_id;
+      }
+    }
+
+    const entries = includeEntries
+      ? await Promise.all(
+          accessibleSpaces.map((space) =>
+            ctx.db
+              .query("journal_entries")
+              .withIndex("by_space_date", (q: any) => q.eq("space_id", space._id))
+              .filter((q: any) =>
+                q.and(
+                  q.gte(q.field("entry_date"), args.startDate),
+                  q.lte(q.field("entry_date"), args.endDate),
+                  q.eq(q.field("is_archived"), false)
+                )
+              )
+              .collect()
+          )
+        ).then((groups) => groups.flat())
+      : [];
+
+    const tasks = includeTasks
+      ? await Promise.all(
+          accessibleSpaces.map((space) =>
+            ctx.db
+              .query("journal_tasks")
+              .withIndex("by_space_due_date", (q: any) => q.eq("space_id", space._id))
+              .filter((q: any) =>
+                q.and(
+                  q.eq(q.field("is_archived"), false),
+                  q.gte(q.field("due_date"), args.startDate),
+                  q.lte(q.field("due_date"), args.endDate)
+                )
+              )
+              .collect()
+          )
+        ).then((groups) => groups.flat())
+      : [];
+
+    const spaceTypeById = new Map(accessibleSpaces.map((space) => [String(space._id), space.type as SpaceType]));
+    const filteredTasks = tasks.filter((task) => {
+      if (assigneeFilter === "all") return true;
+      if (assigneeFilter === "me") return task.assignee_user_id === user._id;
+      if (assigneeFilter === "partner") return !!partnerUserId && task.assignee_user_id === partnerUserId;
+      return true;
+    });
+
+    const normalizedItems = [
+      ...entries.map((entry) => ({
+        itemType: "entry" as const,
+        id: String(entry._id),
+        spaceId: String(entry.space_id),
+        spaceType: spaceTypeById.get(String(entry.space_id)) ?? "private",
+        title: entry.title,
+        entryDate: entry.entry_date,
+        createdBy: String(entry.created_by),
+        updatedAt: entry.updated_at,
+      })),
+      ...filteredTasks.map((task) => ({
+        itemType: "task" as const,
+        id: String(task._id),
+        spaceId: String(task.space_id),
+        spaceType: spaceTypeById.get(String(task.space_id)) ?? "private",
+        pageId: task.page_id ? String(task.page_id) : undefined,
+        title: task.title,
+        status: task.status,
+        dueDate: task.due_date,
+        assigneeUserId: task.assignee_user_id ? String(task.assignee_user_id) : undefined,
+        isArchived: task.is_archived,
+        createdBy: String(task.created_by),
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+      })),
+    ];
+
+    normalizedItems.sort((a, b) => {
+      const aDate = a.itemType === "entry" ? a.entryDate : (a.dueDate ?? 0);
+      const bDate = b.itemType === "entry" ? b.entryDate : (b.dueDate ?? 0);
+      if (aDate !== bDate) return aDate - bDate;
+      return a.itemType.localeCompare(b.itemType);
+    });
+
+    return normalizedItems;
   },
 });
 

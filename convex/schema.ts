@@ -330,6 +330,22 @@ export default defineSchema({
     .index("by_space_updated", ["space_id", "updated_at"])
     .index("by_creator", ["created_by", "created_at"]),
 
+  journal_tasks: defineTable({
+    space_id: v.id("journal_spaces"),
+    page_id: v.optional(v.id("journal_pages")),
+    title: v.string(),
+    status: v.string(), // 'todo' | 'in_progress' | 'done'
+    due_date: v.optional(v.number()),
+    assignee_user_id: v.optional(v.id("users")),
+    is_archived: v.boolean(),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_space_due_date", ["space_id", "due_date"])
+    .index("by_assignee_due_date", ["assignee_user_id", "due_date"])
+    .index("by_page_updated", ["page_id", "updated_at"]),
+
   journal_shares: defineTable({
     source_entry_id: v.id("journal_entries"),
     shared_entry_id: v.id("journal_entries"),

@@ -3,11 +3,19 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/dashboard-layout";
-import { ArrowLeft, GripVertical, Plus, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, GripVertical, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
-import { useJournalPage, useReplaceJournalPageBlocks } from "@/hooks/useJournal";
+import {
+  useCreateJournalTask,
+  useJournalPage,
+  useJournalPageTasks,
+  useReplaceJournalPageBlocks,
+  useToggleJournalTaskStatus,
+  useUpdateJournalTask,
+} from "@/hooks/useJournal";
 import { useGoals } from "@/hooks/useGoals";
 import { AnimatePresence, Reorder, motion, useReducedMotion } from "framer-motion";
+import { useUser } from "@/contexts/UserContext";
 
 type BlockInput = {
   id: string;
@@ -41,18 +49,46 @@ const createBlock = (type: CommandType, content = "", checked = false): BlockInp
   checked,
 });
 
+const toDateInput = (timestamp?: number) => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const fromDateInput = (value: string) => {
+  if (!value) return undefined;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return undefined;
+  return new Date(year, month - 1, day, 12, 0, 0, 0).getTime();
+};
+
 export default function JournalPageEditor() {
   const params = useParams();
   const router = useRouter();
   const pageId = params.pageId as string;
   const { page, blocks, isLoading } = useJournalPage(pageId);
+  const { tasks: pageTasks, spaceType: pageSpaceType, isLoading: isTasksLoading } = useJournalPageTasks(pageId);
   const replaceBlocks = useReplaceJournalPageBlocks();
+  const createTask = useCreateJournalTask();
+  const updateTask = useUpdateJournalTask();
+  const toggleTaskStatus = useToggleJournalTaskStatus();
   const { data: goals = [] } = useGoals();
+  const { userDetails } = useUser();
   const reduceMotion = useReducedMotion();
 
   const [draftBlocks, setDraftBlocks] = useState<BlockInput[]>([]);
   const [hasInitializedFromServer, setHasInitializedFromServer] = useState(false);
   const [suggestion, setSuggestion] = useState<SuggestionState>(null);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState("");
+  const [taskAssignee, setTaskAssignee] = useState<string>("");
+  const [taskStartsDone, setTaskStartsDone] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
+  const [taskDrafts, setTaskDrafts] = useState<Record<string, { title: string; dueDate: string; assigneeUserId: string }>>({});
 
   useEffect(() => {
     setHasInitializedFromServer(false);
@@ -83,6 +119,26 @@ export default function JournalPageEditor() {
     }
     setHasInitializedFromServer(true);
   }, [blocks, hasInitializedFromServer, isLoading]);
+
+  useEffect(() => {
+    if (taskAssignee) return;
+    if (userDetails?._id) {
+      setTaskAssignee(String(userDetails._id));
+    }
+  }, [taskAssignee, userDetails?._id]);
+
+  useEffect(() => {
+    const nextDrafts: Record<string, { title: string; dueDate: string; assigneeUserId: string }> = {};
+    for (const task of pageTasks) {
+      const id = String(task._id);
+      nextDrafts[id] = {
+        title: task.title || "",
+        dueDate: toDateInput(task.due_date),
+        assigneeUserId: task.assignee_user_id ? String(task.assignee_user_id) : "",
+      };
+    }
+    setTaskDrafts(nextDrafts);
+  }, [pageTasks]);
 
   const mentionOptions = useMemo<MentionOption[]>(() => {
     const options: MentionOption[] = [];
@@ -200,6 +256,88 @@ export default function JournalPageEditor() {
     [mentionOptions, suggestion?.query]
   );
 
+  const assigneeOptions = useMemo(() => {
+    const options: Array<{ label: string; value: string }> = [];
+    if (userDetails?._id) {
+      options.push({ label: "Me", value: String(userDetails._id) });
+    }
+    if (pageSpaceType === "shared" && userDetails?.partner_id) {
+      options.push({
+        label: userDetails.partner_nickname || userDetails.partner_full_name || "Partner",
+        value: String(userDetails.partner_id),
+      });
+    }
+    return options;
+  }, [pageSpaceType, userDetails?._id, userDetails?.partner_full_name, userDetails?.partner_id, userDetails?.partner_nickname]);
+
+  const updateTaskDraft = (taskId: string, patch: Partial<{ title: string; dueDate: string; assigneeUserId: string }>) => {
+    setTaskDrafts((current) => ({
+      ...current,
+      [taskId]: {
+        ...(current[taskId] ?? { title: "", dueDate: "", assigneeUserId: "" }),
+        ...patch,
+      },
+    }));
+  };
+
+  const saveTaskPatch = async (
+    taskId: string,
+    patch: {
+      title?: string;
+      dueDate?: string;
+      assigneeUserId?: string;
+    }
+  ) => {
+    try {
+      setSavingTaskId(taskId);
+      await updateTask({
+        taskId,
+        title: patch.title,
+        dueDate: patch.dueDate !== undefined ? fromDateInput(patch.dueDate) : undefined,
+        assigneeUserId: patch.assigneeUserId || undefined,
+      });
+    } catch (error: any) {
+      toast.error(error?.message || "Could not update task.");
+    } finally {
+      setSavingTaskId(null);
+    }
+  };
+
+  const createPageTask = async () => {
+    if (!taskTitle.trim()) return;
+    if (!userDetails?._id) return;
+
+    try {
+      setIsCreatingTask(true);
+      const nextAssignee =
+        pageSpaceType === "shared"
+          ? (taskAssignee || String(userDetails._id))
+          : String(userDetails._id);
+
+      const taskId = await createTask({
+        spaceType: pageSpaceType || "private",
+        title: taskTitle.trim(),
+        dueDate: fromDateInput(taskDueDate),
+        assigneeUserId: nextAssignee as any,
+        pageId,
+      });
+
+      if (taskStartsDone && taskId) {
+        await toggleTaskStatus(String(taskId), "done");
+      }
+
+      setTaskTitle("");
+      setTaskDueDate("");
+      setTaskStartsDone(false);
+      setTaskAssignee(String(userDetails._id));
+      toast.success("Task added to page.");
+    } catch (error: any) {
+      toast.error(error?.message || "Could not create task.");
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
   const save = async () => {
     try {
       await replaceBlocks({
@@ -251,6 +389,152 @@ export default function JournalPageEditor() {
               {page?.title || "Journal Page"}
             </h1>
           </div>
+        </motion.section>
+
+        <motion.section
+          initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: easing }}
+          className="space-y-3 rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-landing-espresso sm:text-base">Page Tasks</h2>
+            <span className="text-xs text-landing-espresso-light">
+              {pageSpaceType === "shared" ? "Shared workspace" : "Private workspace"}
+            </span>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto_auto]">
+            <input
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              placeholder="Task title"
+              className="rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+            />
+            <input
+              type="date"
+              value={taskDueDate}
+              onChange={(e) => setTaskDueDate(e.target.value)}
+              className="rounded-lg border border-landing-clay px-2.5 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+            />
+            {pageSpaceType === "shared" ? (
+              <select
+                value={taskAssignee}
+                onChange={(e) => setTaskAssignee(e.target.value)}
+                className="rounded-lg border border-landing-clay px-2.5 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+              >
+                {assigneeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setTaskStartsDone((current) => !current)}
+              className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-semibold ${
+                taskStartsDone
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                  : "border-landing-clay text-landing-espresso-light hover:bg-landing-cream"
+              }`}
+            >
+              {taskStartsDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+              {taskStartsDone ? "Done" : "Todo"}
+            </button>
+            <button
+              type="button"
+              onClick={createPageTask}
+              disabled={isCreatingTask || !taskTitle.trim() || !pageSpaceType}
+              className="inline-flex items-center justify-center gap-1 rounded-lg bg-landing-espresso px-3 py-2 text-xs font-semibold text-landing-cream disabled:opacity-60"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {isCreatingTask ? "Adding..." : "Add task"}
+            </button>
+          </div>
+
+          {isTasksLoading ? (
+            <p className="text-xs text-landing-espresso-light">Loading page tasks...</p>
+          ) : pageTasks.length === 0 ? (
+            <p className="text-xs text-landing-espresso-light">No tasks linked to this page yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {pageTasks.map((task) => {
+                const taskId = String(task._id);
+                const draft = taskDrafts[taskId] ?? {
+                  title: task.title || "",
+                  dueDate: toDateInput(task.due_date),
+                  assigneeUserId: task.assignee_user_id ? String(task.assignee_user_id) : "",
+                };
+                const isDone = task.status === "done";
+                return (
+                  <div key={taskId} className="grid gap-2 rounded-xl border border-landing-clay bg-landing-cream p-2.5 sm:grid-cols-[1fr_auto_auto_auto]">
+                    <input
+                      value={draft.title}
+                      onChange={(e) => updateTaskDraft(taskId, { title: e.target.value })}
+                      onBlur={() => {
+                        if ((task.title || "") !== draft.title) {
+                          saveTaskPatch(taskId, { title: draft.title });
+                        }
+                      }}
+                      className="rounded-md border border-landing-clay bg-white px-2.5 py-1.5 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+                    />
+                    <input
+                      type="date"
+                      value={draft.dueDate}
+                      onChange={(e) => updateTaskDraft(taskId, { dueDate: e.target.value })}
+                      onBlur={() => {
+                        const original = toDateInput(task.due_date);
+                        if (original !== draft.dueDate) {
+                          saveTaskPatch(taskId, { dueDate: draft.dueDate });
+                        }
+                      }}
+                      className="rounded-md border border-landing-clay bg-white px-2 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
+                    />
+                    {pageSpaceType === "shared" ? (
+                      <select
+                        value={draft.assigneeUserId}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          updateTaskDraft(taskId, { assigneeUserId: next });
+                          saveTaskPatch(taskId, { assigneeUserId: next });
+                        }}
+                        className="rounded-md border border-landing-clay bg-white px-2 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
+                      >
+                        {assigneeOptions.map((option) => (
+                          <option key={`${taskId}-${option.value}`} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          setSavingTaskId(taskId);
+                          await toggleTaskStatus(taskId, isDone ? "todo" : "done");
+                        } catch (error: any) {
+                          toast.error(error?.message || "Could not update status.");
+                        } finally {
+                          setSavingTaskId(null);
+                        }
+                      }}
+                      disabled={savingTaskId === taskId}
+                      className={`inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-xs font-semibold ${
+                        isDone
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                          : "border-landing-clay bg-white text-landing-espresso-light"
+                      }`}
+                    >
+                      {isDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                      {isDone ? "Done" : "Todo"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </motion.section>
 
         {isLoading ? (

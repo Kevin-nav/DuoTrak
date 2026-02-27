@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { JournalCalendarItem, JournalCalendarQueryParams, JournalTaskStatus } from "@/lib/journal/calendarTypes";
 
 export type JournalSpaceType = "private" | "shared";
 
@@ -90,6 +91,17 @@ export function useReplaceJournalPageBlocks() {
       meta_json?: string;
     }>;
   }) => mutation(payload as any);
+}
+
+export function useJournalPageTasks(pageId: string) {
+  const data = useQuery((api as any).journal.listPageTasks, pageId ? ({ pageId } as any) : "skip") as
+    | { spaceType: JournalSpaceType; tasks: any[] }
+    | undefined;
+  return {
+    spaceType: data?.spaceType ?? null,
+    tasks: data?.tasks ?? [],
+    isLoading: data === undefined,
+  };
 }
 
 export function useUpdateJournalEntry() {
@@ -212,4 +224,44 @@ export function useJournalAlerts() {
     },
     isLoading: data === undefined,
   };
+}
+
+export function useJournalCalendarItems(params: JournalCalendarQueryParams) {
+  const data = useQuery((api as any).journal.listJournalCalendarItems, params as any) as JournalCalendarItem[] | undefined;
+  return {
+    items: data ?? [],
+    isLoading: data === undefined,
+  };
+}
+
+export function useCreateJournalTask() {
+  const mutation = useMutation((api as any).journal.createJournalTask);
+  return (payload: {
+    spaceType: JournalSpaceType;
+    title: string;
+    dueDate?: number;
+    assigneeUserId?: string;
+    pageId?: string;
+  }) => mutation(payload as any);
+}
+
+export function useUpdateJournalTask() {
+  const mutation = useMutation((api as any).journal.updateJournalTask);
+  return (payload: {
+    taskId: string;
+    title?: string;
+    dueDate?: number;
+    assigneeUserId?: string;
+    pageId?: string;
+  }) => mutation(payload as any);
+}
+
+export function useToggleJournalTaskStatus() {
+  const mutation = useMutation((api as any).journal.toggleJournalTaskStatus);
+  return (taskId: string, status: JournalTaskStatus) => mutation({ taskId, status } as any);
+}
+
+export function useArchiveJournalTask() {
+  const mutation = useMutation((api as any).journal.archiveJournalTask);
+  return (taskId: string) => mutation({ taskId } as any);
 }

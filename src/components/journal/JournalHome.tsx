@@ -7,6 +7,7 @@ import JournalComposer from "@/components/journal/JournalComposer";
 import JournalEntriesList from "@/components/journal/JournalEntriesList";
 import JournalSearch from "@/components/journal/JournalSearch";
 import JournalPagesPanel from "@/components/journal/JournalPagesPanel";
+import JournalCalendarPanel from "@/components/journal/JournalCalendarPanel";
 import {
   JournalSpaceType,
   useCreateJournalEntry,
@@ -137,6 +138,8 @@ export default function JournalHome() {
           }}
           onOpenPage={(pageId) => router.push(`/journal/pages/${pageId}`)}
         />
+
+        <JournalCalendarPanel spaceType={activeTab} />
 
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

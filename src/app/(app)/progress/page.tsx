@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 
-import { useProgressMetrics } from "@/hooks/useProgressMetrics";
+import { useProgressMetrics, useStreakHistoryCalendar } from "@/hooks/useProgressMetrics";
 import { useUser } from "@/contexts/UserContext";
 import { getRangeFromPreset } from "@/lib/progress/dateRange";
 import type { DatePreset } from "@/lib/progress/types";
@@ -20,6 +20,7 @@ import ProgressLoadingState from "@/components/progress/ProgressLoadingState";
 import ProgressErrorState from "@/components/progress/ProgressErrorState";
 import ProgressEmptyState from "@/components/progress/ProgressEmptyState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import StreakHistoryCalendar from "@/components/progress/StreakHistoryCalendar";
 
 export default function ProgressPage() {
   const { userDetails } = useUser();
@@ -35,8 +36,13 @@ export default function ProgressPage() {
     ...range,
     includePartner: includePartner && hasPartner,
   });
+  const { data: streakHistoryData, isLoading: isStreakHistoryLoading } = useStreakHistoryCalendar({
+    ...range,
+    includePartner: includePartner && hasPartner,
+  });
 
   const [stableData, setStableData] = useState<typeof data>(undefined);
+  const [stableStreakHistoryData, setStableStreakHistoryData] = useState<typeof streakHistoryData>(undefined);
 
   useEffect(() => {
     if (data !== undefined) {
@@ -44,8 +50,16 @@ export default function ProgressPage() {
     }
   }, [data]);
 
+  useEffect(() => {
+    if (streakHistoryData !== undefined) {
+      setStableStreakHistoryData(streakHistoryData);
+    }
+  }, [streakHistoryData]);
+
   const displayData = data ?? stableData;
+  const displayStreakHistoryData = streakHistoryData ?? stableStreakHistoryData;
   const isRefreshing = isLoading && !!stableData;
+  const isHistoryRefreshing = isStreakHistoryLoading && !!stableStreakHistoryData;
 
   if (!displayData && isLoading) {
     return <ProgressLoadingState />;
@@ -65,9 +79,12 @@ export default function ProgressPage() {
           includePartner={includePartner && hasPartner}
           onIncludePartnerChange={setIncludePartner}
           partnerToggleDisabled={!hasPartner}
-          isUpdating={isRefreshing}
+          isUpdating={isRefreshing || isHistoryRefreshing}
         />
         <ProgressEmptyState onSelectPreset={setPreset} />
+        {displayStreakHistoryData ? (
+          <StreakHistoryCalendar data={displayStreakHistoryData} showPartnerComparison={includePartner && hasPartner} />
+        ) : null}
       </div>
     );
   }
@@ -82,7 +99,7 @@ export default function ProgressPage() {
         includePartner={includePartner && hasPartner}
         onIncludePartnerChange={setIncludePartner}
         partnerToggleDisabled={!hasPartner}
-        isUpdating={isRefreshing}
+        isUpdating={isRefreshing || isHistoryRefreshing}
       />
 
       {displayData.warnings.length > 0 ? (
@@ -106,6 +123,10 @@ export default function ProgressPage() {
       />
 
       <ProgressConsistencyChart consistency={displayData.consistency} />
+
+      {displayStreakHistoryData ? (
+        <StreakHistoryCalendar data={displayStreakHistoryData} showPartnerComparison={includePartner && hasPartner} />
+      ) : null}
 
       <GoalProgressCards goals={displayData.goalBreakdown} />
       <GoalProgressTable goals={displayData.goalBreakdown} />

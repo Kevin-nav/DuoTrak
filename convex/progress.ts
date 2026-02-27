@@ -55,6 +55,14 @@ type UserMetrics = {
   achievements: AchievementItem[];
 };
 
+type StreakDayStatus = "done" | "missed" | "no_plan";
+
+type StreakHistoryActorDay = {
+  status: StreakDayStatus;
+  completedTasks: number;
+  totalTasks: number;
+};
+
 function startOfDay(timestamp: number): number {
   const date = new Date(timestamp);
   date.setHours(0, 0, 0, 0);
@@ -98,6 +106,53 @@ function ratio(completed: number, total: number): number {
 function isCompletedStatus(status: string | undefined): boolean {
   if (!status) return false;
   return status === "completed" || status === "Completed" || status === "verified";
+}
+
+function toStreakDayStatus(totalTasks: number, completedTasks: number): StreakDayStatus {
+  if (totalTasks <= 0) return "no_plan";
+  if (completedTasks > 0) return "done";
+  return "missed";
+}
+
+function createEmptyDayAccumulator(rangeStart: number, rangeEnd: number): Map<number, { completedTasks: number; totalTasks: number }> {
+  const days = new Map<number, { completedTasks: number; totalTasks: number }>();
+  for (let cursor = rangeStart; cursor <= rangeEnd; cursor += DAY_MS) {
+    days.set(cursor, { completedTasks: 0, totalTasks: 0 });
+  }
+  return days;
+}
+
+async function collectStreakHistoryByDay(ctx: any, userId: Id<"users">, rangeStart: number, rangeEnd: number) {
+  const dailyMap = createEmptyDayAccumulator(rangeStart, rangeEnd);
+
+  const taskInstances = await ctx.db
+    .query("task_instances")
+    .withIndex("by_user_date", (q: any) =>
+      q.eq("user_id", userId).gte("instance_date", rangeStart).lte("instance_date", rangeEnd)
+    )
+    .collect();
+
+  for (const instance of taskInstances) {
+    const day = startOfDay(instance.instance_date);
+    const daily = dailyMap.get(day);
+    if (!daily) continue;
+
+    daily.totalTasks += 1;
+    if (isCompletedStatus(instance.status)) {
+      daily.completedTasks += 1;
+    }
+  }
+
+  const result = new Map<number, StreakHistoryActorDay>();
+  for (const [date, counts] of dailyMap.entries()) {
+    result.set(date, {
+      status: toStreakDayStatus(counts.totalTasks, counts.completedTasks),
+      completedTasks: counts.completedTasks,
+      totalTasks: counts.totalTasks,
+    });
+  }
+
+  return result;
 }
 
 function buildAchievements(summary: Summary): AchievementItem[] {
@@ -355,6 +410,77 @@ export const getDashboardMetrics = query({
       goalBreakdown: userMetrics.goalBreakdown,
       achievements: userMetrics.achievements,
       partnerComparison,
+      warnings,
+      generatedAt: Date.now(),
+    };
+  },
+});
+
+export const getStreakHistoryCalendar = query({
+  args: {
+    startDate: v.number(),
+    endDate: v.number(),
+    includePartner: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) {
+      return null;
+    }
+
+    const rangeStart = startOfDay(args.startDate);
+    const rangeEnd = endOfDay(args.endDate);
+    if (rangeEnd < rangeStart || rangeEnd - rangeStart > 365 * DAY_MS) {
+      throw new Error("Invalid date range");
+    }
+
+    const includePartner = args.includePartner ?? true;
+    const userDaily = await collectStreakHistoryByDay(ctx, user._id, rangeStart, rangeEnd);
+
+    let partnerDaily: Map<number, StreakHistoryActorDay> | null = null;
+    let partnerName: string | null = null;
+    const warnings: string[] = [];
+
+    if (includePartner) {
+      if (!user.current_partner_id) {
+        warnings.push("Partner history unavailable because no active partner was found.");
+      } else {
+        const partnerId = user.current_partner_id as Id<"users">;
+        const partner = await ctx.db.get(partnerId);
+        if (!partner) {
+          warnings.push("Partner history unavailable because partner profile could not be loaded.");
+        } else {
+          partnerName = partner.full_name || partner.nickname || "Partner";
+          partnerDaily = await collectStreakHistoryByDay(ctx, partnerId, rangeStart, rangeEnd);
+        }
+      }
+    }
+
+    const days = [];
+    for (let cursor = rangeStart; cursor <= rangeEnd; cursor += DAY_MS) {
+      const userDay = userDaily.get(cursor) || {
+        status: "no_plan" as StreakDayStatus,
+        completedTasks: 0,
+        totalTasks: 0,
+      };
+      const partnerDay = partnerDaily?.get(cursor) || null;
+
+      days.push({
+        date: cursor,
+        label: dayLabel(cursor),
+        user: userDay,
+        partner: partnerDay,
+      });
+    }
+
+    return {
+      range: {
+        startDate: rangeStart,
+        endDate: rangeEnd,
+        dayCount: days.length,
+      },
+      days,
+      partnerName,
       warnings,
       generatedAt: Date.now(),
     };
