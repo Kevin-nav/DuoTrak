@@ -9,6 +9,7 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { renderNotificationEmail } from "./lib/notificationEmail";
+import { getLocalDayKey, normalizeTimeZone } from "./lib/streaks";
 
 type NotificationCategory = "task" | "partner" | "progress" | "system" | "chat" | "journal";
 type NotificationPriority = "low" | "medium" | "high";
@@ -526,6 +527,11 @@ export const sendEmailForNotification = internalAction({
     }
 
     const from = process.env.RESEND_FROM_EMAIL || "DuoTrak <no-reply@duotrak.org>";
+    const actionLabelByType: Record<string, string> = {
+      shared_streak_save_needed: "Save Streak",
+      verification_requested: "Review Proof",
+      verification_rejected: "Retry Task",
+    };
     const rendered = renderNotificationEmail({
       title: notification.title,
       message: notification.message,
@@ -534,7 +540,7 @@ export const sendEmailForNotification = internalAction({
         process.env.NEXT_PUBLIC_APP_URL ||
         process.env.SITE_URL ||
         "https://duotrak.org",
-      actionLabel: "Open DuoTrak",
+      actionLabel: actionLabelByType[notification.type] || "Open DuoTrak",
     });
 
     try {
@@ -885,6 +891,21 @@ export const dispatchEvent: any = internalAction({
           sendEmail: false,
         };
         break;
+      case "shared_streak_save_needed":
+        payload = {
+          type: "shared_streak_save_needed",
+          category: "partner",
+          title: "Save your Duo streak 🔥",
+          message:
+            context.message ||
+            `${actorName} showed up today. Do one quick action to keep your shared streak alive.`,
+          priority: "high",
+          actionable: true,
+          related_entity_type: "partnership",
+          related_entity_id: context.partnershipId || undefined,
+          sendEmail: true,
+        };
+        break;
       case "task_due_soon":
         payload = {
           type: "task_due_soon",
@@ -1121,6 +1142,127 @@ export const runDailyReminderSweep: any = internalAction({
     }
 
     return { ok: true, usersProcessed: (users as any[]).length };
+  },
+});
+
+export const listActivePartnershipsForStreakSweep = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const partnerships = await ctx.db
+      .query("partnerships")
+      .withIndex("by_status", (q: any) => q.eq("status", "active"))
+      .collect();
+
+    const rows: any[] = [];
+    for (const partnership of partnerships) {
+      const user1 = await ctx.db.get(partnership.user1_id);
+      const user2 = await ctx.db.get(partnership.user2_id);
+      if (!user1 || !user2) continue;
+      rows.push({
+        partnership,
+        user1,
+        user2,
+      });
+    }
+    return rows;
+  },
+});
+
+export const markStreakNudgeSent = internalMutation({
+  args: {
+    partnershipId: v.id("partnerships"),
+    recipientUserId: v.id("users"),
+    dayKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const partnership = await ctx.db.get(args.partnershipId);
+    if (!partnership) return { ok: false };
+
+    if (String(partnership.user1_id) === String(args.recipientUserId)) {
+      await ctx.db.patch(partnership._id, {
+        user1_last_streak_nudge_day: args.dayKey,
+        updated_at: Date.now(),
+      });
+      return { ok: true };
+    }
+
+    if (String(partnership.user2_id) === String(args.recipientUserId)) {
+      await ctx.db.patch(partnership._id, {
+        user2_last_streak_nudge_day: args.dayKey,
+        updated_at: Date.now(),
+      });
+      return { ok: true };
+    }
+
+    return { ok: false };
+  },
+});
+
+export const runSharedStreakNudgeSweep: any = internalAction({
+  args: {},
+  handler: async (ctx: any): Promise<any> => {
+    const now = Date.now();
+    const rows: any[] = await ctx.runQuery(
+      (internal as any).notifications.listActivePartnershipsForStreakSweep,
+      {}
+    );
+
+    let nudgesSent = 0;
+    for (const row of rows) {
+      const partnership = row.partnership;
+      const user1 = row.user1;
+      const user2 = row.user2;
+
+      const day1 = getLocalDayKey(now, normalizeTimeZone(user1.timezone));
+      const day2 = getLocalDayKey(now, normalizeTimeZone(user2.timezone));
+
+      const user1Done = user1.last_streak_activity_day === day1;
+      const user2Done = user2.last_streak_activity_day === day2;
+      if (user1Done === user2Done) continue;
+
+      if (user1Done && !user2Done) {
+        if (partnership.user2_last_streak_nudge_day === day2) continue;
+        await ctx.runAction((internal as any).notifications.dispatchEvent, {
+          eventType: "shared_streak_save_needed",
+          recipientUserId: user2._id,
+          actorUserId: user1._id,
+          context: JSON.stringify({
+            partnershipId: String(partnership._id),
+            message: `${user1.full_name || user1.nickname || "Your partner"} has already checked in today. Jump in now so your duo streak doesn't snap.`,
+            sharedStreak: partnership.shared_current_streak ?? 0,
+          }),
+        });
+        await ctx.runMutation((internal as any).notifications.markStreakNudgeSent, {
+          partnershipId: partnership._id,
+          recipientUserId: user2._id,
+          dayKey: day2,
+        });
+        nudgesSent += 1;
+        continue;
+      }
+
+      if (user2Done && !user1Done) {
+        if (partnership.user1_last_streak_nudge_day === day1) continue;
+        await ctx.runAction((internal as any).notifications.dispatchEvent, {
+          eventType: "shared_streak_save_needed",
+          recipientUserId: user1._id,
+          actorUserId: user2._id,
+          context: JSON.stringify({
+            partnershipId: String(partnership._id),
+            message: `${user2.full_name || user2.nickname || "Your partner"} has already checked in today. One quick move from you keeps the streak alive.`,
+            sharedStreak: partnership.shared_current_streak ?? 0,
+          }),
+        });
+        await ctx.runMutation((internal as any).notifications.markStreakNudgeSent, {
+          partnershipId: partnership._id,
+          recipientUserId: user1._id,
+          dayKey: day1,
+        });
+        nudgesSent += 1;
+      }
+    }
+
+    return { ok: true, partnershipsProcessed: rows.length, nudgesSent };
   },
 });
 

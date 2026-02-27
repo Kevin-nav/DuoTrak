@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { recordUserActivity } from "./lib/streaks";
 
 function buildTaskStartWeeks(aiPlanJson: string | undefined, totalTasks: number): number[] {
   const startWeeks = Array.from({ length: totalTasks }, () => 1);
@@ -254,6 +255,7 @@ export const create = mutation({
       }
     }
 
+    await recordUserActivity(ctx, user._id);
     return goalId;
   },
 });
@@ -404,6 +406,7 @@ export const createWithInstances = mutation({
       }
     }
 
+    await recordUserActivity(ctx, user._id);
     return goalId;
   },
 });
@@ -579,6 +582,7 @@ export const createSharedGoal = mutation({
       }
     }
 
+    await recordUserActivity(ctx, user._id);
     return { creatorGoalId, partnerGoalId, groupId };
   },
 });
@@ -650,6 +654,8 @@ export const acceptSharedGoal = mutation({
         updated_at: Date.now(),
       });
     }
+
+    await recordUserActivity(ctx, user._id);
   },
 });
 

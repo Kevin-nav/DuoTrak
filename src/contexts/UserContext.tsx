@@ -49,6 +49,8 @@ export interface UserDetails {
     partner_longest_streak?: number | null;
     partner_total_tasks_completed?: number | null;
     partner_goals_conquered?: number | null;
+    shared_current_streak?: number | null;
+    shared_longest_streak?: number | null;
     nickname: string | null;
     sent_invitation: any | null;
     received_invitation: any | null;
@@ -164,6 +166,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         partner_longest_streak: convexUser.partner_longest_streak ?? 0,
         partner_total_tasks_completed: convexUser.partner_total_tasks_completed ?? 0,
         partner_goals_conquered: convexUser.partner_goals_conquered ?? 0,
+        shared_current_streak: (convexUser as any).shared_current_streak ?? 0,
+        shared_longest_streak: (convexUser as any).shared_longest_streak ?? 0,
         nickname: convexUser.nickname ?? null,
         // Default missing fields
         notifications_enabled: convexUser.notifications_enabled ?? true,

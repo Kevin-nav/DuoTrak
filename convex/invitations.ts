@@ -457,6 +457,8 @@ export const accept = mutation({
       user2_nickname: receiver.full_name ?? undefined,
       status: "active",
       start_date: Date.now(),
+      shared_current_streak: 0,
+      shared_longest_streak: 0,
       updated_at: Date.now(),
     });
 

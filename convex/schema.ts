@@ -33,6 +33,8 @@ export default defineSchema({
     longest_streak: v.number(),
     total_tasks_completed: v.number(),
     goals_conquered: v.number(),
+    last_streak_activity_day: v.optional(v.string()),
+    last_activity_at: v.optional(v.number()),
 
     // Relationships
     current_partner_id: v.optional(v.id("users")), // Self-reference
@@ -203,6 +205,18 @@ export default defineSchema({
     status: v.string(), // 'active', 'pending', etc.
     start_date: v.number(),
     end_date: v.optional(v.number()),
+    shared_current_streak: v.optional(v.number()),
+    shared_longest_streak: v.optional(v.number()),
+    last_shared_cycle_key: v.optional(v.string()),
+    last_shared_user1_day: v.optional(v.string()),
+    last_shared_user2_day: v.optional(v.string()),
+    user1_last_activity_day_local: v.optional(v.string()),
+    user2_last_activity_day_local: v.optional(v.string()),
+    user1_grace_last_used_at: v.optional(v.number()),
+    user2_grace_last_used_at: v.optional(v.number()),
+    user1_last_streak_nudge_day: v.optional(v.string()),
+    user2_last_streak_nudge_day: v.optional(v.string()),
+    last_shared_activity_at: v.optional(v.number()),
 
     updated_at: v.number(),
   })

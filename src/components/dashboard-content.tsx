@@ -58,6 +58,7 @@ const getProofTypeLabel = (mode?: string): string => {
 
 const SPECIAL_BIRTHDAY_EMAIL = "charlenelaar26@gmail.com";
 const SPECIAL_BIRTHDAY_WELCOME_STORAGE_PREFIX = "duotrak:birthday-welcome:seen:v1";
+const DAILY_STREAK_WHATS_NEW_KEY = "duotrak:dashboard:daily-streak-whats-new:v1";
 
 export default function DashboardContent({
   userName,
@@ -72,6 +73,7 @@ export default function DashboardContent({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [showBirthdayWelcome, setShowBirthdayWelcome] = useState(false);
+  const [showDailyStreakWhatsNew, setShowDailyStreakWhatsNew] = useState(false);
 
   useEffect(() => {
     if (userDetails) {
@@ -99,6 +101,17 @@ export default function DashboardContent({
     window.localStorage.setItem(storageKey, new Date().toISOString());
     setShowBirthdayWelcome(true);
   }, [userDetails?.email]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!userDetails?._id) return;
+
+    const storageKey = `${DAILY_STREAK_WHATS_NEW_KEY}:${String(userDetails._id)}`;
+    const hasSeen = window.localStorage.getItem(storageKey);
+    if (!hasSeen) {
+      setShowDailyStreakWhatsNew(true);
+    }
+  }, [userDetails?._id]);
 
   // ── Real task instance data ──
   const todayStart = useMemo(() => {
@@ -357,6 +370,14 @@ export default function DashboardContent({
     })();
   };
 
+  const dismissDailyStreakWhatsNew = () => {
+    if (typeof window !== "undefined" && userDetails?._id) {
+      const storageKey = `${DAILY_STREAK_WHATS_NEW_KEY}:${String(userDetails._id)}`;
+      window.localStorage.setItem(storageKey, new Date().toISOString());
+    }
+    setShowDailyStreakWhatsNew(false);
+  };
+
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -389,6 +410,34 @@ export default function DashboardContent({
       <BirthdayLaunchWelcome open={showBirthdayWelcome} onClose={() => setShowBirthdayWelcome(false)} />
 
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
+      {showDailyStreakWhatsNew ? (
+        <motion.section
+          variants={itemVariants}
+          className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-pink-50 to-sky-50 p-4 shadow-sm sm:p-5"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-2xl space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">What&apos;s New</p>
+              <h2 className="text-lg font-bold text-charcoal sm:text-xl">Daily streaks are now timezone-smart</h2>
+              <p className="text-sm text-stone-gray">
+                Your streak now updates once per day in your own timezone when you do a real DuoTrak action:
+                complete a task, journal, update goals, or collaborate with your partner.
+              </p>
+              <p className="text-sm font-medium text-primary-blue">
+                Tiny daily action, big relationship momentum. Keep the flame alive together.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissDailyStreakWhatsNew}
+              className="rounded-md bg-charcoal px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+            >
+              Got it
+            </button>
+          </div>
+        </motion.section>
+      ) : null}
+
       <DuoStreakHero
         streakCount={streak}
         partnerName={partnerName}
@@ -419,9 +468,9 @@ export default function DashboardContent({
                 </motion.div>
                 <div className="min-w-0">
                   <span className="text-base font-semibold text-charcoal dark:text-gray-100 sm:text-lg">
-                    Personal Streak: {streak}
+                    Shared Streak: {streak}
                   </span>
-                  <p className="text-xs text-stone-gray dark:text-gray-300 sm:text-sm">Keep up the great work!</p>
+                  <p className="text-xs text-stone-gray dark:text-gray-300 sm:text-sm">Built together with your partner.</p>
                 </div>
               </div>
             </div>

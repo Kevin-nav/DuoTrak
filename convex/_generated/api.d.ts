@@ -21,6 +21,7 @@ import type * as lib_inviteUrl from "../lib/inviteUrl.js";
 import type * as lib_notificationEmail from "../lib/notificationEmail.js";
 import type * as lib_posthog from "../lib/posthog.js";
 import type * as lib_r2 from "../lib/r2.js";
+import type * as lib_streaks from "../lib/streaks.js";
 import type * as llmCostLedger from "../llmCostLedger.js";
 import type * as notifications from "../notifications.js";
 import type * as onboarding from "../onboarding.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   "lib/notificationEmail": typeof lib_notificationEmail;
   "lib/posthog": typeof lib_posthog;
   "lib/r2": typeof lib_r2;
+  "lib/streaks": typeof lib_streaks;
   llmCostLedger: typeof llmCostLedger;
   notifications: typeof notifications;
   onboarding: typeof onboarding;

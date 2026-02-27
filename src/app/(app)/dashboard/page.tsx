@@ -15,7 +15,7 @@ export default function HomePage() {
     <DashboardLayout>
       <DashboardContent
         userName={currentUser.full_name || "User"}
-        streak={currentUser.current_streak ?? undefined}
+        streak={currentUser.shared_current_streak ?? currentUser.current_streak ?? undefined}
         hasPartner={!!currentUser.partner_id}
         partnerName={currentUser.partner_full_name || "Partner"}
       />

@@ -2,6 +2,7 @@ import { action, internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { uploadToR2 } from "./lib/r2";
 import { api, internal } from "./_generated/api";
+import { recordUserActivity } from "./lib/streaks";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -864,6 +865,8 @@ export const markComplete = mutation({
             completed_at: Date.now(),
             updated_at: Date.now(),
         });
+
+        await recordUserActivity(ctx, user._id);
     },
 });
 
@@ -896,6 +899,8 @@ export const submitVerification = mutation({
             verification_evidence_url: args.evidence_url,
             updated_at: now,
         });
+
+        await recordUserActivity(ctx, user._id, now);
 
         if (user.current_partner_id) {
             const task = await ctx.db.get(instance.task_id);
@@ -959,6 +964,8 @@ export const partnerReviewVerification = mutation({
             verification_rejection_reason: approved ? undefined : args.rejection_reason,
             updated_at: now,
         });
+
+        await recordUserActivity(ctx, reviewer._id, now);
 
         const task = await ctx.db.get(instance.task_id);
         await ctx.scheduler.runAfter(

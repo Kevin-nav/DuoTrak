@@ -31,4 +31,11 @@ crons.cron(
   {}
 );
 
+crons.cron(
+  "hourly-shared-streak-nudges",
+  "20 * * * *",
+  (internal as any).notifications.runSharedStreakNudgeSweep,
+  {}
+);
+
 export default crons;

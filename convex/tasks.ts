@@ -1,6 +1,7 @@
 import { mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { recordUserActivity } from "./lib/streaks";
 
 /**
  * Helper to validate task ownership via goal and user.
@@ -224,6 +225,7 @@ export const create = mutation({
       updated_at: Date.now(),
     });
 
+    await recordUserActivity(ctx, user._id);
     return taskId;
   },
 });
@@ -238,6 +240,10 @@ export const updateStatus = mutation({
     if (!identity) throw new Error("Unauthenticated");
 
     const task = await validateTaskOwnership(ctx, args.id, identity.subject);
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_firebase_uid", (q: any) => q.eq("firebase_uid", identity.subject))
+      .unique();
 
     await ctx.db.patch(args.id, {
       status: args.status,
@@ -245,11 +251,11 @@ export const updateStatus = mutation({
     });
 
     if (isTaskCompletedLike(args.status) && !isTaskCompletedLike(task.status)) {
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_firebase_uid", (q: any) => q.eq("firebase_uid", identity.subject))
-        .unique();
       await emitGoalProgressNotifications(ctx, task.goal_id, currentUser?._id);
+    }
+
+    if (currentUser?._id) {
+      await recordUserActivity(ctx, currentUser._id);
     }
   },
 });
@@ -287,6 +293,10 @@ export const submitVerification = mutation({
       verification_rejection_reason: undefined,
       updated_at: now,
     });
+
+    if (currentUser?._id) {
+      await recordUserActivity(ctx, currentUser._id, now);
+    }
 
     if (currentUser?.current_partner_id) {
       await ctx.scheduler.runAfter(
@@ -334,6 +344,10 @@ export const partnerReviewVerification = mutation({
       verification_rejection_reason: approved ? undefined : args.rejection_reason,
       updated_at: now,
     });
+
+    if (currentUser?._id) {
+      await recordUserActivity(ctx, currentUser._id, now);
+    }
 
     if (currentUser?._id) {
       await ctx.scheduler.runAfter(

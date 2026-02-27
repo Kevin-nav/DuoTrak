@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { recordUserActivity } from "./lib/streaks";
 
 type SpaceType = "shared" | "private";
 const COMMENT_MAX_LENGTH = 280;
@@ -361,6 +362,7 @@ export const createEntry = mutation({
     });
 
     await ctx.db.patch(space._id, { updated_at: now });
+    await recordUserActivity(ctx, user._id, now);
 
     return entryId;
   },
@@ -409,7 +411,7 @@ export const createPage = mutation({
     if (!allowed) throw new Error("Forbidden");
 
     const now = Date.now();
-    return await ctx.db.insert("journal_pages", {
+    const pageId = await ctx.db.insert("journal_pages", {
       space_id: space._id,
       title: args.title.trim() || "Untitled Page",
       icon: args.icon,
@@ -418,6 +420,8 @@ export const createPage = mutation({
       created_at: now,
       updated_at: now,
     });
+    await recordUserActivity(ctx, user._id, now);
+    return pageId;
   },
 });
 
@@ -491,6 +495,7 @@ export const replacePageBlocks = mutation({
     await ctx.db.patch(space._id, {
       updated_at: now,
     });
+    await recordUserActivity(ctx, user._id, now);
     return { success: true };
   },
 });
@@ -547,6 +552,7 @@ export const updateEntry = mutation({
     }
 
     await ctx.db.patch(space._id, { updated_at: now });
+    await recordUserActivity(ctx, user._id, now);
     return { success: true };
   },
 });
@@ -639,6 +645,7 @@ export const sharePrivateEntry = mutation({
       }),
     });
 
+    await recordUserActivity(ctx, user._id, now);
     return sharedEntryId;
   },
 });
@@ -697,6 +704,7 @@ export const addReaction = mutation({
         );
       }
       await recomputeInteractionCounters(ctx, args.entryId);
+      await recordUserActivity(ctx, user._id, now);
     }
 
     return { ok: true };
@@ -723,8 +731,10 @@ export const removeReaction = mutation({
 
     const target = existing.find((item: any) => item.reaction_key === reactionKey);
     if (target) {
+      const now = Date.now();
       await ctx.db.delete(target._id);
       await recomputeInteractionCounters(ctx, args.entryId);
+      await recordUserActivity(ctx, user._id, now);
     }
 
     return { ok: true };
@@ -781,6 +791,7 @@ export const addComment = mutation({
     }
 
     await recomputeInteractionCounters(ctx, args.entryId);
+    await recordUserActivity(ctx, user._id, now);
     return interactionId;
   },
 });

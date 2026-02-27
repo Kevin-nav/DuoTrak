@@ -83,6 +83,8 @@ export const current = query({
       partner_longest_streak: null as number | null,
       partner_total_tasks_completed: null as number | null,
       partner_goals_conquered: null as number | null,
+      shared_current_streak: 0 as number,
+      shared_longest_streak: 0 as number,
       sent_invitation: null as any,
       received_invitation: null as any,
       badges: [] as any[], // Placeholder for now
@@ -126,6 +128,8 @@ export const current = query({
           partnerDetails.partnership_id = partnership._id;
           partnerDetails.partner_nickname =
             (partnership.user1_id === user._id ? partnership.user2_nickname : partnership.user1_nickname) ?? null;
+          partnerDetails.shared_current_streak = partnership.shared_current_streak ?? 0;
+          partnerDetails.shared_longest_streak = partnership.shared_longest_streak ?? 0;
         }
       }
     }
