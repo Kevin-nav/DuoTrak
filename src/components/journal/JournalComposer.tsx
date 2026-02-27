@@ -15,8 +15,6 @@ import {
 import { JournalSpaceType } from "@/hooks/useJournal";
 import { useGoals } from "@/hooks/useGoals";
 import { motion, useReducedMotion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   Popover,
   PopoverContent,
@@ -30,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import InlineMarkdownEditor from "@/components/journal/InlineMarkdownEditor";
 import { cn } from "@/lib/utils";
 
 const MOODS = [
@@ -264,27 +263,12 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
           </div>
         </div>
 
-        <textarea
-          ref={bodyRef}
+        <InlineMarkdownEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={8}
+          onChange={setBody}
           placeholder="How was your day? What did you learn together?"
-          className="w-full resize-none bg-transparent py-2 text-sm leading-relaxed text-landing-espresso placeholder:text-landing-espresso-light/30 outline-none"
+          textareaRef={bodyRef}
         />
-
-        <div className="rounded-xl border border-landing-clay/70 bg-landing-cream/50 p-3">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-landing-espresso-light">
-            Live Preview
-          </p>
-          {body.trim().length > 0 ? (
-            <div className="prose prose-sm max-w-none text-landing-espresso prose-headings:text-landing-espresso prose-p:my-1.5">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
-            </div>
-          ) : (
-            <p className="text-xs text-landing-espresso-light">Start typing to preview markdown rendering.</p>
-          )}
-        </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="flex items-center gap-2">
