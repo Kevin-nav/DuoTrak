@@ -82,7 +82,7 @@ export default function JournalHome() {
 
   return (
     <DashboardLayout maxWidthClass="max-w-[1600px] px-2 sm:px-4">
-      <div className="flex h-[calc(100vh-5rem)] flex-col gap-4 overflow-hidden">
+      <div className="flex min-h-[calc(100dvh-9rem)] flex-col gap-4">
         {/* Header Section */}
         <motion.section
           initial={reduceMotion ? undefined : { opacity: 0, y: -6 }}
@@ -102,7 +102,7 @@ export default function JournalHome() {
             </div>
 
             {/* Mobile Actions */}
-            <div className="flex items-center gap-2 sm:hidden">
+            <div className="flex items-center gap-2 lg:hidden">
               <Drawer>
                 <DrawerTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -179,9 +179,9 @@ export default function JournalHome() {
         </motion.section>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1">
           {/* Desktop Layout: 3 Columns */}
-          <div className="hidden h-full sm:block">
+          <div className="hidden h-full md:block">
             <ResizablePanelGroup direction="horizontal" className="h-full items-stretch">
               {/* Left Sidebar: Pages */}
               <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="hidden lg:block">
@@ -303,7 +303,7 @@ export default function JournalHome() {
           </div>
 
           {/* Mobile Layout: Stacked Feed only */}
-          <div className="h-full overflow-y-auto sm:hidden pb-20">
+          <div className="h-full overflow-y-auto pb-20 md:hidden">
             <div className="flex flex-col gap-4">
               <JournalSearch />
 
@@ -314,6 +314,18 @@ export default function JournalHome() {
                   animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                   className="space-y-4"
                 >
+                  {isMetaLoading || isEntriesLoading ? (
+                    <div className="rounded-2xl border border-landing-clay bg-white p-6 text-sm text-landing-espresso-light">
+                      Loading journal entries...
+                    </div>
+                  ) : null}
+
+                  {!isEntriesLoading && !isMetaLoading && message ? (
+                    <div className="rounded-2xl border border-landing-clay bg-white p-6 text-sm text-landing-espresso-light">
+                      {message}
+                    </div>
+                  ) : null}
+
                   {activeTab === "shared" && (
                     <div className="px-1">
                       <JournalDuoPrompt />
@@ -331,8 +343,7 @@ export default function JournalHome() {
                       }
                     }}
                   />
-                  {/* Load more... */}
-                  <div ref={loadMoreRef} className="h-1 w-full" aria-hidden />
+                  {entries.length > 0 ? <div ref={loadMoreRef} className="h-1 w-full" aria-hidden /> : null}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -341,7 +352,7 @@ export default function JournalHome() {
       </div>
 
       {/* Mobile Floating Action Button */}
-      <div className="fixed bottom-24 right-6 sm:hidden">
+      <div className="fixed bottom-24 right-6 md:hidden">
         <Drawer open={isComposerOpen} onOpenChange={setIsComposerOpen}>
           <DrawerTrigger asChild>
             <Button size="icon" className="h-14 w-14 rounded-full bg-landing-espresso shadow-xl ring-2 ring-white">
