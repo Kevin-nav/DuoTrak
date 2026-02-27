@@ -1,9 +1,16 @@
 const DEFAULT_LOCAL_BASE_URL = "http://localhost:3000";
+const DEFAULT_PRODUCTION_BASE_URL = "https://duotrak.org";
+
+const getDefaultBaseUrl = (): string => {
+  return process.env.NODE_ENV === "development"
+    ? DEFAULT_LOCAL_BASE_URL
+    : DEFAULT_PRODUCTION_BASE_URL;
+};
 
 const ensureUrlLike = (value: string): string => {
   const trimmed = value.trim().replace(/\/+$/, "");
   if (!trimmed) {
-    return DEFAULT_LOCAL_BASE_URL;
+    return getDefaultBaseUrl();
   }
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
@@ -18,7 +25,7 @@ const getAppBaseUrl = (): string => {
     process.env.SITE_URL ||
     process.env.VERCEL_URL;
   if (!configuredBase) {
-    return DEFAULT_LOCAL_BASE_URL;
+    return getDefaultBaseUrl();
   }
   return ensureUrlLike(configuredBase);
 };

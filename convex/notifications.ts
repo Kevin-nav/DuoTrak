@@ -529,7 +529,11 @@ export const sendEmailForNotification = internalAction({
     const rendered = renderNotificationEmail({
       title: notification.title,
       message: notification.message,
-      actionUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      actionUrl:
+        process.env.APP_URL ||
+        process.env.NEXT_PUBLIC_APP_URL ||
+        process.env.SITE_URL ||
+        "https://duotrak.org",
       actionLabel: "Open DuoTrak",
     });
 

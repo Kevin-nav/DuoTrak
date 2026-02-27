@@ -56,11 +56,6 @@ const getProofTypeLabel = (mode?: string): string => {
   return "Proof";
 };
 
-const isLikelyImageUrl = (url?: string): boolean => {
-  if (!url) return false;
-  return /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)(\?|$)/i.test(url);
-};
-
 const SPECIAL_BIRTHDAY_EMAIL = "charlenelaar26@gmail.com";
 const SPECIAL_BIRTHDAY_WELCOME_STORAGE_PREFIX = "duotrak:birthday-welcome:seen:v1";
 
@@ -270,7 +265,8 @@ export default function DashboardContent({
         taskName: inst.task_name || "Task",
         partnerName: resolvedPartnerName,
         partnerInitials: getInitials(resolvedPartnerName),
-        imageUrl: isLikelyImageUrl(evidenceUrl) ? evidenceUrl : undefined,
+        evidenceUrl,
+        verificationMode: inst.task_verification_mode || undefined,
         submittedAt: formatRelativeTime(inst.verification_submitted_at ?? inst.updated_at),
         goalName: inst.goal_name || "Goal",
         goalType: inst.goal_type === "shared" ? "shared" : "personal",

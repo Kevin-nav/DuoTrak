@@ -10,7 +10,8 @@ interface VerificationItem {
   taskName: string;
   partnerName: string;
   partnerInitials: string;
-  imageUrl?: string;
+  evidenceUrl?: string;
+  verificationMode?: string;
   submittedAt: string;
   goalName: string;
   goalType: "personal" | "shared";
@@ -28,33 +29,56 @@ export default function VerificationQueue({
   onVerify,
   onReject,
 }: VerificationQueueProps) {
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<VerificationItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const rejectReasons = [
-    "Image is unclear or blurry",
-    "Doesn't show task completion",
-    "Wrong task or activity",
-    "Photo seems old or not recent",
-  ];
-
-  const handleVerify = (itemId: string) => {
-    onVerify(itemId);
+  const closeReviewModal = () => {
+    setSelectedItem(null);
+    setRejectReason("");
+    setIsSubmitting(false);
   };
 
-  const handleRejectClick = (itemId: string) => {
-    setSelectedItem(itemId);
-    setShowRejectModal(true);
+  const isImageProof = (item?: VerificationItem | null) => {
+    const mode = String(item?.verificationMode || "").toLowerCase();
+    if (mode === "photo") return true;
+    const url = String(item?.evidenceUrl || "");
+    return /\.(png|jpe?g|webp|gif|bmp|svg|heic|heif)(\?|$)/i.test(url);
   };
 
-  const handleRejectSubmit = () => {
-    if (selectedItem && rejectReason) {
-      onReject(selectedItem, rejectReason);
-      setShowRejectModal(false);
-      setSelectedItem(null);
-      setRejectReason("");
+  const isVideoProof = (item?: VerificationItem | null) => {
+    const mode = String(item?.verificationMode || "").toLowerCase();
+    if (mode === "video") return true;
+    const url = String(item?.evidenceUrl || "");
+    return /\.(mp4|mov|webm|m4v|avi|mkv)(\?|$)/i.test(url);
+  };
+
+  const isAudioProof = (item?: VerificationItem | null) => {
+    const mode = String(item?.verificationMode || "").toLowerCase();
+    if (mode === "voice") return true;
+    const url = String(item?.evidenceUrl || "");
+    return /\.(mp3|wav|ogg|m4a|aac|flac|webm)(\?|$)/i.test(url);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedItem) return;
+    setIsSubmitting(true);
+    try {
+      await Promise.resolve(onVerify(selectedItem.id));
+      closeReviewModal();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!selectedItem || !rejectReason.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await Promise.resolve(onReject(selectedItem.id, rejectReason.trim()));
+      closeReviewModal();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -157,43 +181,15 @@ export default function VerificationQueue({
                     </div>
                   </div>
 
-                  {item.imageUrl ? (
-                    <div className="mb-3">
-                      <motion.img
-                        whileHover={{ scale: 1.01 }}
-                        src={item.imageUrl}
-                        alt={`${item.taskName} verification`}
-                        className="h-28 w-full cursor-pointer rounded-lg border border-cool-gray object-cover dark:border-gray-600 sm:h-32"
-                        onClick={() => setExpandedImage(item.imageUrl || null)}
-                      />
-                    </div>
-                  ) : (
-                    <p className="mb-3 rounded-lg border border-cool-gray bg-gray-50 px-3 py-2 text-xs text-stone-gray dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
-                      Proof submitted. Open the task details for full review.
-                    </p>
-                  )}
-
-                  <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
-                    <MouseGlowEffect glowColor="#10B981" intensity="medium">
-                      <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => handleVerify(item.id)}
-                        className="flex w-full items-center justify-center space-x-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600 sm:flex-1"
-                      >
-                        <Check className="h-4 w-4" />
-                        <span>Verify</span>
-                      </motion.button>
-                    </MouseGlowEffect>
-
+                  <div className="flex">
                     <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleRejectClick(item.id)}
-                      className="flex w-full items-center justify-center space-x-2 rounded-lg border border-error-red px-4 py-2 text-sm font-medium text-error-red transition-colors hover:bg-error-red hover:text-white sm:flex-1"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => setSelectedItem(item)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-primary-blue bg-primary-blue/10 px-4 py-2 text-sm font-medium text-primary-blue transition-colors hover:bg-primary-blue hover:text-white"
                     >
-                      <X className="h-4 w-4" />
-                      <span>Reject</span>
+                      <Eye className="h-4 w-4" />
+                      View proof
                     </motion.button>
                   </div>
                 </div>
@@ -204,106 +200,98 @@ export default function VerificationQueue({
       </motion.div>
 
       <AnimatePresence>
-        {expandedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <motion.img
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
-              src={expandedImage}
-              alt="Expanded verification"
-              className="max-h-full max-w-full rounded-lg object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showRejectModal && (
+        {selectedItem && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"
+            onClick={closeReviewModal}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md rounded-xl bg-white p-4 dark:bg-gray-800 sm:p-6"
+              className="w-full max-w-2xl rounded-xl bg-white p-4 dark:bg-gray-800 sm:p-6"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="mb-4 flex items-center space-x-3">
-                <X className="h-6 w-6 text-error-red" />
-                <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100">Reject Task</h3>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-charcoal dark:text-gray-100">Review proof</h3>
+                  <p className="text-sm text-stone-gray dark:text-gray-300">
+                    {selectedItem.taskName} • {selectedItem.partnerName} • {selectedItem.submittedAt}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeReviewModal}
+                  className="rounded-md p-1 text-stone-gray hover:bg-gray-100 dark:hover:bg-gray-700"
+                  aria-label="Close review"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <p className="mb-4 text-stone-gray dark:text-gray-300">
-                Let your partner know why this task needs to be resubmitted:
-              </p>
-
-              <div className="mb-4 space-y-2">
-                {rejectReasons.map((reason) => (
-                  <motion.label
-                    key={reason}
-                    whileHover={{ scale: 1.01 }}
-                    className={`flex cursor-pointer items-center rounded-lg border p-3 transition-all ${
-                      rejectReason === reason
-                        ? "border-error-red bg-error-red/10"
-                        : "border-cool-gray hover:border-error-red dark:border-gray-600"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="rejectReason"
-                      checked={rejectReason === reason}
-                      onChange={() => setRejectReason(reason)}
-                      className="sr-only"
+              <div className="mb-4 rounded-lg border border-cool-gray bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-900/30">
+                {selectedItem.evidenceUrl ? (
+                  isImageProof(selectedItem) ? (
+                    <img
+                      src={selectedItem.evidenceUrl}
+                      alt={`${selectedItem.taskName} proof`}
+                      className="max-h-[50vh] w-full rounded-lg object-contain"
                     />
-                    <div
-                      className={`mr-3 flex h-4 w-4 items-center justify-center rounded-full border-2 ${
-                        rejectReason === reason ? "border-error-red" : "border-cool-gray dark:border-gray-600"
-                      }`}
+                  ) : isVideoProof(selectedItem) ? (
+                    <video src={selectedItem.evidenceUrl} controls playsInline className="max-h-[50vh] w-full rounded-lg" />
+                  ) : isAudioProof(selectedItem) ? (
+                    <audio controls src={selectedItem.evidenceUrl} className="w-full" preload="metadata" />
+                  ) : (
+                    <a
+                      href={selectedItem.evidenceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-primary-blue hover:underline"
                     >
-                      {rejectReason === reason ? (
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="h-2 w-2 rounded-full bg-error-red" />
-                      ) : null}
-                    </div>
-                    <span className="text-sm text-charcoal dark:text-gray-100">{reason}</span>
-                  </motion.label>
-                ))}
+                      Open submitted proof
+                    </a>
+                  )
+                ) : (
+                  <p className="text-sm text-stone-gray dark:text-gray-300">No proof URL attached to this submission.</p>
+                )}
               </div>
 
+              <p className="mb-2 text-sm font-medium text-charcoal dark:text-gray-100">Rejection feedback (required only if rejecting)</p>
               <textarea
-                placeholder="Other reason (optional)"
-                value={rejectReason.startsWith("Other: ") ? rejectReason.replace("Other: ", "") : ""}
-                onChange={(e) => setRejectReason(`Other: ${e.target.value}`)}
+                placeholder="Explain what needs to be fixed before re-upload (for example: unclear image, wrong task, or not enough evidence)."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
                 className="w-full resize-none rounded-lg border border-cool-gray bg-white p-3 text-sm text-charcoal focus:border-error-red focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                 rows={3}
               />
 
               <div className="mt-5 flex flex-col gap-2.5 sm:mt-6 sm:flex-row sm:gap-3">
                 <button
-                  onClick={() => {
-                    setShowRejectModal(false);
-                    setRejectReason("");
-                  }}
+                  onClick={closeReviewModal}
                   className="w-full rounded-lg border border-cool-gray px-4 py-2 text-charcoal transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700 sm:flex-1"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
+                <MouseGlowEffect glowColor="#10B981" intensity="medium">
+                  <button
+                    onClick={handleApprove}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
+                    disabled={isSubmitting}
+                  >
+                    <Check className="h-4 w-4" />
+                    Approve
+                  </button>
+                </MouseGlowEffect>
                 <button
                   onClick={handleRejectSubmit}
-                  disabled={!rejectReason}
+                  disabled={!rejectReason.trim() || isSubmitting}
                   className="w-full rounded-lg bg-error-red px-4 py-2 text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1"
                 >
-                  Send Feedback
+                  Reject with feedback
                 </button>
               </div>
             </motion.div>
