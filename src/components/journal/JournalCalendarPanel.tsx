@@ -142,8 +142,8 @@ export default function JournalCalendarPanel({ spaceType }: JournalCalendarPanel
       {isLoading ? (
         <p className="mt-3 text-sm text-landing-espresso-light">Loading calendar activity...</p>
       ) : (
-        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="w-full lg:flex-1 min-w-[240px]">
+        <div className="mt-4 space-y-4">
+          <div className="min-w-[240px]">
             {viewMode === "agenda" ? (
               <JournalAgendaList
                 items={items}
@@ -166,7 +166,7 @@ export default function JournalCalendarPanel({ spaceType }: JournalCalendarPanel
           </div>
 
           {!isMobile ? (
-            <div className="hidden lg:block w-[280px] shrink-0">
+            <div className="w-full">
               <JournalDaySheet date={selectedDay} items={selectedItems} isMobile={false} isOpen onClose={() => { }} />
             </div>
           ) : null}
