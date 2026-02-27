@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, RefObject, useRef } from "react";
+import { ChangeEvent, KeyboardEvent, RefObject, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -20,11 +20,116 @@ export default function InlineMarkdownEditor({
   textareaRef,
 }: InlineMarkdownEditorProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const internalTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const resolvedTextareaRef = textareaRef ?? internalTextareaRef;
 
   const handleScroll = (event: ChangeEvent<HTMLTextAreaElement>) => {
     if (!overlayRef.current) return;
     overlayRef.current.scrollTop = event.currentTarget.scrollTop;
     overlayRef.current.scrollLeft = event.currentTarget.scrollLeft;
+  };
+
+  const insertAtSelection = (insertion: string, moveCursorBy = insertion.length) => {
+    const target = resolvedTextareaRef.current;
+    if (!target) return;
+    const start = target.selectionStart ?? 0;
+    const end = target.selectionEnd ?? 0;
+    const nextValue = `${value.slice(0, start)}${insertion}${value.slice(end)}`;
+    const nextPos = start + moveCursorBy;
+    onChange(nextValue);
+    requestAnimationFrame(() => {
+      const el = resolvedTextareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextPos, nextPos);
+    });
+  };
+
+  const replaceCurrentLine = (
+    replacement: string,
+    cursorFromLineStart: number,
+    start: number,
+    end: number
+  ) => {
+    const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const nextBreak = value.indexOf("\n", end);
+    const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+    const nextValue = `${value.slice(0, lineStart)}${replacement}${value.slice(lineEnd)}`;
+    const nextPos = lineStart + cursorFromLineStart;
+    onChange(nextValue);
+    requestAnimationFrame(() => {
+      const el = resolvedTextareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextPos, nextPos);
+    });
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    const target = event.currentTarget;
+    const start = target.selectionStart ?? 0;
+    const end = target.selectionEnd ?? 0;
+    const hasRangeSelection = start !== end;
+    if (hasRangeSelection) return;
+
+    const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const nextBreak = value.indexOf("\n", start);
+    const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+    const line = value.slice(lineStart, lineEnd);
+    const beforeCursorInLine = value.slice(lineStart, start);
+
+    if (event.key === "Enter") {
+      const todoMatch = /^(\s*[-*]\s+\[(?: |x|X)\]\s+)(.*)$/.exec(line);
+      if (todoMatch) {
+        event.preventDefault();
+        const content = todoMatch[2].trim();
+        if (!content) {
+          const stripped = line.replace(/^(\s*[-*]\s+\[(?: |x|X)\]\s+)/, "");
+          replaceCurrentLine(stripped, 0, start, end);
+          return;
+        }
+        const leadingWhitespace = (/^\s*/.exec(todoMatch[1]) || [""])[0];
+        insertAtSelection(`\n${leadingWhitespace}- [ ] `);
+        return;
+      }
+
+      const bulletMatch = /^(\s*[-*]\s+)(.*)$/.exec(line);
+      if (bulletMatch) {
+        event.preventDefault();
+        const content = bulletMatch[2].trim();
+        if (!content) {
+          const stripped = line.replace(/^(\s*[-*]\s+)/, "");
+          replaceCurrentLine(stripped, 0, start, end);
+          return;
+        }
+        insertAtSelection(`\n${bulletMatch[1]}`);
+        return;
+      }
+
+      const numberedMatch = /^(\s*)(\d+)\.\s+(.*)$/.exec(line);
+      if (numberedMatch) {
+        event.preventDefault();
+        const content = numberedMatch[3].trim();
+        if (!content) {
+          const stripped = line.replace(/^(\s*)\d+\.\s+/, "$1");
+          replaceCurrentLine(stripped, 0, start, end);
+          return;
+        }
+        const nextNumber = Number(numberedMatch[2]) + 1;
+        insertAtSelection(`\n${numberedMatch[1]}${nextNumber}. `);
+        return;
+      }
+    }
+
+    if (event.key === "Backspace" && start === lineStart + beforeCursorInLine.length) {
+      const removablePrefix =
+        /^(\s*[-*]\s+\[(?: |x|X)\]\s+|\s*[-*]\s+|\s*\d+\.\s+|#{1,6}\s+|>\s+|!\s+)/.exec(line)?.[0];
+      if (removablePrefix && beforeCursorInLine.length <= removablePrefix.length) {
+        event.preventDefault();
+        const nextLine = line.slice(removablePrefix.length);
+        replaceCurrentLine(nextLine, 0, start, end);
+      }
+    }
   };
 
   return (
@@ -39,8 +144,20 @@ export default function InlineMarkdownEditor({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                strong: ({ children }) => <strong className="font-extrabold text-landing-espresso">{children}</strong>,
+                p: ({ children }) => <p className="my-1.5 whitespace-pre-wrap">{children}</p>,
+                ul: ({ children }) => <ul className="my-1.5 list-disc pl-5">{children}</ul>,
+                ol: ({ children }) => <ol className="my-1.5 list-decimal pl-5">{children}</ol>,
+                li: ({ children }) => <li className="my-0.5">{children}</li>,
+                strong: ({ children }) => <strong className="font-black text-landing-espresso">{children}</strong>,
                 em: ({ children }) => <em className="italic text-landing-espresso">{children}</em>,
+                input: ({ checked }) => (
+                  <input
+                    type="checkbox"
+                    checked={!!checked}
+                    readOnly
+                    className="mr-1.5 h-3.5 w-3.5 align-middle accent-landing-terracotta"
+                  />
+                ),
               }}
             >
               {value}
@@ -52,9 +169,10 @@ export default function InlineMarkdownEditor({
       </div>
 
       <textarea
-        ref={textareaRef}
+        ref={resolvedTextareaRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={handleKeyDown}
         onScroll={handleScroll}
         spellCheck
         className="absolute inset-0 h-full w-full resize-none bg-transparent px-3 py-2 text-sm leading-relaxed text-transparent caret-landing-espresso outline-none selection:bg-landing-terracotta/25"
@@ -62,4 +180,3 @@ export default function InlineMarkdownEditor({
     </div>
   );
 }
-
