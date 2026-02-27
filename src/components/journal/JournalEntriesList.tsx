@@ -5,6 +5,8 @@ import { Share2, Users, Lock, Smile } from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
 import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const MOODS_MAP: Record<string, { emoji: string; color: string }> = {
   Happy: { emoji: "😊", color: "bg-yellow-100 border-yellow-200 text-yellow-700" },
@@ -69,7 +71,9 @@ export default function JournalEntriesList({
               </span>
             </div>
 
-            <p className="mt-3 whitespace-pre-wrap text-sm text-landing-espresso-light">{entry.body}</p>
+            <div className="prose prose-sm mt-3 max-w-none text-landing-espresso-light prose-headings:text-landing-espresso prose-p:my-1.5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.body || ""}</ReactMarkdown>
+            </div>
 
             {(entry.tags || []).length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1.5">

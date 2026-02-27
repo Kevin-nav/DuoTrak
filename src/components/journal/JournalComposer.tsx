@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { 
   Plus, 
   Save, 
@@ -15,6 +15,8 @@ import {
 import { JournalSpaceType } from "@/hooks/useJournal";
 import { useGoals } from "@/hooks/useGoals";
 import { motion, useReducedMotion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Popover,
   PopoverContent,
@@ -55,6 +57,7 @@ interface JournalComposerProps {
 
 export default function JournalComposer({ spaceType, onCreate }: JournalComposerProps) {
   const reduceMotion = useReducedMotion();
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [mood, setMood] = useState("");
@@ -66,6 +69,72 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
   const activeGoals = goals?.filter(g => !g.isArchived) || [];
 
   const selectedMood = MOODS.find((m) => m.label === mood);
+
+  const applyAndPreserveSelection = (
+    transform: (value: string, start: number, end: number) => { value: string; start: number; end: number }
+  ) => {
+    const textarea = bodyRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const next = transform(body, start, end);
+    setBody(next.value);
+
+    requestAnimationFrame(() => {
+      const current = bodyRef.current;
+      if (!current) return;
+      current.focus();
+      current.setSelectionRange(next.start, next.end);
+    });
+  };
+
+  const wrapSelection = (prefix: string, suffix: string, placeholder: string) => {
+    applyAndPreserveSelection((value, start, end) => {
+      const selected = value.slice(start, end);
+      const hasSelection = selected.length > 0;
+      const text = hasSelection ? selected : placeholder;
+      const replacement = `${prefix}${text}${suffix}`;
+      const nextValue = `${value.slice(0, start)}${replacement}${value.slice(end)}`;
+      const nextStart = start + prefix.length;
+      const nextEnd = nextStart + text.length;
+      return { value: nextValue, start: nextStart, end: nextEnd };
+    });
+  };
+
+  const toggleLinePrefix = (prefix: string) => {
+    applyAndPreserveSelection((value, start, end) => {
+      const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+      const nextBreak = value.indexOf("\n", end);
+      const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+      const line = value.slice(lineStart, lineEnd);
+      const hasPrefix = line.startsWith(prefix);
+      const stripped = hasPrefix ? line.slice(prefix.length) : line;
+      const replaced = hasPrefix ? stripped : `${prefix}${line}`;
+      const nextValue = `${value.slice(0, lineStart)}${replaced}${value.slice(lineEnd)}`;
+      const delta = hasPrefix ? -prefix.length : prefix.length;
+      const nextStart = Math.max(lineStart, start + delta);
+      const nextEnd = Math.max(lineStart, end + delta);
+      return { value: nextValue, start: nextStart, end: nextEnd };
+    });
+  };
+
+  const clearLineFormatting = () => {
+    applyAndPreserveSelection((value, start, end) => {
+      const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+      const nextBreak = value.indexOf("\n", end);
+      const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+      const line = value.slice(lineStart, lineEnd);
+      const prefixMatch = /^(#{1,6}\s+|[-*]\s+|>\s+|\[(?: |x|X)\]\s+)/.exec(line);
+      if (!prefixMatch) return { value, start, end };
+      const removed = prefixMatch[0];
+      const nextLine = line.slice(removed.length);
+      const nextValue = `${value.slice(0, lineStart)}${nextLine}${value.slice(lineEnd)}`;
+      const nextStart = Math.max(lineStart, start - removed.length);
+      const nextEnd = Math.max(lineStart, end - removed.length);
+      return { value: nextValue, start: nextStart, end: nextEnd };
+    });
+  };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -137,22 +206,57 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
           className="w-full bg-transparent text-lg font-black tracking-tight text-landing-espresso placeholder:text-landing-espresso-light/30 outline-none"
         />
 
-        {/* Pseudo-Rich Text Toolbar */}
+        {/* Markdown Toolbar */}
         <div className="flex items-center gap-1 border-b border-t border-landing-clay/30 py-1.5">
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={clearLineFormatting}
+            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+            title="Clear line markdown formatting"
+          >
             <Type className="h-3.5 w-3.5" />
           </Button>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => toggleLinePrefix("## ")}
+            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+            title="Toggle heading"
+          >
             <Heading2 className="h-3.5 w-3.5" />
           </Button>
           <div className="mx-1 h-4 w-px bg-landing-clay/30" />
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => wrapSelection("**", "**", "bold text")}
+            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+            title="Bold"
+          >
             <Bold className="h-3.5 w-3.5" />
           </Button>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => wrapSelection("*", "*", "italic text")}
+            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+            title="Italic"
+          >
             <Italic className="h-3.5 w-3.5" />
           </Button>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => toggleLinePrefix("- ")}
+            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+            title="Toggle list item"
+          >
             <List className="h-3.5 w-3.5" />
           </Button>
           <div className="ml-auto flex items-center gap-1">
@@ -161,12 +265,26 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
         </div>
 
         <textarea
+          ref={bodyRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={8}
           placeholder="How was your day? What did you learn together?"
           className="w-full resize-none bg-transparent py-2 text-sm leading-relaxed text-landing-espresso placeholder:text-landing-espresso-light/30 outline-none"
         />
+
+        <div className="rounded-xl border border-landing-clay/70 bg-landing-cream/50 p-3">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-landing-espresso-light">
+            Live Preview
+          </p>
+          {body.trim().length > 0 ? (
+            <div className="prose prose-sm max-w-none text-landing-espresso prose-headings:text-landing-espresso prose-p:my-1.5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-xs text-landing-espresso-light">Start typing to preview markdown rendering.</p>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="flex items-center gap-2">

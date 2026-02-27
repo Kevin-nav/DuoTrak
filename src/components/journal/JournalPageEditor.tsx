@@ -797,7 +797,15 @@ export default function JournalPageEditor() {
                       }
                       rows={block.type === "heading" ? 1 : 3}
                       placeholder={`${block.type} block... type / for commands or @ to mention goals/tasks`}
-                      className="w-full rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none transition-all duration-200 focus:border-landing-terracotta focus:ring-2 focus:ring-landing-terracotta/20"
+                      className={`w-full rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none transition-all duration-200 focus:border-landing-terracotta focus:ring-2 focus:ring-landing-terracotta/20 ${
+                        block.type === "heading"
+                          ? "text-base font-bold sm:text-lg"
+                          : block.type === "quote"
+                            ? "border-l-4 border-l-landing-terracotta bg-landing-cream/40 italic"
+                            : block.type === "callout"
+                              ? "bg-amber-50/70"
+                              : ""
+                      }`}
                     />
                   )}
                   <AnimatePresence>
