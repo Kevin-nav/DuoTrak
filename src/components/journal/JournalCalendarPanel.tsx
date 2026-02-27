@@ -78,73 +78,72 @@ export default function JournalCalendarPanel({ spaceType }: JournalCalendarPanel
 
   return (
     <section className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="inline-flex items-center gap-2 text-base font-bold text-landing-espresso">
-          <CalendarDays className="h-4 w-4" />
-          Calendar
-        </h2>
-        <div className="inline-flex items-center gap-1 rounded-lg border border-landing-clay p-1">
-          <button
-            type="button"
-            onClick={() => setViewMode("agenda")}
-            className={`rounded-md px-2 py-1 text-xs font-semibold ${
-              viewMode === "agenda" ? "bg-landing-espresso text-landing-cream" : "text-landing-espresso-light"
-            }`}
-          >
-            Agenda
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("month")}
-            className={`rounded-md px-2 py-1 text-xs font-semibold ${
-              viewMode === "month" ? "bg-landing-espresso text-landing-cream" : "text-landing-espresso-light"
-            }`}
-          >
-            Month
-          </button>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="inline-flex items-center gap-2 text-base font-bold text-landing-espresso">
+            <CalendarDays className="h-4 w-4" />
+            Calendar
+          </h2>
+          <div className="inline-flex items-center gap-1 rounded-lg border border-landing-clay p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("agenda")}
+              className={`rounded-md px-2 py-1 text-xs font-semibold transition ${viewMode === "agenda" ? "bg-landing-espresso text-landing-cream shadow-sm" : "text-landing-espresso-light hover:bg-landing-cream"
+                }`}
+            >
+              Agenda
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("month")}
+              className={`rounded-md px-2 py-1 text-xs font-semibold transition ${viewMode === "month" ? "bg-landing-espresso text-landing-cream shadow-sm" : "text-landing-espresso-light hover:bg-landing-cream"
+                }`}
+            >
+              Month
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {filters.map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() => setActiveFilter(filter.id)}
-            className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-              activeFilter === filter.id
+        <div className="flex flex-wrap items-center gap-2">
+          {filters.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setActiveFilter(filter.id)}
+              className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${activeFilter === filter.id
                 ? "border-landing-terracotta bg-landing-terracotta/10 text-landing-espresso"
                 : "border-landing-clay text-landing-espresso-light hover:bg-landing-cream"
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
+                }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
 
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-landing-clay bg-landing-cream p-2.5">
-        <button
-          type="button"
-          onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="rounded-md border border-landing-clay bg-white p-1.5 text-landing-espresso-light"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <p className="text-sm font-semibold text-landing-espresso">{format(month, "MMMM yyyy")}</p>
-        <button
-          type="button"
-          onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="rounded-md border border-landing-clay bg-white p-1.5 text-landing-espresso-light"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-between rounded-xl border border-landing-clay bg-landing-cream p-2.5">
+          <button
+            type="button"
+            onClick={() => setMonth((current) => addMonths(current, -1))}
+            className="rounded-md border border-landing-clay bg-white p-1.5 text-landing-espresso-light transition hover:bg-gray-50 hover:text-landing-espresso"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <p className="text-sm font-semibold text-landing-espresso">{format(month, "MMMM yyyy")}</p>
+          <button
+            type="button"
+            onClick={() => setMonth((current) => addMonths(current, 1))}
+            className="rounded-md border border-landing-clay bg-white p-1.5 text-landing-espresso-light transition hover:bg-gray-50 hover:text-landing-espresso"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
         <p className="mt-3 text-sm text-landing-espresso-light">Loading calendar activity...</p>
       ) : (
-        <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_280px]">
-          <div>
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="w-full lg:flex-1 min-w-[240px]">
             {viewMode === "agenda" ? (
               <JournalAgendaList
                 items={items}
@@ -167,7 +166,9 @@ export default function JournalCalendarPanel({ spaceType }: JournalCalendarPanel
           </div>
 
           {!isMobile ? (
-            <JournalDaySheet date={selectedDay} items={selectedItems} isMobile={false} isOpen onClose={() => {}} />
+            <div className="hidden lg:block w-[280px] shrink-0">
+              <JournalDaySheet date={selectedDay} items={selectedItems} isMobile={false} isOpen onClose={() => { }} />
+            </div>
           ) : null}
         </div>
       )}
