@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardEvent, KeyboardEvent, RefObject, useEffect, useRef } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useEffect, useRef } from "react";
 
 type InlineMarkdownEditorProps = {
   value: string;
@@ -40,11 +40,77 @@ export default function InlineMarkdownEditor({
     onChange(editor.innerHTML);
   };
 
+  const getActiveRange = (editor: HTMLDivElement) => {
+    const selection = window.getSelection();
+    if (!selection) return null;
+    if (selection.rangeCount === 0) {
+      const fallbackRange = document.createRange();
+      fallbackRange.selectNodeContents(editor);
+      fallbackRange.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(fallbackRange);
+      return fallbackRange;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) {
+      const fallbackRange = document.createRange();
+      fallbackRange.selectNodeContents(editor);
+      fallbackRange.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(fallbackRange);
+      return fallbackRange;
+    }
+
+    return range;
+  };
+
   const insertHtmlAtCursor = (html: string) => {
     const editor = resolvedEditorRef.current;
     if (!editor) return;
     editor.focus();
-    document.execCommand("insertHTML", false, html);
+
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = getActiveRange(editor);
+    if (!range) return;
+
+    range.deleteContents();
+    const fragment = range.createContextualFragment(html);
+    const lastNode = fragment.lastChild;
+    range.insertNode(fragment);
+
+    if (lastNode) {
+      const nextRange = document.createRange();
+      nextRange.setStartAfter(lastNode);
+      nextRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
+    }
+
+    syncHtmlToState();
+  };
+
+  const insertTextAtCursor = (text: string) => {
+    const editor = resolvedEditorRef.current;
+    if (!editor) return;
+    editor.focus();
+
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = getActiveRange(editor);
+    if (!range) return;
+
+    range.deleteContents();
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+
+    const nextRange = document.createRange();
+    nextRange.setStartAfter(textNode);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+
     syncHtmlToState();
   };
 
@@ -62,8 +128,14 @@ export default function InlineMarkdownEditor({
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Tab") {
       event.preventDefault();
-      document.execCommand("insertHTML", false, "&nbsp;&nbsp;&nbsp;&nbsp;");
-      syncHtmlToState();
+      insertTextAtCursor("    ");
+    }
+  };
+
+  const handleBeforeInput = (event: FormEvent<HTMLDivElement>) => {
+    const native = event.nativeEvent as InputEvent;
+    if (native.inputType === "insertText" || native.inputType === "insertFromPaste" || native.inputType === "insertParagraph") {
+      requestAnimationFrame(syncHtmlToState);
     }
   };
 
@@ -73,6 +145,7 @@ export default function InlineMarkdownEditor({
         ref={resolvedEditorRef}
         contentEditable
         suppressContentEditableWarning
+        onBeforeInput={handleBeforeInput}
         onInput={syncHtmlToState}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}

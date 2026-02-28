@@ -43,9 +43,38 @@ const ALLOWED_TAGS = new Set([
   "INPUT",
 ]);
 
+const sanitizeRichBodyServer = (html: string) => {
+  if (!html) return "";
+
+  const withoutUnsafeBlocks = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+
+  return withoutUnsafeBlocks.replace(/<(\/?)([a-z0-9-]+)([^>]*)>/gi, (_full, slash, rawTag, attrs) => {
+    const tag = String(rawTag || "").toUpperCase();
+    const isClosing = slash === "/";
+    if (!ALLOWED_TAGS.has(tag)) {
+      return "";
+    }
+
+    if (isClosing) {
+      if (tag === "INPUT") return "";
+      return `</${rawTag.toLowerCase()}>`;
+    }
+
+    if (tag === "INPUT") {
+      const hasChecked = /\schecked(?:\s*=\s*(?:"checked"|'checked'|checked))?/i.test(String(attrs || ""));
+      return hasChecked ? '<input type="checkbox" checked="checked">' : '<input type="checkbox">';
+    }
+
+    return `<${rawTag.toLowerCase()}>`;
+  });
+};
+
 const sanitizeRichBody = (html: string) => {
   if (!html) return "";
-  if (typeof window === "undefined") return "";
+  if (typeof window === "undefined") return sanitizeRichBodyServer(html);
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");

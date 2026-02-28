@@ -78,6 +78,7 @@ export default function FloatingChatButton({ partnerId }: FloatingChatButtonProp
       type="button"
       aria-label="Open chat"
       title="Drag to move chat button to another corner"
+      animate={{ x: 0, y: 0 }}
       drag
       dragMomentum={false}
       dragElastic={0.12}
