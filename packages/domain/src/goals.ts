@@ -59,6 +59,7 @@ export type DomainGoal = {
   category?: string | null;
   icon?: string | null;
   color?: string | null;
+  isArchived: boolean;
   status: string;
   total: number;
   progress: number;
@@ -121,6 +122,7 @@ export const mapGoalFromConvex = (goal: ConvexGoal): DomainGoal => ({
   category: typeof goal.category === "string" ? goal.category : null,
   icon: typeof goal.icon === "string" ? goal.icon : null,
   color: typeof goal.color === "string" ? goal.color : null,
+  isArchived: goal.is_archived === true,
   status: typeof goal.status === "string" ? goal.status : "On Track",
   total: typeof goal.total === "number" ? goal.total : 0,
   progress: typeof goal.progress === "number" ? goal.progress : 0,

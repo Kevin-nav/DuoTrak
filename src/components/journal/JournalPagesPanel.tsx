@@ -39,7 +39,7 @@ export default function JournalPagesPanel({
       initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
+      className="min-w-0 overflow-hidden rounded-2xl border border-landing-clay bg-white p-4 shadow-sm"
     >
       <div className="mb-3 flex items-center justify-between">
         <h2 className="inline-flex items-center gap-2 text-base font-bold text-landing-espresso">
@@ -48,18 +48,18 @@ export default function JournalPagesPanel({
         </h2>
       </div>
 
-      <form onSubmit={onSubmit} className="mb-3 flex flex-col gap-2 sm:flex-row">
+      <form onSubmit={onSubmit} className="mb-3 flex min-w-0 flex-col gap-2 md:flex-row">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Create a Notion-style page"
-          className="flex-1 rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+          className="min-w-0 flex-1 rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
         />
         <motion.button
           type="submit"
           disabled={isSaving}
           whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-          className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-landing-clay px-2.5 py-2 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream disabled:opacity-70 sm:w-auto"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-1 rounded-lg border border-landing-clay px-2.5 py-2 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream disabled:opacity-70 md:w-auto"
         >
           <PlusSquare className="h-3.5 w-3.5" />
           {isSaving ? "Adding..." : "Add"}
@@ -69,7 +69,7 @@ export default function JournalPagesPanel({
       {pages.length === 0 ? (
         <p className="text-sm text-landing-espresso-light">No pages yet.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           {pages.map((page) => (
             <motion.button
               type="button"
@@ -77,10 +77,10 @@ export default function JournalPagesPanel({
               onClick={() => onOpenPage(page._id)}
               whileHover={reduceMotion ? undefined : { y: -1 }}
               whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-              className="w-full rounded-lg border border-landing-clay bg-landing-cream px-3 py-2 text-left text-sm text-landing-espresso"
+              className="flex w-full min-w-0 items-center gap-1 rounded-lg border border-landing-clay bg-landing-cream px-3 py-2 text-left text-sm text-landing-espresso"
             >
-              {page.icon ? `${page.icon} ` : ""}
-              {page.title}
+              {page.icon ? <span className="shrink-0">{page.icon}</span> : null}
+              <span className="block min-w-0 truncate">{page.title}</span>
             </motion.button>
           ))}
         </div>

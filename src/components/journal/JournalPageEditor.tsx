@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/dashboard-layout";
 import { ArrowLeft, CheckCircle2, Circle, GripVertical, Plus, Save } from "lucide-react";
@@ -22,6 +22,7 @@ type BlockInput = {
   type: "paragraph" | "heading" | "todo" | "quote" | "callout";
   content: string;
   checked?: boolean;
+  autoFormat?: boolean;
 };
 
 type CommandType = BlockInput["type"];
@@ -47,7 +48,93 @@ const createBlock = (type: CommandType, content = "", checked = false): BlockInp
   type,
   content,
   checked,
+  autoFormat: true,
 });
+
+type AutoFormatTransform = {
+  content: string;
+  removedPrefixLength: number;
+  type?: BlockInput["type"];
+  checked?: boolean;
+};
+
+const parseAutoFormatTransform = (value: string): AutoFormatTransform | null => {
+  const headingMatch = /^(#{1,3})\s+(\S[\s\S]*)$/.exec(value);
+  if (headingMatch) {
+    const [, hashes, content] = headingMatch;
+    return {
+      type: "heading",
+      content,
+      removedPrefixLength: hashes.length + 1,
+    };
+  }
+
+  const quoteMatch = /^>\s+(\S[\s\S]*)$/.exec(value);
+  if (quoteMatch) {
+    const [, content] = quoteMatch;
+    return {
+      type: "quote",
+      content,
+      removedPrefixLength: value.length - content.length,
+    };
+  }
+
+  const calloutMatch = /^!\s+(\S[\s\S]*)$/.exec(value);
+  if (calloutMatch) {
+    const [, content] = calloutMatch;
+    return {
+      type: "callout",
+      content,
+      removedPrefixLength: value.length - content.length,
+    };
+  }
+
+  const taskWithPrefixMatch = /^[-*]\s+\[( |x|X)\]\s+(\S[\s\S]*)$/.exec(value);
+  if (taskWithPrefixMatch) {
+    const [, marker, content] = taskWithPrefixMatch;
+    return {
+      type: "todo",
+      checked: marker.toLowerCase() === "x",
+      content,
+      removedPrefixLength: value.length - content.length,
+    };
+  }
+
+  const bareTaskMatch = /^\[( |x|X)\]\s+(\S[\s\S]*)$/.exec(value);
+  if (bareTaskMatch) {
+    const [, marker, content] = bareTaskMatch;
+    return {
+      type: "todo",
+      checked: marker.toLowerCase() === "x",
+      content,
+      removedPrefixLength: value.length - content.length,
+    };
+  }
+
+  const looseTaskMatch = /^\[\]\s+(\S[\s\S]*)$/.exec(value);
+  if (looseTaskMatch) {
+    const [, content] = looseTaskMatch;
+    return {
+      type: "todo",
+      checked: false,
+      content,
+      removedPrefixLength: value.length - content.length,
+    };
+  }
+
+  const bulletMatch = /^[-*]\s+(\S[\s\S]*)$/.exec(value);
+  if (bulletMatch) {
+    const [, content] = bulletMatch;
+    return {
+      type: "todo",
+      checked: false,
+      content,
+      removedPrefixLength: value.length - content.length,
+    };
+  }
+
+  return null;
+};
 
 const toDateInput = (timestamp?: number) => {
   if (!timestamp) return "";
@@ -89,6 +176,7 @@ export default function JournalPageEditor() {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [taskDrafts, setTaskDrafts] = useState<Record<string, { title: string; dueDate: string; assigneeUserId: string }>>({});
+  const blockTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   useEffect(() => {
     setHasInitializedFromServer(false);
@@ -112,6 +200,7 @@ export default function JournalPageEditor() {
           type: block.type,
           content: block.content || "",
           checked: block.checked || false,
+          autoFormat: true,
         }))
       );
     } else {
@@ -158,33 +247,38 @@ export default function JournalPageEditor() {
   }, [goals]);
 
   const updateBlock = (index: number, patch: Partial<BlockInput>) => {
-    const next = [...draftBlocks];
-    next[index] = { ...next[index], ...patch };
-    setDraftBlocks(next);
+    setDraftBlocks((current) => {
+      const next = [...current];
+      if (!next[index]) return current;
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
   };
 
   const addBlock = (type: BlockInput["type"]) => {
-    setDraftBlocks([...draftBlocks, createBlock(type)]);
+    setDraftBlocks((current) => [...current, createBlock(type)]);
   };
 
   const removeBlock = (index: number) => {
-    const next = draftBlocks.filter((_, idx) => idx !== index);
-    setDraftBlocks(next.length > 0 ? next : [createBlock("paragraph")]);
+    setDraftBlocks((current) => {
+      const next = current.filter((_, idx) => idx !== index);
+      return next.length > 0 ? next : [createBlock("paragraph")];
+    });
   };
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || toIndex >= draftBlocks.length) return;
-    const next = [...draftBlocks];
-    const [item] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, item);
-    setDraftBlocks(next);
+    setDraftBlocks((current) => {
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || toIndex >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, item);
+      return next;
+    });
   };
 
-  const deriveSuggestion = (index: number, event: ChangeEvent<HTMLTextAreaElement>) => {
+  const deriveSuggestion = (index: number, content: string, cursor: number) => {
     const block = draftBlocks[index];
     if (!block) return;
-    const content = event.target.value;
-    const cursor = event.target.selectionStart ?? content.length;
     const beforeCursor = content.slice(0, cursor);
 
     const slashMatch = /(?:^|\s)\/([a-z]*)$/.exec(beforeCursor);
@@ -218,6 +312,54 @@ export default function JournalPageEditor() {
     }
 
     setSuggestion(null);
+  };
+
+  const setBlockCursorPosition = (blockId: string, position: number) => {
+    requestAnimationFrame(() => {
+      const target = blockTextareaRefs.current[blockId];
+      if (!target) return;
+      target.focus();
+      target.setSelectionRange(position, position);
+    });
+  };
+
+  const handleBlockContentChange = (index: number, event: ChangeEvent<HTMLTextAreaElement>) => {
+    const block = draftBlocks[index];
+    if (!block) return;
+
+    const isComposing = (event.nativeEvent as any)?.isComposing === true;
+    const rawContent = event.target.value;
+    const rawCursor = event.target.selectionStart ?? rawContent.length;
+
+    let nextContent = rawContent;
+    let nextType = block.type;
+    let nextChecked = block.checked;
+    let nextCursor = rawCursor;
+    let didAutoFormat = false;
+
+    if (!isComposing && block.autoFormat !== false) {
+      const transform = parseAutoFormatTransform(rawContent);
+      if (transform) {
+        nextContent = transform.content;
+        nextType = transform.type ?? nextType;
+        nextChecked = typeof transform.checked === "boolean" ? transform.checked : nextChecked;
+        nextCursor = Math.max(0, rawCursor - transform.removedPrefixLength);
+        didAutoFormat = true;
+      }
+    }
+
+    updateBlock(index, {
+      type: nextType,
+      content: nextContent,
+      checked: nextChecked,
+    });
+
+    deriveSuggestion(index, nextContent, nextCursor);
+
+    if (didAutoFormat) {
+      setSuggestion(null);
+      setBlockCursorPosition(block.id, nextCursor);
+    }
   };
 
   const applyCommand = (command: CommandType) => {
@@ -360,7 +502,7 @@ export default function JournalPageEditor() {
         initial={reduceMotion ? undefined : { opacity: 0, y: 8 }}
         animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: easing }}
-        className="space-y-4"
+        className="space-y-4 overflow-x-hidden"
       >
         <motion.section
           initial={reduceMotion ? undefined : { opacity: 0, y: -6 }}
@@ -404,24 +546,24 @@ export default function JournalPageEditor() {
             </span>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto_auto]">
+          <div className="grid gap-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
             <input
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
               placeholder="Task title"
-              className="rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+              className="min-w-0 rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
             />
             <input
               type="date"
               value={taskDueDate}
               onChange={(e) => setTaskDueDate(e.target.value)}
-              className="rounded-lg border border-landing-clay px-2.5 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+              className="min-w-0 rounded-lg border border-landing-clay px-2.5 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
             />
             {pageSpaceType === "shared" ? (
               <select
                 value={taskAssignee}
                 onChange={(e) => setTaskAssignee(e.target.value)}
-                className="rounded-lg border border-landing-clay px-2.5 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+                className="min-w-0 rounded-lg border border-landing-clay px-2.5 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
               >
                 {assigneeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -468,7 +610,7 @@ export default function JournalPageEditor() {
                 };
                 const isDone = task.status === "done";
                 return (
-                  <div key={taskId} className="grid gap-2 rounded-xl border border-landing-clay bg-landing-cream p-2.5 sm:grid-cols-[1fr_auto_auto_auto]">
+                  <div key={taskId} className="grid gap-2 rounded-xl border border-landing-clay bg-landing-cream p-2.5 lg:grid-cols-[1fr_auto_auto_auto]">
                     <input
                       value={draft.title}
                       onChange={(e) => updateTaskDraft(taskId, { title: e.target.value })}
@@ -477,7 +619,7 @@ export default function JournalPageEditor() {
                           saveTaskPatch(taskId, { title: draft.title });
                         }
                       }}
-                      className="rounded-md border border-landing-clay bg-white px-2.5 py-1.5 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
+                      className="min-w-0 rounded-md border border-landing-clay bg-white px-2.5 py-1.5 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
                     />
                     <input
                       type="date"
@@ -489,7 +631,7 @@ export default function JournalPageEditor() {
                           saveTaskPatch(taskId, { dueDate: draft.dueDate });
                         }
                       }}
-                      className="rounded-md border border-landing-clay bg-white px-2 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
+                      className="min-w-0 rounded-md border border-landing-clay bg-white px-2 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
                     />
                     {pageSpaceType === "shared" ? (
                       <select
@@ -499,7 +641,7 @@ export default function JournalPageEditor() {
                           updateTaskDraft(taskId, { assigneeUserId: next });
                           saveTaskPatch(taskId, { assigneeUserId: next });
                         }}
-                        className="rounded-md border border-landing-clay bg-white px-2 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
+                        className="min-w-0 rounded-md border border-landing-clay bg-white px-2 py-1.5 text-xs text-landing-espresso outline-none focus:border-landing-terracotta"
                       >
                         {assigneeOptions.map((option) => (
                           <option key={`${taskId}-${option.value}`} value={option.value}>
@@ -562,11 +704,11 @@ export default function JournalPageEditor() {
                   whileDrag={reduceMotion ? undefined : { scale: 1.01, boxShadow: "0 14px 30px rgba(0,0,0,0.12)" }}
                   layout
                 >
-                  <motion.div layout className="mb-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                  <motion.div layout className="mb-2 flex flex-col gap-1.5 md:flex-row md:items-center md:gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
                       <button
                         type="button"
-                        className="rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white touch-none sm:text-xs"
+                        className="rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white touch-none md:text-xs"
                         title="Drag to reorder"
                       >
                         <GripVertical className="h-3.5 w-3.5" />
@@ -574,7 +716,7 @@ export default function JournalPageEditor() {
                       <select
                         value={block.type}
                         onChange={(e) => updateBlock(index, { type: e.target.value as BlockInput["type"] })}
-                        className="min-w-0 flex-1 rounded-md border border-landing-clay px-2 py-1 text-[11px] text-landing-espresso sm:min-w-[9rem] sm:flex-none sm:text-xs"
+                        className="min-w-0 flex-1 rounded-md border border-landing-clay px-2 py-1 text-[11px] text-landing-espresso md:min-w-[9rem] md:flex-none md:text-xs"
                       >
                         <option value="paragraph">Paragraph</option>
                         <option value="heading">Heading</option>
@@ -583,12 +725,24 @@ export default function JournalPageEditor() {
                         <option value="callout">Callout</option>
                       </select>
                     </div>
-                    <div className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:items-center sm:justify-end sm:gap-1.5">
+                    <div className="grid w-full grid-cols-2 gap-1 md:flex md:w-auto md:items-center md:justify-end md:gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updateBlock(index, { autoFormat: !(block.autoFormat ?? true) })}
+                        className={`min-w-0 rounded-md border px-1.5 py-1 text-[11px] md:px-2 md:text-xs ${
+                          block.autoFormat === false
+                            ? "border-landing-clay bg-white text-landing-espresso-light hover:bg-landing-cream"
+                            : "border-landing-terracotta bg-landing-terracotta/10 text-landing-espresso"
+                        }`}
+                        title="Toggle auto-format markdown shortcuts for this block"
+                      >
+                        {block.autoFormat === false ? "Raw" : "Auto"}
+                      </button>
                       <button
                         type="button"
                         onClick={() => moveBlock(index, index - 1)}
                         disabled={index === 0}
-                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white disabled:opacity-50 sm:px-2 sm:text-xs"
+                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white disabled:opacity-50 md:px-2 md:text-xs"
                       >
                         Up
                       </button>
@@ -596,14 +750,14 @@ export default function JournalPageEditor() {
                         type="button"
                         onClick={() => moveBlock(index, index + 1)}
                         disabled={index === draftBlocks.length - 1}
-                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white disabled:opacity-50 sm:px-2 sm:text-xs"
+                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white disabled:opacity-50 md:px-2 md:text-xs"
                       >
                         Down
                       </button>
                       <button
                         type="button"
                         onClick={() => removeBlock(index)}
-                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white sm:px-2 sm:text-xs"
+                        className="min-w-0 rounded-md border border-landing-clay px-1.5 py-1 text-[11px] text-landing-espresso-light hover:bg-white md:px-2 md:text-xs"
                       >
                         Remove
                       </button>
@@ -618,11 +772,11 @@ export default function JournalPageEditor() {
                         className="mt-1"
                       />
                       <textarea
-                        value={block.content}
-                        onChange={(e) => {
-                          updateBlock(index, { content: e.target.value });
-                          deriveSuggestion(index, e);
+                        ref={(node) => {
+                          blockTextareaRefs.current[block.id] = node;
                         }}
+                        value={block.content}
+                        onChange={(e) => handleBlockContentChange(index, e)}
                         onBlur={() =>
                           setTimeout(() => setSuggestion((current) => (current?.blockId === block.id ? null : current)), 120)
                         }
@@ -633,17 +787,25 @@ export default function JournalPageEditor() {
                     </div>
                   ) : (
                     <textarea
-                      value={block.content}
-                      onChange={(e) => {
-                        updateBlock(index, { content: e.target.value });
-                        deriveSuggestion(index, e);
+                      ref={(node) => {
+                        blockTextareaRefs.current[block.id] = node;
                       }}
+                      value={block.content}
+                      onChange={(e) => handleBlockContentChange(index, e)}
                       onBlur={() =>
                         setTimeout(() => setSuggestion((current) => (current?.blockId === block.id ? null : current)), 120)
                       }
                       rows={block.type === "heading" ? 1 : 3}
                       placeholder={`${block.type} block... type / for commands or @ to mention goals/tasks`}
-                      className="w-full rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none transition-all duration-200 focus:border-landing-terracotta focus:ring-2 focus:ring-landing-terracotta/20"
+                      className={`w-full rounded-lg border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none transition-all duration-200 focus:border-landing-terracotta focus:ring-2 focus:ring-landing-terracotta/20 ${
+                        block.type === "heading"
+                          ? "text-base font-bold sm:text-lg"
+                          : block.type === "quote"
+                            ? "border-l-4 border-l-landing-terracotta bg-landing-cream/40 italic"
+                            : block.type === "callout"
+                              ? "bg-amber-50/70"
+                              : ""
+                      }`}
                     />
                   )}
                   <AnimatePresence>

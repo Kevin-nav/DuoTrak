@@ -30,7 +30,7 @@ export default function JournalCalendarMonth({ month, selectedDay, itemsByDay, o
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const items = itemsByDay[key] ?? [];
@@ -44,20 +44,19 @@ export default function JournalCalendarMonth({ month, selectedDay, itemsByDay, o
               key={key}
               type="button"
               onClick={() => onSelectDay(day)}
-              className={`min-h-16 rounded-lg border px-1 py-1.5 text-left transition ${
-                isSelected
-                  ? "border-landing-terracotta bg-landing-terracotta/10"
-                  : "border-landing-clay hover:bg-landing-cream"
-              } ${inMonth ? "text-landing-espresso" : "text-landing-espresso-light/60"}`}
+              className={`min-h-[3.5rem] min-w-0 flex flex-col items-center justify-center rounded-lg border p-1 sm:p-1.5 text-center transition ${isSelected
+                ? "border-landing-terracotta bg-landing-terracotta/10 ring-1 ring-landing-terracotta/30"
+                : "border-landing-clay hover:bg-landing-cream"
+                } ${inMonth ? "text-landing-espresso bg-white" : "text-landing-espresso-light/40 bg-gray-50/50"}`}
             >
-              <div className="text-xs font-semibold">{format(day, "d")}</div>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {hasEntry ? <span className="h-1.5 w-1.5 rounded-full bg-landing-terracotta" /> : null}
-                {hasTodo ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> : null}
+              <div className="text-xs font-semibold w-full text-center">{format(day, "d")}</div>
+
+              <div className="mt-1 w-full flex flex-col items-center justify-center gap-0.5">
+                <div className="flex flex-wrap items-center justify-center gap-1">
+                  {hasEntry ? <span className="h-1.5 w-1.5 rounded-full bg-landing-terracotta shrink-0" /> : null}
+                  {hasTodo ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" /> : null}
+                </div>
               </div>
-              {items.length > 0 ? (
-                <p className="mt-1 text-[10px] font-semibold text-landing-espresso-light">{items.length}</p>
-              ) : null}
             </button>
           );
         })}
