@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { Share2, Users, Lock, Smile } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 import { toast } from "sonner";
 import { JournalSpaceType } from "@/hooks/useJournal";
 import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
@@ -25,99 +26,30 @@ interface JournalEntriesListProps {
   onSharePrivateEntry: (entryId: string) => Promise<any>;
 }
 
-const ALLOWED_TAGS = new Set([
-  "P",
-  "BR",
-  "STRONG",
-  "B",
-  "EM",
-  "I",
-  "U",
-  "UL",
-  "OL",
-  "LI",
-  "H1",
-  "H2",
-  "H3",
-  "DIV",
-  "SPAN",
-  "LABEL",
-  "INPUT",
-]);
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ["p", "br", "strong", "b", "em", "i", "u", "ul", "ol", "li", "h1", "h2", "h3", "div", "span", "label", "input"],
+  ALLOWED_ATTR: ["type", "checked"],
+};
 
-const sanitizeRichBodyServer = (html: string) => {
-  if (!html) return "";
+let sanitizerHooksRegistered = false;
 
-  const withoutUnsafeBlocks = html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "");
-
-  return withoutUnsafeBlocks.replace(/<(\/?)([a-z0-9-]+)([^>]*)>/gi, (_full, slash, rawTag, attrs) => {
-    const tag = String(rawTag || "").toUpperCase();
-    const isClosing = slash === "/";
-    if (!ALLOWED_TAGS.has(tag)) {
-      return "";
+const ensureSanitizerHooks = () => {
+  if (sanitizerHooksRegistered) return;
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if ((node as Element).nodeName?.toUpperCase() !== "INPUT") return;
+    const input = node as HTMLInputElement;
+    input.setAttribute("type", "checkbox");
+    if (!input.checked) {
+      input.removeAttribute("checked");
     }
-
-    if (isClosing) {
-      if (tag === "INPUT") return "";
-      return `</${rawTag.toLowerCase()}>`;
-    }
-
-    if (tag === "INPUT") {
-      const hasChecked = /\schecked(?:\s*=\s*(?:"checked"|'checked'|checked))?/i.test(String(attrs || ""));
-      return hasChecked ? '<input type="checkbox" checked="checked">' : '<input type="checkbox">';
-    }
-
-    return `<${rawTag.toLowerCase()}>`;
   });
+  sanitizerHooksRegistered = true;
 };
 
 const sanitizeRichBody = (html: string) => {
   if (!html) return "";
-  if (typeof window === "undefined") return sanitizeRichBodyServer(html);
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
-  const root = doc.body.firstElementChild as HTMLElement | null;
-  if (!root) return "";
-
-  const walk = (node: Node) => {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as HTMLElement;
-      if (!ALLOWED_TAGS.has(element.tagName)) {
-        const parent = element.parentNode;
-        while (element.firstChild) {
-          parent?.insertBefore(element.firstChild, element);
-        }
-        parent?.removeChild(element);
-        return;
-      }
-
-      Array.from(element.attributes).forEach((attr) => {
-        const name = attr.name.toLowerCase();
-        if (element.tagName === "INPUT") {
-          if (name !== "type" && name !== "checked") {
-            element.removeAttribute(attr.name);
-          }
-          return;
-        }
-        element.removeAttribute(attr.name);
-      });
-
-      if (element.tagName === "INPUT") {
-        const input = element as HTMLInputElement;
-        input.type = "checkbox";
-      }
-    }
-
-    const children = Array.from(node.childNodes);
-    children.forEach(walk);
-  };
-
-  walk(root);
-  return root.innerHTML;
+  ensureSanitizerHooks();
+  return DOMPurify.sanitize(html, SANITIZE_CONFIG);
 };
 
 export default function JournalEntriesList({
