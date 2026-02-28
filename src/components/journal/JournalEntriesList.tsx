@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
 import { Share2, Users, Lock, Smile } from "lucide-react";
+import { toast } from "sonner";
 import { JournalSpaceType } from "@/hooks/useJournal";
 import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
 import { cn } from "@/lib/utils";
@@ -123,6 +125,20 @@ export default function JournalEntriesList({
   activeSpaceType,
   onSharePrivateEntry,
 }: JournalEntriesListProps) {
+  const [sharingEntryId, setSharingEntryId] = useState<string | null>(null);
+
+  const handleShareClick = async (entryId: string) => {
+    if (sharingEntryId === entryId) return;
+    try {
+      setSharingEntryId(entryId);
+      await onSharePrivateEntry(entryId);
+    } catch (error: any) {
+      toast.error(error?.message || "Could not share entry.");
+    } finally {
+      setSharingEntryId(null);
+    }
+  };
+
   if (entries.length === 0) {
     return (
       <div className="rounded-2xl border border-landing-clay bg-white p-6 text-center text-sm text-landing-espresso-light">
@@ -188,11 +204,14 @@ export default function JournalEntriesList({
             {activeSpaceType === "private" ? (
               <div className="mt-3 flex justify-end">
                 <button
-                  onClick={() => onSharePrivateEntry(entry._id)}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream sm:w-auto"
+                  onClick={() => {
+                    void handleShareClick(entry._id);
+                  }}
+                  disabled={sharingEntryId === entry._id}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-landing-clay px-2.5 py-1.5 text-xs font-semibold text-landing-espresso-light hover:bg-landing-cream disabled:opacity-60 sm:w-auto"
                 >
                   <Share2 className="h-3.5 w-3.5" />
-                  Share with partner
+                  {sharingEntryId === entry._id ? "Sharing..." : "Share with partner"}
                 </button>
               </div>
             ) : null}

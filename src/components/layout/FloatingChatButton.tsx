@@ -28,6 +28,7 @@ export default function FloatingChatButton({ partnerId }: FloatingChatButtonProp
   const pathname = usePathname();
   const [corner, setCorner] = useState<Corner>("bottom-left");
   const suppressClickRef = useRef(false);
+  const suppressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const conversation = useQuery(
@@ -43,12 +44,21 @@ export default function FloatingChatButton({ partnerId }: FloatingChatButtonProp
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY) as Corner | null;
-      if (stored && stored in cornerClasses) {
+      if (stored && Object.prototype.hasOwnProperty.call(cornerClasses, stored)) {
         setCorner(stored);
       }
     } catch {
       // Ignore storage errors; keep default corner.
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (suppressTimeoutRef.current) {
+        clearTimeout(suppressTimeoutRef.current);
+        suppressTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -93,8 +103,12 @@ export default function FloatingChatButton({ partnerId }: FloatingChatButtonProp
           const moved = Math.hypot(dx, dy);
           if (moved > 8) {
             suppressClickRef.current = true;
-            setTimeout(() => {
+            if (suppressTimeoutRef.current) {
+              clearTimeout(suppressTimeoutRef.current);
+            }
+            suppressTimeoutRef.current = setTimeout(() => {
               suppressClickRef.current = false;
+              suppressTimeoutRef.current = null;
             }, 160);
           }
         }
