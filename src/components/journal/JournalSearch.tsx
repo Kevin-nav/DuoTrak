@@ -50,7 +50,7 @@ export default function JournalSearch() {
           placeholder="Search text in journals..."
           className="w-full rounded-xl border border-landing-clay px-3 py-2 text-sm text-landing-espresso outline-none focus:border-landing-terracotta"
         />
-        <div className={`${showFilters || query.trim().length > 0 ? "grid" : "hidden"} grid-cols-1 gap-2 sm:grid sm:grid-cols-4`}>
+        <div className={`${showFilters || query.trim().length > 0 ? "grid" : "hidden"} grid-cols-1 gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-4`}>
             <select
               value={spaceType}
               onChange={(e) => setSpaceType(e.target.value as any)}

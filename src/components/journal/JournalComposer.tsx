@@ -10,7 +10,8 @@ import {
   Italic, 
   List, 
   Heading2, 
-  Type 
+  Type,
+  CheckSquare
 } from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
 import { useGoals } from "@/hooks/useGoals";
@@ -56,7 +57,7 @@ interface JournalComposerProps {
 
 export default function JournalComposer({ spaceType, onCreate }: JournalComposerProps) {
   const reduceMotion = useReducedMotion();
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [mood, setMood] = useState("");
@@ -69,75 +70,59 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
 
   const selectedMood = MOODS.find((m) => m.label === mood);
 
-  const applyAndPreserveSelection = (
-    transform: (value: string, start: number, end: number) => { value: string; start: number; end: number }
-  ) => {
-    const textarea = bodyRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart ?? 0;
-    const end = textarea.selectionEnd ?? 0;
-    const next = transform(body, start, end);
-    setBody(next.value);
-
-    requestAnimationFrame(() => {
-      const current = bodyRef.current;
-      if (!current) return;
-      current.focus();
-      current.setSelectionRange(next.start, next.end);
-    });
+  const syncEditorHtml = () => {
+    if (!bodyRef.current) return;
+    setBody(bodyRef.current.innerHTML);
   };
 
-  const wrapSelection = (prefix: string, suffix: string, placeholder: string) => {
-    applyAndPreserveSelection((value, start, end) => {
-      const selected = value.slice(start, end);
-      const hasSelection = selected.length > 0;
-      const text = hasSelection ? selected : placeholder;
-      const replacement = `${prefix}${text}${suffix}`;
-      const nextValue = `${value.slice(0, start)}${replacement}${value.slice(end)}`;
-      const nextStart = start + prefix.length;
-      const nextEnd = nextStart + text.length;
-      return { value: nextValue, start: nextStart, end: nextEnd };
-    });
+  const runCommand = (command: string, value?: string) => {
+    if (!bodyRef.current) return;
+    bodyRef.current.focus();
+    document.execCommand(command, false, value);
+    syncEditorHtml();
   };
 
-  const toggleLinePrefix = (prefix: string) => {
-    applyAndPreserveSelection((value, start, end) => {
-      const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
-      const nextBreak = value.indexOf("\n", end);
-      const lineEnd = nextBreak === -1 ? value.length : nextBreak;
-      const line = value.slice(lineStart, lineEnd);
-      const hasPrefix = line.startsWith(prefix);
-      const stripped = hasPrefix ? line.slice(prefix.length) : line;
-      const replaced = hasPrefix ? stripped : `${prefix}${line}`;
-      const nextValue = `${value.slice(0, lineStart)}${replaced}${value.slice(lineEnd)}`;
-      const delta = hasPrefix ? -prefix.length : prefix.length;
-      const nextStart = Math.max(lineStart, start + delta);
-      const nextEnd = Math.max(lineStart, end + delta);
-      return { value: nextValue, start: nextStart, end: nextEnd };
-    });
+  const getSelectionParent = () => {
+    const selection = window.getSelection();
+    const anchorNode = selection?.anchorNode;
+    return anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement ?? null;
   };
 
-  const clearLineFormatting = () => {
-    applyAndPreserveSelection((value, start, end) => {
-      const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
-      const nextBreak = value.indexOf("\n", end);
-      const lineEnd = nextBreak === -1 ? value.length : nextBreak;
-      const line = value.slice(lineStart, lineEnd);
-      const prefixMatch = /^(#{1,6}\s+|[-*]\s+|>\s+|\[(?: |x|X)\]\s+)/.exec(line);
-      if (!prefixMatch) return { value, start, end };
-      const removed = prefixMatch[0];
-      const nextLine = line.slice(removed.length);
-      const nextValue = `${value.slice(0, lineStart)}${nextLine}${value.slice(lineEnd)}`;
-      const nextStart = Math.max(lineStart, start - removed.length);
-      const nextEnd = Math.max(lineStart, end - removed.length);
-      return { value: nextValue, start: nextStart, end: nextEnd };
-    });
+  const clearFormatting = () => {
+    const parent = getSelectionParent();
+    if (!parent) return;
+
+    if (parent.closest("li")) {
+      runCommand("insertUnorderedList");
+    }
+    if (parent.closest("h1, h2, h3")) {
+      runCommand("formatBlock", "p");
+    }
+    runCommand("removeFormat");
+  };
+
+  const toggleHeading = () => {
+    const parent = getSelectionParent();
+    const isHeading = !!parent?.closest("h2");
+    runCommand("formatBlock", isHeading ? "p" : "h2");
+  };
+
+  const insertCheckbox = () => {
+    runCommand("insertHTML", `<label><input type="checkbox" />&nbsp;</label>`);
+  };
+
+  const hasMeaningfulBodyContent = (html: string) => {
+    const normalized = html
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/<[^>]*>/g, "")
+      .trim();
+    return normalized.length > 0;
   };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!title.trim() && !body.trim()) return;
+    if (!title.trim() && !hasMeaningfulBodyContent(body)) return;
 
     setIsSaving(true);
     try {
@@ -170,7 +155,7 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="rounded-2xl border border-landing-clay bg-white p-3 shadow-sm sm:p-4"
     >
-      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+      <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
         <h2 className="text-base font-bold text-landing-espresso">
           <span className="inline-flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -179,10 +164,10 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
         </h2>
         
         {/* Goal Selector */}
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2 md:w-auto">
           <Target className="h-3.5 w-3.5 text-landing-espresso-light" />
           <Select value={goalId || "none"} onValueChange={(v) => setGoalId(v === "none" ? undefined : v)}>
-            <SelectTrigger className="h-8 w-[180px] rounded-lg border-landing-clay bg-landing-cream/30 text-[11px] font-semibold text-landing-espresso-light">
+            <SelectTrigger className="h-8 w-full max-w-full rounded-lg border-landing-clay bg-landing-cream/30 text-[11px] font-semibold text-landing-espresso-light md:w-[180px]">
               <SelectValue placeholder="Link to a goal..." />
             </SelectTrigger>
             <SelectContent>
@@ -205,61 +190,107 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
           className="w-full bg-transparent text-lg font-black tracking-tight text-landing-espresso placeholder:text-landing-espresso-light/30 outline-none"
         />
 
-        {/* Markdown Toolbar */}
-        <div className="flex items-center gap-1 border-b border-t border-landing-clay/30 py-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={clearLineFormatting}
-            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
-            title="Clear line markdown formatting"
-          >
-            <Type className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => toggleLinePrefix("## ")}
-            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
-            title="Toggle heading"
-          >
-            <Heading2 className="h-3.5 w-3.5" />
-          </Button>
+        {/* Rich Text Toolbar */}
+        <div className="flex flex-wrap items-center gap-1 border-b border-t border-landing-clay/30 py-1.5">
+          <div className="group relative">
+            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-landing-espresso px-2 py-1 text-[10px] font-bold text-landing-cream opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Plain text
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={clearFormatting}
+              className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+              title="Plain text"
+              aria-label="Plain text"
+            >
+              <Type className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="group relative">
+            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-landing-espresso px-2 py-1 text-[10px] font-bold text-landing-cream opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Heading
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={toggleHeading}
+              className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+              title="Heading"
+              aria-label="Heading"
+            >
+              <Heading2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <div className="mx-1 h-4 w-px bg-landing-clay/30" />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => wrapSelection("**", "**", "bold text")}
-            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
-            title="Bold"
-          >
-            <Bold className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => wrapSelection("*", "*", "italic text")}
-            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
-            title="Italic"
-          >
-            <Italic className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => toggleLinePrefix("- ")}
-            className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
-            title="Toggle list item"
-          >
-            <List className="h-3.5 w-3.5" />
-          </Button>
-          <div className="ml-auto flex items-center gap-1">
-             <p className="text-[10px] font-bold text-landing-espresso-light/40 italic mr-2">Markdown supported</p>
+          <div className="group relative">
+            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-landing-espresso px-2 py-1 text-[10px] font-bold text-landing-cream opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Bold
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => runCommand("bold")}
+              className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+              title="Bold"
+              aria-label="Bold"
+            >
+              <Bold className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="group relative">
+            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-landing-espresso px-2 py-1 text-[10px] font-bold text-landing-cream opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Italic
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => runCommand("italic")}
+              className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+              title="Italic"
+              aria-label="Italic"
+            >
+              <Italic className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="group relative">
+            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-landing-espresso px-2 py-1 text-[10px] font-bold text-landing-cream opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              List
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => runCommand("insertUnorderedList")}
+              className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+              title="List"
+              aria-label="List"
+            >
+              <List className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="group relative">
+            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-md bg-landing-espresso px-2 py-1 text-[10px] font-bold text-landing-cream opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Checkbox
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={insertCheckbox}
+              className="h-7 w-7 text-landing-espresso-light hover:bg-landing-cream"
+              title="Checkbox"
+              aria-label="Checkbox"
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="ml-auto hidden items-center gap-1 sm:flex">
+            <p className="mr-2 text-[10px] font-bold italic text-landing-espresso-light/40">Rich text</p>
           </div>
         </div>
 
@@ -267,7 +298,7 @@ export default function JournalComposer({ spaceType, onCreate }: JournalComposer
           value={body}
           onChange={setBody}
           placeholder="How was your day? What did you learn together?"
-          textareaRef={bodyRef}
+          editorRef={bodyRef}
         />
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

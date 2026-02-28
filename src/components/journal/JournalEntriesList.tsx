@@ -5,8 +5,6 @@ import { Share2, Users, Lock, Smile } from "lucide-react";
 import { JournalSpaceType } from "@/hooks/useJournal";
 import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
 import { cn } from "@/lib/utils";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 const MOODS_MAP: Record<string, { emoji: string; color: string }> = {
   Happy: { emoji: "😊", color: "bg-yellow-100 border-yellow-200 text-yellow-700" },
@@ -24,6 +22,72 @@ interface JournalEntriesListProps {
   activeSpaceType: JournalSpaceType;
   onSharePrivateEntry: (entryId: string) => Promise<any>;
 }
+
+const ALLOWED_TAGS = new Set([
+  "P",
+  "BR",
+  "STRONG",
+  "B",
+  "EM",
+  "I",
+  "U",
+  "UL",
+  "OL",
+  "LI",
+  "H1",
+  "H2",
+  "H3",
+  "DIV",
+  "SPAN",
+  "LABEL",
+  "INPUT",
+]);
+
+const sanitizeRichBody = (html: string) => {
+  if (!html) return "";
+  if (typeof window === "undefined") return "";
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild as HTMLElement | null;
+  if (!root) return "";
+
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      if (!ALLOWED_TAGS.has(element.tagName)) {
+        const parent = element.parentNode;
+        while (element.firstChild) {
+          parent?.insertBefore(element.firstChild, element);
+        }
+        parent?.removeChild(element);
+        return;
+      }
+
+      Array.from(element.attributes).forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        if (element.tagName === "INPUT") {
+          if (name !== "type" && name !== "checked") {
+            element.removeAttribute(attr.name);
+          }
+          return;
+        }
+        element.removeAttribute(attr.name);
+      });
+
+      if (element.tagName === "INPUT") {
+        const input = element as HTMLInputElement;
+        input.type = "checkbox";
+      }
+    }
+
+    const children = Array.from(node.childNodes);
+    children.forEach(walk);
+  };
+
+  walk(root);
+  return root.innerHTML;
+};
 
 export default function JournalEntriesList({
   entries,
@@ -44,15 +108,17 @@ export default function JournalEntriesList({
         const moodData = entry.mood ? MOODS_MAP[entry.mood] : null;
 
         return (
-          <article key={entry._id} className="rounded-2xl border border-landing-clay bg-white p-3 shadow-sm sm:p-4">
+          <article key={entry._id} className="min-w-0 rounded-2xl border border-landing-clay bg-white p-3 shadow-sm sm:p-4">
             <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate text-base font-bold text-landing-espresso">{entry.title}</h3>
+                <div className="flex min-w-0 items-start gap-2">
+                  <h3 className="line-clamp-2 break-words text-base font-bold leading-tight text-landing-espresso">
+                    {entry.title}
+                  </h3>
                   {entry.mood && (
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                        "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold",
                         moodData ? moodData.color : "bg-landing-cream border-landing-clay text-landing-espresso-light"
                       )}
                     >
@@ -71,16 +137,18 @@ export default function JournalEntriesList({
               </span>
             </div>
 
-            <div className="prose prose-sm mt-3 max-w-none text-landing-espresso-light prose-headings:text-landing-espresso prose-p:my-1.5">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.body || ""}</ReactMarkdown>
-            </div>
+            <div
+              className="journal-entry-body mt-3 max-w-none break-words text-sm text-landing-espresso-light [&_h1]:my-1 [&_h1]:text-base [&_h1]:font-black [&_h1]:text-landing-espresso [&_h2]:my-1 [&_h2]:text-[15px] [&_h2]:font-extrabold [&_h2]:text-landing-espresso [&_h3]:my-1 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-landing-espresso [&_li]:my-0.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5"
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: sanitizeRichBody(entry.body || "") }}
+            />
 
             {(entry.tags || []).length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {entry.tags.map((tag: string) => (
                   <span
                     key={`${entry._id}-${tag}`}
-                    className="rounded-full bg-landing-sand px-2 py-0.5 text-[11px] font-medium text-landing-espresso-light"
+                    className="inline-flex max-w-full break-all rounded-full bg-landing-sand px-2 py-0.5 text-[11px] font-medium text-landing-espresso-light"
                   >
                     #{tag}
                   </span>

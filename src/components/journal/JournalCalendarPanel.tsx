@@ -143,7 +143,7 @@ export default function JournalCalendarPanel({ spaceType }: JournalCalendarPanel
         <p className="mt-3 text-sm text-landing-espresso-light">Loading calendar activity...</p>
       ) : (
         <div className="mt-4 space-y-4">
-          <div className="min-w-[240px]">
+          <div className="min-w-0 w-full">
             {viewMode === "agenda" ? (
               <JournalAgendaList
                 items={items}

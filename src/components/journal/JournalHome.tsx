@@ -82,7 +82,7 @@ export default function JournalHome() {
 
   return (
     <DashboardLayout maxWidthClass="max-w-[1600px] px-2 sm:px-4">
-      <div className="flex min-h-[calc(100dvh-9rem)] flex-col gap-4">
+      <div className="flex min-h-[calc(100dvh-9rem)] flex-col gap-4 overflow-x-hidden">
         {/* Header Section */}
         <motion.section
           initial={reduceMotion ? undefined : { opacity: 0, y: -6 }}
@@ -181,11 +181,11 @@ export default function JournalHome() {
         {/* Main Content Area */}
         <div className="min-h-0 flex-1">
           {/* Desktop Layout: 3 Columns */}
-          <div className="hidden h-full md:block">
+          <div className="hidden h-full lg:block">
             <ResizablePanelGroup direction="horizontal" className="h-full items-stretch">
               {/* Left Sidebar: Pages */}
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="hidden lg:block">
-                <div className="h-full overflow-y-auto pr-4">
+              <ResizablePanel defaultSize={20} minSize={16} maxSize={30} className="hidden min-w-0 lg:block">
+                <div className="h-full min-w-0 overflow-x-hidden overflow-y-auto pr-4">
                   <JournalPagesPanel
                     spaceType={activeTab}
                     pages={pages}
@@ -287,10 +287,10 @@ export default function JournalHome() {
                 </div>
               </ResizablePanel>
 
-              <ResizableHandle withHandle className="hidden md:flex" />
+              <ResizableHandle withHandle className="hidden lg:flex" />
 
               {/* Right Sidebar: Calendar & Pulse */}
-              <ResizablePanel defaultSize={30} minSize={20} maxSize={40} className="hidden md:block">
+              <ResizablePanel defaultSize={30} minSize={20} maxSize={40} className="hidden lg:block">
                 <div className="flex h-full flex-col gap-6 overflow-y-auto pl-4">
                   <JournalCalendarPanel spaceType={activeTab} />
 
@@ -303,7 +303,7 @@ export default function JournalHome() {
           </div>
 
           {/* Mobile Layout: Stacked Feed only */}
-          <div className="h-full overflow-y-auto pb-20 md:hidden">
+          <div className="h-full overflow-y-auto pb-20 lg:hidden">
             <div className="flex flex-col gap-4">
               <JournalSearch />
 
@@ -352,7 +352,7 @@ export default function JournalHome() {
       </div>
 
       {/* Mobile Floating Action Button */}
-      <div className="fixed bottom-24 right-6 md:hidden">
+      <div className="fixed bottom-24 right-4 z-30 sm:right-6 lg:hidden">
         <Drawer open={isComposerOpen} onOpenChange={setIsComposerOpen}>
           <DrawerTrigger asChild>
             <Button size="icon" className="h-14 w-14 rounded-full bg-landing-espresso shadow-xl ring-2 ring-white">
