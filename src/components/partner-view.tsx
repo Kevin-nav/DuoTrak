@@ -24,6 +24,7 @@ import { useUser } from "@/contexts/UserContext";
 import { api } from "../../convex/_generated/api";
 import { usePartnerJournalActivity } from "@/hooks/useJournal";
 import JournalEntryInteractions from "@/components/journal/JournalEntryInteractions";
+import JournalRichText from "@/components/journal/JournalRichText";
 
 interface Task {
   id: string;
@@ -429,7 +430,11 @@ export default function PartnerView() {
                   {partnerJournalEntries.map((entry: any) => (
                     <div key={entry._id} className="rounded-xl border border-landing-clay bg-landing-cream p-3">
                       <p className="text-sm font-semibold text-landing-espresso">{entry.title}</p>
-                      <p className="mt-1 line-clamp-3 text-xs text-landing-espresso-light">{entry.body}</p>
+                      <JournalRichText
+                        html={entry.body}
+                        variant="preview"
+                        className="mt-1 max-h-20 overflow-hidden text-landing-espresso-light"
+                      />
                       <JournalEntryInteractions entryId={entry._id} />
                     </div>
                   ))}

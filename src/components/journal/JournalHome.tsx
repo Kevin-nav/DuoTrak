@@ -32,6 +32,7 @@ import {
   useJournalHome,
   useJournalPages,
   useSharePrivateEntry,
+  useUpdateJournalEntry,
 } from "@/hooks/useJournal";
 import { BookOpenText, Calendar, FileText, Loader2, Lock, Plus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -55,6 +56,7 @@ export default function JournalHome() {
   const createEntry = useCreateJournalEntry();
   const createPage = useCreateJournalPage();
   const sharePrivateEntry = useSharePrivateEntry();
+  const updateEntry = useUpdateJournalEntry();
 
   useEffect(() => {
     ensureSpaces().catch(() => {
@@ -262,6 +264,9 @@ export default function JournalHome() {
                                 toast.error(error?.message || "Could not share entry.");
                               }
                             }}
+                            onUpdateEntry={async (payload) => {
+                              await updateEntry(payload);
+                            }}
                           />
                           {entries.length > 0 ? (
                             <div className="space-y-2">
@@ -341,6 +346,9 @@ export default function JournalHome() {
                       } catch (error: any) {
                         toast.error(error?.message || "Could not share entry.");
                       }
+                    }}
+                    onUpdateEntry={async (payload) => {
+                      await updateEntry(payload);
                     }}
                   />
                   {entries.length > 0 ? <div ref={loadMoreRef} className="h-1 w-full" aria-hidden /> : null}

@@ -18,6 +18,7 @@ import { useUser } from '@/contexts/UserContext';
 import BirthdayLaunchWelcome from '@/components/dashboard/BirthdayLaunchWelcome';
 import { useDashboardJournalPulse } from '@/hooks/useJournal';
 import JournalEntryInteractions from '@/components/journal/JournalEntryInteractions';
+import JournalRichText from '@/components/journal/JournalRichText';
 import { fileToBase64 } from '@/lib/files/base64';
 import { TaskVerificationSubmission, VerificationMode } from '@/components/task-verification-modal';
 
@@ -538,7 +539,11 @@ export default function DashboardContent({
               <div className="flex items-start justify-between gap-2.5">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-charcoal dark:text-gray-100">{entry.title}</p>
-                  <p className="line-clamp-2 text-xs text-stone-gray dark:text-gray-300">{entry.body}</p>
+                  <JournalRichText
+                    html={entry.body}
+                    variant="preview"
+                    className="mt-1 max-h-14 overflow-hidden"
+                  />
                 </div>
                 <button
                   type="button"
